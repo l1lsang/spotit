@@ -57,6 +57,7 @@ function toChat(snapshot: QueryDocumentSnapshot<DocumentData> | DocumentSnapshot
     ...(data as Omit<DaymarkChat, 'id'>),
     id: snapshot.id,
     lastMessage: (data as { lastMessage?: string }).lastMessage || '',
+    readAtBy: (data as { readAtBy?: DaymarkChat['readAtBy'] }).readAtBy || {},
   }
 }
 
@@ -107,7 +108,9 @@ export async function getOrCreateDirectChat(
       participantIds: [currentUser.uid, targetUser.uid].sort(),
       participants,
       lastMessage: '',
+      lastMessageUid: '',
       lastMessageAt: null,
+      readAtBy: {},
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
@@ -134,6 +137,23 @@ export async function getChatById(chatId: string, viewerUid: string): Promise<Da
   }
 
   return chat
+}
+
+export function subscribeToChat(
+  chatId: string,
+  viewerUid: string,
+  onChange: (chat: DaymarkChat | null) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    doc(requireDb(), 'chats', chatId),
+    (snapshot) => {
+      const chat = toChat(snapshot)
+
+      onChange(chat && chat.participantIds.includes(viewerUid) ? chat : null)
+    },
+    onError,
+  )
 }
 
 export function subscribeToMyChats(
@@ -196,11 +216,20 @@ export async function sendChatMessage(
   })
   batch.update(chatRef, {
     lastMessage: trimmed,
+    lastMessageUid: author.uid,
     lastMessageAt: serverTimestamp(),
+    [`readAtBy.${author.uid}`]: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
 
   await batch.commit()
+}
+
+export async function markChatAsRead(chatId: string, uid: string): Promise<void> {
+  await updateDoc(doc(requireDb(), 'chats', chatId), {
+    [`readAtBy.${uid}`]: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
 }
 
 export async function refreshChatParticipant(chatId: string, user: ChatPerson): Promise<void> {

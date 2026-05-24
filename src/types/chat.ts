@@ -11,7 +11,9 @@ export interface DaymarkChat {
   participantIds: string[]
   participants: Record<string, ChatParticipant>
   lastMessage: string
+  lastMessageUid?: string
   lastMessageAt?: Timestamp
+  readAtBy?: Record<string, Timestamp>
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }

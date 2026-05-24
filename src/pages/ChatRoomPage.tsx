@@ -1,16 +1,28 @@
 import { ArrowLeft, SendHorizonal } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
-import { formatTimestamp } from '../lib/date'
+import { formatChatDateSeparator, formatChatTime, getTimestampDateKey } from '../lib/date'
 import {
-  getChatById,
   getOtherParticipant,
+  markChatAsRead,
   sendChatMessage,
+  subscribeToChat,
   subscribeToChatMessages,
 } from '../services/chatService'
-import type { DaymarkChat, ChatMessage } from '../types/chat'
+import type { ChatMessage, DaymarkChat } from '../types/chat'
+
+function isMessageReadByOther(message: ChatMessage, chat: DaymarkChat, currentUid: string): boolean {
+  const other = getOtherParticipant(chat, currentUid)
+  const otherReadAt = other ? chat.readAtBy?.[other.uid] : undefined
+
+  if (!otherReadAt || !message.createdAt || message.uid !== currentUid) {
+    return false
+  }
+
+  return otherReadAt.toMillis() >= message.createdAt.toMillis()
+}
 
 export function ChatRoomPage() {
   const { chatId = '' } = useParams()
@@ -24,32 +36,32 @@ export function ChatRoomPage() {
   const [sending, setSending] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
 
-  const loadChat = useCallback(async () => {
+  useEffect(() => {
     if (!firebaseReady || !currentUser || !chatId) {
       setLoading(false)
-      return
+      return undefined
     }
 
     setLoading(true)
     setError('')
 
-    try {
-      const nextChat = await getChatById(chatId, currentUser.uid)
-      setChat(nextChat)
+    return subscribeToChat(
+      chatId,
+      currentUser.uid,
+      (nextChat) => {
+        setChat(nextChat)
+        setLoading(false)
 
-      if (!nextChat) {
-        setError('참여 중인 채팅방을 찾을 수 없습니다.')
-      }
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : '채팅방을 불러오지 못했습니다.')
-    } finally {
-      setLoading(false)
-    }
+        if (!nextChat) {
+          setError('참여 중인 채팅방을 찾을 수 없습니다.')
+        }
+      },
+      (subscribeError) => {
+        setError(subscribeError instanceof Error ? subscribeError.message : '채팅방을 불러오지 못했습니다.')
+        setLoading(false)
+      },
+    )
   }, [chatId, currentUser, firebaseReady])
-
-  useEffect(() => {
-    void loadChat()
-  }, [loadChat])
 
   useEffect(() => {
     if (!chat) {
@@ -63,6 +75,21 @@ export function ChatRoomPage() {
         setError(subscribeError instanceof Error ? subscribeError.message : '메시지를 불러오지 못했습니다.'),
     )
   }, [chat])
+
+  useEffect(() => {
+    if (!chat || !currentUser) {
+      return
+    }
+
+    const lastMessageAt = chat.lastMessageAt
+    const myReadAt = chat.readAtBy?.[currentUser.uid]
+
+    if (lastMessageAt && (!myReadAt || myReadAt.toMillis() < lastMessageAt.toMillis())) {
+      void markChatAsRead(chat.id, currentUser.uid).catch((readError) => {
+        setError(readError instanceof Error ? readError.message : '읽음 상태를 저장하지 못했습니다.')
+      })
+    }
+  }, [chat, currentUser])
 
   useEffect(() => {
     listRef.current?.scrollTo({
@@ -88,6 +115,13 @@ export function ChatRoomPage() {
       setError(sendError instanceof Error ? sendError.message : '메시지 전송에 실패했습니다.')
     } finally {
       setSending(false)
+    }
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      event.currentTarget.form?.requestSubmit()
     }
   }
 
@@ -139,15 +173,37 @@ export function ChatRoomPage() {
           {messages.length === 0 ? (
             <p className="empty-text">아직 메시지가 없습니다.</p>
           ) : (
-            messages.map((message) => {
+            messages.map((message, index) => {
               const isMine = message.uid === currentUser?.uid
+              const dateKey = getTimestampDateKey(message.createdAt)
+              const previousDateKey = getTimestampDateKey(messages[index - 1]?.createdAt)
+              const showDateSeparator = dateKey && dateKey !== previousDateKey
+              const readByOther = chat && currentUser ? isMessageReadByOther(message, chat, currentUser.uid) : false
 
               return (
-                <article className={`message-bubble ${isMine ? 'mine' : 'other'}`} key={message.id}>
-                  <strong>{isMine ? '나' : message.authorNickname}</strong>
-                  <p>{message.content}</p>
-                  <time>{formatTimestamp(message.createdAt)}</time>
-                </article>
+                <Fragment key={message.id}>
+                  {showDateSeparator && (
+                    <div className="date-separator">
+                      <span>{formatChatDateSeparator(dateKey)}</span>
+                    </div>
+                  )}
+                  <article className={`message-row ${isMine ? 'mine' : 'other'}`}>
+                    {!isMine &&
+                      (other?.photoURL ? (
+                        <img className="message-avatar" src={other.photoURL} alt={`${other.nickname} 프로필`} />
+                      ) : (
+                        <span className="profile-avatar tiny">{other?.nickname.slice(0, 1) || 'D'}</span>
+                      ))}
+                    <div className="message-stack">
+                      {!isMine && <strong className="message-author">{message.authorNickname}</strong>}
+                      <p className="message-bubble">{message.content}</p>
+                      <div className="message-meta">
+                        {isMine && <span>{readByOther ? '읽음' : '보냄'}</span>}
+                        <time>{formatChatTime(message.createdAt)}</time>
+                      </div>
+                    </div>
+                  </article>
+                </Fragment>
               )
             })
           )}
@@ -158,6 +214,7 @@ export function ChatRoomPage() {
             rows={2}
             value={content}
             onChange={(event) => setContent(event.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="메시지를 입력하세요"
           />
           <button className="button button-primary" type="submit" disabled={sending || !content.trim()}>

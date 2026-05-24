@@ -7,6 +7,16 @@ import { formatTimestamp } from '../lib/date'
 import { getOtherParticipant, subscribeToMyChats } from '../services/chatService'
 import type { DaymarkChat } from '../types/chat'
 
+function isUnreadChat(chat: DaymarkChat, uid: string): boolean {
+  const readAt = chat.readAtBy?.[uid]
+
+  if (!chat.lastMessageAt || chat.lastMessageUid === uid) {
+    return false
+  }
+
+  return !readAt || readAt.toMillis() < chat.lastMessageAt.toMillis()
+}
+
 export function ChatListPage() {
   const { currentUser, firebaseReady } = useAuth()
   const [chats, setChats] = useState<DaymarkChat[]>([])
@@ -56,9 +66,14 @@ export function ChatListPage() {
         <div className="chat-list">
           {chats.map((chat) => {
             const other = currentUser ? getOtherParticipant(chat, currentUser.uid) : null
+            const unread = currentUser ? isUnreadChat(chat, currentUser.uid) : false
+            const lastMessage =
+              chat.lastMessageUid === currentUser?.uid && chat.lastMessage
+                ? `나: ${chat.lastMessage}`
+                : chat.lastMessage
 
             return (
-              <Link className="chat-row" to={`/chats/${chat.id}`} key={chat.id}>
+              <Link className={`chat-row ${unread ? 'unread' : ''}`} to={`/chats/${chat.id}`} key={chat.id}>
                 {other?.photoURL ? (
                   <img className="chat-avatar" src={other.photoURL} alt={`${other.nickname} 프로필`} />
                 ) : (
@@ -66,9 +81,12 @@ export function ChatListPage() {
                 )}
                 <span className="chat-row-main">
                   <strong>{other?.nickname || '알 수 없는 사용자'}</strong>
-                  <small>{chat.lastMessage || '새 대화를 시작해 보세요.'}</small>
+                  <small>{lastMessage || '새 대화를 시작해 보세요.'}</small>
                 </span>
-                <time>{formatTimestamp(chat.lastMessageAt || chat.updatedAt)}</time>
+                <span className="chat-row-side">
+                  <time>{formatTimestamp(chat.lastMessageAt || chat.updatedAt)}</time>
+                  {unread && <i aria-label="읽지 않은 메시지" />}
+                </span>
               </Link>
             )
           })}

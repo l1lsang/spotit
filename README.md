@@ -127,7 +127,9 @@ chats/{chatId}/messages/{messageId}
   participantIds: string[]
   participants: Record<string, { uid: string; nickname: string; photoURL: string }>
   lastMessage: string
+  lastMessageUid: string
   lastMessageAt: Timestamp
+  readAtBy: Record<string, Timestamp>
   createdAt: Timestamp
   updatedAt: Timestamp
 }
