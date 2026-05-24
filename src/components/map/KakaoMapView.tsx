@@ -18,6 +18,7 @@ interface KakaoMapViewProps {
   selectedLocation?: LatLng | null
   onMapClick: (location: LatLng) => void
   onMarkerClick: (post: Post) => void
+  currentUserUid?: string
   className?: string
 }
 
@@ -27,6 +28,7 @@ export function KakaoMapView({
   selectedLocation = null,
   onMapClick,
   onMarkerClick,
+  currentUserUid,
   className = '',
 }: KakaoMapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -119,11 +121,11 @@ export function KakaoMapView({
     const kakao = getKakaoMaps()
     postMarkersRef.current.forEach((marker) => marker.setMap(null))
     postMarkersRef.current = posts.map((post) =>
-      createPostMarker(kakao, mapRef.current as KakaoMapInstance, post, () =>
+      createPostMarker(kakao, mapRef.current as KakaoMapInstance, post, currentUserUid, () =>
         onMarkerClickRef.current(post),
       ),
     )
-  }, [posts, status])
+  }, [currentUserUid, posts, status])
 
   useEffect(() => {
     if (status !== 'ready' || !mapRef.current) {

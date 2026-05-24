@@ -29,6 +29,12 @@ export interface KakaoMapsNamespace {
     options: { center: KakaoLatLngInstance; level: number },
   ) => KakaoMapInstance
   Marker: new (options: { position: KakaoLatLngInstance }) => KakaoMarkerInstance
+  CustomOverlay: new (options: {
+    position: KakaoLatLngInstance
+    content: HTMLElement | string
+    xAnchor?: number
+    yAnchor?: number
+  }) => KakaoMarkerInstance
   event: {
     addListener: (
       target: KakaoMapInstance | KakaoMarkerInstance,

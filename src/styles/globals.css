@@ -682,6 +682,57 @@ img {
   font-weight: 800;
 }
 
+.map-toolbar .map-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.map-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.map-legend .mine {
+  background: var(--teal);
+}
+
+.map-legend .other {
+  background: #e03b2f;
+}
+
+.daymark-map-pin {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 3px solid #fffdf8;
+  border-radius: 999px 999px 999px 4px;
+  box-shadow: 0 8px 18px rgba(46, 42, 36, 0.2);
+  transform: rotate(-45deg);
+}
+
+.daymark-map-pin span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #fffdf8;
+}
+
+.daymark-map-pin.mine {
+  background: var(--teal);
+}
+
+.daymark-map-pin.other {
+  background: #e03b2f;
+}
+
+.daymark-map-pin:hover {
+  transform: rotate(-45deg) translateY(-2px);
+}
+
 .map-error {
   position: absolute;
   top: 78px;

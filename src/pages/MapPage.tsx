@@ -91,6 +91,7 @@ export function MapPage() {
           selectedLocation={selectedLocation}
           onMapClick={handleMapClick}
           onMarkerClick={setSelectedPost}
+          currentUserUid={currentUser?.uid}
         />
 
         <div className="map-toolbar">
@@ -99,6 +100,14 @@ export function MapPage() {
             {locationLoading ? '확인 중' : '현재 위치'}
           </button>
           <span>{loadingPosts ? '기록 불러오는 중' : `팔로우 기반 ${posts.length}개의 기록`}</span>
+          {currentUser && (
+            <span className="map-legend">
+              <i className="mine" />
+              내 기록
+              <i className="other" />
+              팔로잉
+            </span>
+          )}
         </div>
 
         {(locationError || error) && <p className="map-error">{locationError || error}</p>}

@@ -232,6 +232,7 @@ export function PostDetailPage() {
             posts={[post]}
             onMapClick={() => undefined}
             onMarkerClick={() => undefined}
+            currentUserUid={currentUser?.uid}
           />
           <div className="info-panel">
             <h2>기록 정보</h2>
