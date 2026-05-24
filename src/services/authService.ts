@@ -1,6 +1,8 @@
 import {
   createUserWithEmailAndPassword,
+  OAuthProvider,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updateProfile,
   type User,
@@ -22,6 +24,20 @@ export async function signupWithEmail(
 
 export async function loginWithEmail(email: string, password: string): Promise<User> {
   const credential = await signInWithEmailAndPassword(requireAuth(), email, password)
+  await upsertUserProfile(credential.user)
+
+  return credential.user
+}
+
+export async function loginWithKakao(): Promise<User> {
+  const providerId = import.meta.env.VITE_FIREBASE_KAKAO_PROVIDER_ID || 'oidc.kakao'
+  const provider = new OAuthProvider(providerId)
+  provider.addScope('openid')
+  provider.addScope('profile_nickname')
+  provider.addScope('profile_image')
+  provider.addScope('account_email')
+
+  const credential = await signInWithPopup(requireAuth(), provider)
   await upsertUserProfile(credential.user)
 
   return credential.user

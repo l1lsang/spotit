@@ -1,4 +1,4 @@
-import { CalendarDays, Lock, MapPin, UserRound } from 'lucide-react'
+import { CalendarDays, Lock, MapPin, UsersRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDateKey } from '../../lib/date'
@@ -29,8 +29,12 @@ export function PostCard({ post, showVisibility = false, actions }: PostCardProp
             <h2>{post.title}</h2>
             {showVisibility && (
               <span className={`pill ${post.visibility === 'private' ? 'private' : ''}`}>
-                {post.visibility === 'private' && <Lock size={13} aria-hidden="true" />}
-                {post.visibility === 'public' ? 'public' : 'private'}
+                {post.visibility === 'private' ? (
+                  <Lock size={13} aria-hidden="true" />
+                ) : (
+                  <UsersRound size={13} aria-hidden="true" />
+                )}
+                {post.visibility === 'private' ? 'private' : 'followers'}
               </span>
             )}
           </div>
@@ -45,7 +49,7 @@ export function PostCard({ post, showVisibility = false, actions }: PostCardProp
               {formatDateKey(post.dateKey)}
             </span>
             <span>
-              <UserRound size={14} aria-hidden="true" />
+              <UsersRound size={14} aria-hidden="true" />
               {post.authorNickname}
             </span>
           </div>

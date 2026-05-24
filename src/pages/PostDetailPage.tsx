@@ -235,7 +235,7 @@ export function PostDetailPage() {
           />
           <div className="info-panel">
             <h2>기록 정보</h2>
-            <p>{post.visibility === 'public' ? '공개 기록' : '비공개 기록'}</p>
+            <p>{post.visibility === 'private' ? '비공개 기록' : '팔로워 공개 기록'}</p>
             <small>작성 {formatTimestamp(post.createdAt)}</small>
           </div>
         </aside>

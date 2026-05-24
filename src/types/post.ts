@@ -1,6 +1,6 @@
 import type { Timestamp } from 'firebase/firestore'
 
-export type PostVisibility = 'public' | 'private'
+export type PostVisibility = 'followers' | 'private' | 'public'
 
 export interface Post {
   id: string

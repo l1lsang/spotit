@@ -1,9 +1,9 @@
-import { KeyRound, Mail } from 'lucide-react'
+import { KeyRound, Mail, MessageCircle } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FirebaseNotice } from '../components/layout/FirebaseNotice'
 import { useAuth } from '../hooks/useAuth'
-import { loginWithEmail } from '../services/authService'
+import { loginWithEmail, loginWithKakao } from '../services/authService'
 
 interface LocationState {
   from?: string
@@ -29,6 +29,24 @@ export function LoginPage() {
       navigate(from, { replace: true })
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : '로그인에 실패했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleKakaoLogin() {
+    setSubmitting(true)
+    setError('')
+
+    try {
+      await loginWithKakao()
+      navigate(from, { replace: true })
+    } catch (loginError) {
+      setError(
+        loginError instanceof Error
+          ? loginError.message
+          : '카카오 로그인에 실패했습니다. Firebase OIDC 설정을 확인해 주세요.',
+      )
     } finally {
       setSubmitting(false)
     }
@@ -85,6 +103,20 @@ export function LoginPage() {
             {submitting ? '로그인 중' : '로그인'}
           </button>
         </form>
+
+        <div className="auth-divider">
+          <span>또는</span>
+        </div>
+
+        <button
+          className="button kakao-button wide"
+          type="button"
+          disabled={!firebaseReady || submitting}
+          onClick={handleKakaoLogin}
+        >
+          <MessageCircle size={18} aria-hidden="true" />
+          카카오로 로그인
+        </button>
 
         <p className="auth-switch">
           계정이 없다면 <Link to="/signup">회원가입</Link>

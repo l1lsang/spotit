@@ -28,7 +28,7 @@ function createInitialForm(initialPost?: Post | null, location?: LatLng | null):
     lat: initialPost?.lat || location?.lat || 0,
     lng: initialPost?.lng || location?.lng || 0,
     dateKey: initialPost?.dateKey || getTodayDateKey(),
-    visibility: initialPost?.visibility || 'public',
+    visibility: initialPost?.visibility === 'public' ? 'followers' : initialPost?.visibility || 'followers',
   }
 }
 
@@ -144,14 +144,14 @@ export function PostFormModal({
             <fieldset className="field">
               <legend>공개 범위</legend>
               <div className="segmented">
-                {(['public', 'private'] as PostVisibility[]).map((visibility) => (
+                {(['followers', 'private'] as PostVisibility[]).map((visibility) => (
                   <button
                     key={visibility}
                     type="button"
                     className={form.visibility === visibility ? 'active' : ''}
                     onClick={() => updateField('visibility', visibility)}
                   >
-                    {visibility === 'public' ? '공개' : '비공개'}
+                    {visibility === 'followers' ? '팔로워 공개' : '비공개'}
                   </button>
                 ))}
               </div>

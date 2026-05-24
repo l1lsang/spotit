@@ -98,12 +98,20 @@ export function MapPage() {
             <LocateFixed size={18} aria-hidden="true" />
             {locationLoading ? '확인 중' : '현재 위치'}
           </button>
-          <span>{loadingPosts ? '기록 불러오는 중' : `${posts.length}개의 기록`}</span>
+          <span>{loadingPosts ? '기록 불러오는 중' : `팔로우 기반 ${posts.length}개의 기록`}</span>
         </div>
 
         {(locationError || error) && <p className="map-error">{locationError || error}</p>}
+        {!currentUser && (
+          <div className="map-floating map-login-prompt">
+            <p>로그인하면 팔로우한 사람들의 핀 위치가 지도에 표시됩니다.</p>
+            <button className="button button-primary" type="button" onClick={() => navigate('/login')}>
+              로그인
+            </button>
+          </div>
+        )}
 
-        {selectedLocation && !isFormOpen && (
+        {selectedLocation && !isFormOpen && currentUser && (
           <div className="map-floating">
             <p>
               선택한 좌표 {selectedLocation.lat.toFixed(5)}, {selectedLocation.lng.toFixed(5)}

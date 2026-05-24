@@ -59,7 +59,17 @@ export function ProfilePage() {
         <div className="profile-avatar">{nickname.slice(0, 1) || 'D'}</div>
         <div>
           <span className="muted-label">이메일</span>
-          <p>{currentUser?.email}</p>
+          <p>{currentUser?.email || '카카오 계정'}</p>
+        </div>
+        <div className="profile-stats">
+          <span>
+            <strong>{profile?.followerCount || 0}</strong>
+            팔로워
+          </span>
+          <span>
+            <strong>{profile?.followingCount || 0}</strong>
+            팔로잉
+          </span>
         </div>
       </section>
 

@@ -1,12 +1,8 @@
 import type { Timestamp } from 'firebase/firestore'
 
-export interface DaymarkUser {
+export interface FollowEdge {
   uid: string
-  email: string
   nickname: string
   photoURL: string
-  followerCount?: number
-  followingCount?: number
   createdAt: Timestamp
-  updatedAt: Timestamp
 }

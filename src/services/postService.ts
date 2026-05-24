@@ -14,7 +14,9 @@ import {
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
+import type { LatLng } from '../lib/kakaoMap'
 import type { Post, PostFormInput } from '../types/post'
+import { getFollowingIds, isFollowing } from './followService'
 import { uploadPostPhotos } from './storageService'
 
 interface AuthorInfo {
@@ -70,6 +72,38 @@ function assertOwner(post: Post, uid: string): void {
   }
 }
 
+function normalizeVisibility(visibility: Post['visibility']): Post['visibility'] {
+  return visibility === 'public' ? 'followers' : visibility
+}
+
+function canFollowerSee(post: Post): boolean {
+  return post.visibility === 'followers' || post.visibility === 'public'
+}
+
+function distanceKm(from: LatLng, to: LatLng): number {
+  const earthRadiusKm = 6371
+  const latDelta = ((to.lat - from.lat) * Math.PI) / 180
+  const lngDelta = ((to.lng - from.lng) * Math.PI) / 180
+  const fromLat = (from.lat * Math.PI) / 180
+  const toLat = (to.lat * Math.PI) / 180
+  const a =
+    Math.sin(latDelta / 2) * Math.sin(latDelta / 2) +
+    Math.cos(fromLat) * Math.cos(toLat) * Math.sin(lngDelta / 2) * Math.sin(lngDelta / 2)
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+async function getPostsByAuthor(uid: string, viewerUid: string): Promise<Post[]> {
+  const postsRef = collection(requireDb(), 'posts')
+  const postsQuery =
+    uid === viewerUid
+      ? query(postsRef, where('uid', '==', uid))
+      : query(postsRef, where('uid', '==', uid), where('visibility', '==', 'followers'))
+  const snapshot = await getDocs(postsQuery)
+
+  return snapshot.docs.map(toPost).filter((post): post is Post => Boolean(post))
+}
+
 export async function createPost(
   input: PostFormInput,
   files: File[],
@@ -84,6 +118,7 @@ export async function createPost(
     uid: author.uid,
     authorNickname: author.nickname,
     ...input,
+    visibility: normalizeVisibility(input.visibility),
     photoUrls,
     likeCount: 0,
     commentCount: 0,
@@ -95,30 +130,41 @@ export async function createPost(
 }
 
 export async function getVisiblePosts(uid?: string, maxCount = 80): Promise<Post[]> {
-  const db = requireDb()
   const posts = new Map<string, Post>()
-  const publicSnapshot = await getDocs(query(collection(db, 'posts'), where('visibility', '==', 'public')))
 
-  publicSnapshot.docs.forEach((snapshot) => {
-    const post = toPost(snapshot)
+  if (!uid) {
+    return []
+  }
 
-    if (post) {
-      posts.set(post.id, post)
+  const followingIds = await getFollowingIds(uid)
+  const authorIds = [uid, ...followingIds]
+  const authorPosts = await Promise.all(
+    authorIds.map((authorUid) => getPostsByAuthor(authorUid, uid)),
+  )
+
+  authorPosts.flat().forEach((post) => {
+    if (post.uid === uid || canFollowerSee(post)) {
+      posts.set(post.id, {
+        ...post,
+        visibility: normalizeVisibility(post.visibility),
+      })
     }
   })
 
-  if (uid) {
-    const mySnapshot = await getDocs(query(collection(db, 'posts'), where('uid', '==', uid)))
-    mySnapshot.docs.forEach((snapshot) => {
-      const post = toPost(snapshot)
-
-      if (post) {
-        posts.set(post.id, post)
-      }
-    })
-  }
-
   return sortPostsByCreatedAtDesc([...posts.values()]).slice(0, maxCount)
+}
+
+export async function getNearbyVisiblePosts(
+  uid: string | undefined,
+  center: LatLng,
+  radiusKm: number,
+  maxCount = 80,
+): Promise<Post[]> {
+  const posts = await getVisiblePosts(uid, 240)
+
+  return posts
+    .filter((post) => distanceKm(center, { lat: post.lat, lng: post.lng }) <= radiusKm)
+    .slice(0, maxCount)
 }
 
 export async function getUserPosts(uid: string): Promise<Post[]> {
@@ -136,11 +182,28 @@ export async function getPostById(postId: string, viewerUid?: string): Promise<P
     return null
   }
 
-  if (post.visibility === 'private' && post.uid !== viewerUid) {
+  const normalizedPost = {
+    ...post,
+    visibility: normalizeVisibility(post.visibility),
+  }
+
+  if (normalizedPost.uid === viewerUid) {
+    return normalizedPost
+  }
+
+  if (!viewerUid) {
     return null
   }
 
-  return post
+  if (normalizedPost.visibility === 'private') {
+    return null
+  }
+
+  if (!(await isFollowing(viewerUid, normalizedPost.uid))) {
+    return null
+  }
+
+  return normalizedPost
 }
 
 export async function updatePost(

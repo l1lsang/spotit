@@ -1,5 +1,5 @@
 import type { User as FirebaseUser } from 'firebase/auth'
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
 import type { DaymarkUser } from '../types/user'
 
@@ -33,6 +33,8 @@ export async function upsertUserProfile(user: FirebaseUser, nickname?: string): 
     await setDoc(userRef, {
       ...baseProfile,
       nickname: nextNickname,
+      followerCount: 0,
+      followingCount: 0,
       createdAt: serverTimestamp(),
     })
   } else {
@@ -56,4 +58,10 @@ export async function updateUserNickname(uid: string, nickname: string): Promise
     nickname: nickname.trim(),
     updatedAt: serverTimestamp(),
   })
+}
+
+export async function listUsers(): Promise<DaymarkUser[]> {
+  const snapshot = await getDocs(collection(requireDb(), 'users'))
+
+  return snapshot.docs.map((userDoc) => userDoc.data() as DaymarkUser)
 }
