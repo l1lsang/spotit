@@ -1,6 +1,8 @@
 import { type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { ChatListPage } from '../pages/ChatListPage'
+import { ChatRoomPage } from '../pages/ChatRoomPage'
 import { FeedPage } from '../pages/FeedPage'
 import { LandingPage } from '../pages/LandingPage'
 import { LoginPage } from '../pages/LoginPage'
@@ -41,6 +43,22 @@ export function AppRouter() {
           element={
             <ProtectedRoute>
               <PeoplePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chats"
+          element={
+            <ProtectedRoute>
+              <ChatListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chats/:chatId"
+          element={
+            <ProtectedRoute>
+              <ChatRoomPage />
             </ProtectedRoute>
           }
         />

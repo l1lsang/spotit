@@ -1,12 +1,15 @@
-import { RefreshCw, Search, UserPlus, UserRoundCheck } from 'lucide-react'
+import { MessageCircle, RefreshCw, Search, UserPlus, UserRoundCheck } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
+import { getOrCreateDirectChat } from '../services/chatService'
 import { followUser, getFollowingIds, unfollowUser } from '../services/followService'
 import { listUsers } from '../services/userService'
 import type { DaymarkUser } from '../types/user'
 
 export function PeoplePage() {
+  const navigate = useNavigate()
   const { currentUser, profile, firebaseReady, refreshProfile } = useAuth()
   const [users, setUsers] = useState<DaymarkUser[]>([])
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
@@ -81,6 +84,19 @@ export function PeoplePage() {
     }
   }
 
+  async function handleStartChat(user: DaymarkUser) {
+    if (!profile) {
+      return
+    }
+
+    try {
+      const chatId = await getOrCreateDirectChat(profile, user)
+      navigate(`/chats/${chatId}`)
+    } catch (chatError) {
+      setError(chatError instanceof Error ? chatError.message : '채팅을 시작하지 못했습니다.')
+    }
+  }
+
   return (
     <PageContainer className="content-page">
       <section className="page-heading">
@@ -124,18 +140,24 @@ export function PeoplePage() {
                     팔로워 {user.followerCount || 0} · 팔로잉 {user.followingCount || 0}
                   </small>
                 </div>
-                <button
-                  className={`button ${isFollowed ? 'button-secondary' : 'button-primary'}`}
-                  type="button"
-                  onClick={() => void handleToggleFollow(user)}
-                >
-                  {isFollowed ? (
-                    <UserRoundCheck size={17} aria-hidden="true" />
-                  ) : (
-                    <UserPlus size={17} aria-hidden="true" />
-                  )}
-                  {isFollowed ? '팔로잉' : '팔로우'}
-                </button>
+                <div className="person-actions">
+                  <button
+                    className={`button ${isFollowed ? 'button-secondary' : 'button-primary'}`}
+                    type="button"
+                    onClick={() => void handleToggleFollow(user)}
+                  >
+                    {isFollowed ? (
+                      <UserRoundCheck size={17} aria-hidden="true" />
+                    ) : (
+                      <UserPlus size={17} aria-hidden="true" />
+                    )}
+                    {isFollowed ? '팔로잉' : '팔로우'}
+                  </button>
+                  <button className="button button-secondary" type="button" onClick={() => void handleStartChat(user)}>
+                    <MessageCircle size={17} aria-hidden="true" />
+                    채팅
+                  </button>
+                </div>
               </article>
             )
           })}

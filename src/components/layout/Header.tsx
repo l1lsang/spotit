@@ -21,6 +21,7 @@ export function Header() {
         <NavLink to="/map">지도</NavLink>
         <NavLink to="/feed">피드</NavLink>
         {currentUser && <NavLink to="/people">사람</NavLink>}
+        {currentUser && <NavLink to="/chats">채팅</NavLink>}
         {currentUser ? (
           <NavLink to="/profile">{profile?.nickname || '프로필'}</NavLink>
         ) : (

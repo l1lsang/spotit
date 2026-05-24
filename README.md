@@ -75,6 +75,8 @@ users/{uid}/following/{targetUid}
 posts/{postId}
 posts/{postId}/comments/{commentId}
 posts/{postId}/likes/{uid}
+chats/{chatId}
+chats/{chatId}/messages/{messageId}
 ```
 
 `users/{uid}`
@@ -117,6 +119,33 @@ posts/{postId}/likes/{uid}
 
 팔로우 기반 지도 조회를 위해 Firestore에서 `posts` 컬렉션에 `uid` + `visibility` 복합 인덱스가 필요할 수 있습니다. 콘솔에 인덱스 생성 안내가 뜨면 해당 링크로 생성하면 됩니다.
 
+`chats/{chatId}`
+
+```ts
+{
+  id: string
+  participantIds: string[]
+  participants: Record<string, { uid: string; nickname: string; photoURL: string }>
+  lastMessage: string
+  lastMessageAt: Timestamp
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+`chats/{chatId}/messages/{messageId}`
+
+```ts
+{
+  id: string
+  chatId: string
+  uid: string
+  authorNickname: string
+  content: string
+  createdAt: Timestamp
+}
+```
+
 ## Firestore 보안 규칙 예시
 
 ```js
@@ -142,6 +171,10 @@ service cloud.firestore {
 
     function postPath(postId) {
       return /databases/$(database)/documents/posts/$(postId);
+    }
+
+    function chatPath(chatId) {
+      return /databases/$(database)/documents/chats/$(chatId);
     }
 
     function canReadPost(postData) {
@@ -224,6 +257,32 @@ service cloud.firestore {
           && request.auth.uid == uid;
       }
     }
+
+    match /chats/{chatId} {
+      allow read: if signedIn()
+        && request.auth.uid in resource.data.participantIds;
+
+      allow create: if signedIn()
+        && request.auth.uid in request.resource.data.participantIds
+        && request.resource.data.participantIds.size() == 2;
+
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.participantIds
+        && request.resource.data.participantIds == resource.data.participantIds;
+
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if signedIn()
+          && request.auth.uid in get(chatPath(chatId)).data.participantIds;
+
+        allow create: if signedIn()
+          && request.resource.data.uid == request.auth.uid
+          && request.auth.uid in get(chatPath(chatId)).data.participantIds;
+
+        allow update, delete: if false;
+      }
+    }
   }
 }
 ```
@@ -260,8 +319,8 @@ Vercel 기준:
 
 ## 모바일 앱 확장 구조
 
-- `src/types`: 사용자, 팔로우, 기록, 댓글 타입
-- `src/services`: Auth, User, Follow, Post, Comment, Like, Storage 서비스
+- `src/types`: 사용자, 팔로우, 채팅, 기록, 댓글 타입
+- `src/services`: Auth, User, Follow, Chat, Post, Comment, Like, Storage 서비스
 - `src/contexts/AuthContext.tsx`: 로그인 상태 관리
 - `src/lib/firebase.ts`: Firebase 초기화 단일 진입점
 - `src/lib/kakaoMap.ts`: 웹 Kakao Map SDK 래퍼
