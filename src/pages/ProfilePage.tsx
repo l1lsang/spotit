@@ -1,15 +1,19 @@
-import { LogOut, Save } from 'lucide-react'
+import { updateProfile } from 'firebase/auth'
+import { Camera, LogOut, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
 import { logout } from '../services/authService'
-import { updateUserNickname } from '../services/userService'
+import { uploadProfilePhoto } from '../services/storageService'
+import { updateUserNickname, updateUserPhotoURL } from '../services/userService'
 
 export function ProfilePage() {
   const navigate = useNavigate()
   const { currentUser, profile, refreshProfile } = useAuth()
   const [nickname, setNickname] = useState(profile?.nickname || '')
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -17,6 +21,14 @@ export function ProfilePage() {
   useEffect(() => {
     setNickname(profile?.nickname || '')
   }, [profile?.nickname])
+
+  useEffect(() => {
+    return () => {
+      if (photoPreview) {
+        URL.revokeObjectURL(photoPreview)
+      }
+    }
+  }, [photoPreview])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -30,14 +42,48 @@ export function ProfilePage() {
     setMessage('')
 
     try {
+      let uploadedPhotoURL = ''
+
+      if (photoFile) {
+        uploadedPhotoURL = await uploadProfilePhoto(currentUser.uid, photoFile)
+        await updateUserPhotoURL(currentUser.uid, uploadedPhotoURL)
+      }
+
+      await updateProfile(currentUser, {
+        displayName: nickname.trim(),
+        ...(uploadedPhotoURL ? { photoURL: uploadedPhotoURL } : {}),
+      })
       await updateUserNickname(currentUser.uid, nickname)
       await refreshProfile()
-      setMessage('닉네임을 저장했습니다.')
+      setPhotoFile(null)
+      setPhotoPreview('')
+      setMessage(photoFile ? '프로필을 저장했습니다.' : '닉네임을 저장했습니다.')
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : '프로필 저장에 실패했습니다.')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+      return
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setError('이미지 파일만 업로드할 수 있습니다.')
+      return
+    }
+
+    if (photoPreview) {
+      URL.revokeObjectURL(photoPreview)
+    }
+
+    setError('')
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
   }
 
   async function handleLogout() {
@@ -56,7 +102,15 @@ export function ProfilePage() {
       </section>
 
       <section className="profile-panel">
-        <div className="profile-avatar">{nickname.slice(0, 1) || 'D'}</div>
+        {profile?.photoURL || photoPreview ? (
+          <img
+            className="profile-photo"
+            src={photoPreview || profile?.photoURL}
+            alt={`${nickname || '사용자'} 프로필 사진`}
+          />
+        ) : (
+          <div className="profile-avatar">{nickname.slice(0, 1) || 'D'}</div>
+        )}
         <div>
           <span className="muted-label">이메일</span>
           <p>{currentUser?.email || '카카오 계정'}</p>
@@ -74,6 +128,12 @@ export function ProfilePage() {
       </section>
 
       <form className="form profile-form" onSubmit={handleSubmit}>
+        <label className="profile-photo-picker">
+          <Camera size={18} aria-hidden="true" />
+          <span>{photoFile ? photoFile.name : '프로필 사진 변경'}</span>
+          <input type="file" accept="image/*" onChange={handlePhotoChange} />
+        </label>
+
         <label className="field">
           <span>닉네임</span>
           <input

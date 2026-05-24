@@ -1211,6 +1211,15 @@ img {
   font-weight: 900;
 }
 
+.profile-photo {
+  width: 62px;
+  height: 62px;
+  border: 2px solid #fff;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 6px 18px rgba(79, 64, 45, 0.14);
+}
+
 .profile-avatar.small {
   width: 48px;
   height: 48px;
@@ -1248,6 +1257,26 @@ img {
 
 .profile-form {
   padding: 18px;
+}
+
+.profile-photo-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  border: 1px dashed #d9c9b3;
+  border-radius: 8px;
+  color: var(--muted);
+  background: #fffaf2;
+  font-weight: 800;
+}
+
+.profile-photo-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
 }
 
 @media (max-width: 860px) {

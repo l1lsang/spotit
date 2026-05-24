@@ -25,13 +25,13 @@ export async function upsertUserProfile(user: FirebaseUser, nickname?: string): 
   const baseProfile = {
     uid: user.uid,
     email: user.email || '',
-    photoURL: user.photoURL || '',
     updatedAt: serverTimestamp(),
   }
 
   if (!snapshot.exists()) {
     await setDoc(userRef, {
       ...baseProfile,
+      photoURL: user.photoURL || '',
       nickname: nextNickname,
       followerCount: 0,
       followingCount: 0,
@@ -42,6 +42,7 @@ export async function upsertUserProfile(user: FirebaseUser, nickname?: string): 
       userRef,
       {
         ...baseProfile,
+        ...(user.photoURL ? { photoURL: user.photoURL } : {}),
         ...(nickname ? { nickname: nextNickname } : {}),
       },
       { merge: true },
@@ -56,6 +57,13 @@ export async function upsertUserProfile(user: FirebaseUser, nickname?: string): 
 export async function updateUserNickname(uid: string, nickname: string): Promise<void> {
   await updateDoc(doc(requireDb(), 'users', uid), {
     nickname: nickname.trim(),
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export async function updateUserPhotoURL(uid: string, photoURL: string): Promise<void> {
+  await updateDoc(doc(requireDb(), 'users', uid), {
+    photoURL,
     updatedAt: serverTimestamp(),
   })
 }
