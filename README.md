@@ -318,6 +318,7 @@ Vercel 기준:
 3. Environment Variables에 `.env.example`의 값을 등록합니다.
 4. Build Command는 `npm run build`, Output Directory는 `dist`를 사용합니다.
 5. Kakao Developers Web 플랫폼과 Firebase Auth OIDC 설정에 Vercel 배포 도메인을 추가합니다.
+6. `vercel.json`의 SPA rewrite 설정으로 `/feed`, `/profile`, `/chats/:id` 같은 경로에서 새로고침해도 `index.html`이 로드됩니다.
 
 ## 모바일 앱 확장 구조
 
