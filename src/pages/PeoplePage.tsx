@@ -132,7 +132,11 @@ export function PeoplePage() {
 
             return (
               <article className="person-card" key={user.uid}>
-                <div className="profile-avatar small">{user.nickname.slice(0, 1) || 'D'}</div>
+                {user.photoURL ? (
+                  <img className="profile-photo small" src={user.photoURL} alt={`${user.nickname} 프로필`} />
+                ) : (
+                  <div className="profile-avatar small">{user.nickname.slice(0, 1) || 'D'}</div>
+                )}
                 <div className="person-info">
                   <h2>{user.nickname}</h2>
                   <p>{user.email || '카카오 계정'}</p>

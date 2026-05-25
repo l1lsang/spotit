@@ -91,6 +91,10 @@ export async function unfollowUser(currentUid: string, targetUid: string): Promi
   await batch.commit()
 }
 
+export async function removeFollower(ownerUid: string, followerUid: string): Promise<void> {
+  await unfollowUser(followerUid, ownerUid)
+}
+
 export async function getFollowingIds(uid: string): Promise<string[]> {
   const snapshot = await getDocs(collection(requireDb(), 'users', uid, 'following'))
 

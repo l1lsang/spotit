@@ -1692,6 +1692,11 @@ img {
   font-size: 1.2rem;
 }
 
+.profile-photo.small {
+  width: 48px;
+  height: 48px;
+}
+
 .profile-panel p {
   margin: 5px 0 0;
   font-weight: 800;
@@ -1703,7 +1708,7 @@ img {
   margin-left: auto;
 }
 
-.profile-stats span {
+.profile-stats button {
   display: grid;
   justify-items: center;
   min-width: 72px;
@@ -1714,6 +1719,11 @@ img {
   background: #fffaf2;
   font-size: 0.82rem;
   font-weight: 800;
+}
+
+.profile-stats button:hover {
+  border-color: #f0c5b8;
+  background: #fff2ea;
 }
 
 .profile-stats strong {
@@ -1743,6 +1753,36 @@ img {
   width: 1px;
   height: 1px;
   opacity: 0;
+}
+
+.follow-modal {
+  width: min(520px, 100%);
+}
+
+.follow-list {
+  display: grid;
+  gap: 10px;
+}
+
+.follow-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffefa;
+}
+
+.follow-row .button {
+  min-width: 112px;
+}
+
+.follow-empty {
+  margin: 22px 0 4px;
+  color: var(--muted);
+  text-align: center;
 }
 
 @media (max-width: 860px) {
@@ -1882,5 +1922,14 @@ img {
 
   .profile-stats {
     margin-left: 0;
+  }
+
+  .follow-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .follow-row .button {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 }

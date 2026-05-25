@@ -1,12 +1,25 @@
 import { updateProfile } from 'firebase/auth'
-import { Camera, LogOut, Save } from 'lucide-react'
+import { Camera, LogOut, Save, UserMinus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
 import { logout } from '../services/authService'
+import { getFollowers, getFollowing, removeFollower, unfollowUser } from '../services/followService'
 import { uploadProfilePhoto } from '../services/storageService'
 import { updateUserNickname, updateUserPhotoURL } from '../services/userService'
+import type { FollowEdge } from '../types/follow'
+
+type FollowListKind = 'followers' | 'following'
+
+function sortFollowEdgesByCreatedAtDesc(edges: FollowEdge[]): FollowEdge[] {
+  return [...edges].sort((a, b) => {
+    const left = a.createdAt?.toMillis?.() || 0
+    const right = b.createdAt?.toMillis?.() || 0
+
+    return right - left
+  })
+}
 
 export function ProfilePage() {
   const navigate = useNavigate()
@@ -14,6 +27,11 @@ export function ProfilePage() {
   const [nickname, setNickname] = useState(profile?.nickname || '')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
+  const [followListKind, setFollowListKind] = useState<FollowListKind | null>(null)
+  const [followList, setFollowList] = useState<FollowEdge[]>([])
+  const [followListLoading, setFollowListLoading] = useState(false)
+  const [followListError, setFollowListError] = useState('')
+  const [followActionUid, setFollowActionUid] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -91,6 +109,71 @@ export function ProfilePage() {
     navigate('/', { replace: true })
   }
 
+  async function loadFollowList(kind: FollowListKind) {
+    if (!currentUser) {
+      return
+    }
+
+    setFollowListLoading(true)
+    setFollowListError('')
+
+    try {
+      const nextList =
+        kind === 'followers'
+          ? await getFollowers(currentUser.uid)
+          : await getFollowing(currentUser.uid)
+
+      setFollowList(sortFollowEdgesByCreatedAtDesc(nextList))
+    } catch (loadError) {
+      setFollowListError(
+        loadError instanceof Error ? loadError.message : '목록을 불러오지 못했습니다.',
+      )
+    } finally {
+      setFollowListLoading(false)
+    }
+  }
+
+  async function handleOpenFollowList(kind: FollowListKind) {
+    setFollowListKind(kind)
+    setFollowList([])
+    await loadFollowList(kind)
+  }
+
+  function handleCloseFollowList() {
+    setFollowListKind(null)
+    setFollowList([])
+    setFollowListError('')
+    setFollowActionUid('')
+  }
+
+  async function handleRemoveFollow(edge: FollowEdge) {
+    if (!currentUser || !followListKind) {
+      return
+    }
+
+    setFollowActionUid(edge.uid)
+    setFollowListError('')
+
+    try {
+      if (followListKind === 'followers') {
+        await removeFollower(currentUser.uid, edge.uid)
+      } else {
+        await unfollowUser(currentUser.uid, edge.uid)
+      }
+
+      setFollowList((previous) => previous.filter((item) => item.uid !== edge.uid))
+      await refreshProfile()
+    } catch (removeError) {
+      setFollowListError(
+        removeError instanceof Error ? removeError.message : '팔로우 관계를 변경하지 못했습니다.',
+      )
+    } finally {
+      setFollowActionUid('')
+    }
+  }
+
+  const followListTitle = followListKind === 'followers' ? '팔로워' : '팔로잉'
+
   return (
     <PageContainer className="content-page profile-page">
       <section className="page-heading">
@@ -116,14 +199,14 @@ export function ProfilePage() {
           <p>{currentUser?.email || '카카오 계정'}</p>
         </div>
         <div className="profile-stats">
-          <span>
+          <button type="button" onClick={() => void handleOpenFollowList('followers')}>
             <strong>{profile?.followerCount || 0}</strong>
-            팔로워
-          </span>
-          <span>
+            <span>팔로워</span>
+          </button>
+          <button type="button" onClick={() => void handleOpenFollowList('following')}>
             <strong>{profile?.followingCount || 0}</strong>
-            팔로잉
-          </span>
+            <span>팔로잉</span>
+          </button>
         </div>
       </section>
 
@@ -158,6 +241,58 @@ export function ProfilePage() {
           </button>
         </div>
       </form>
+
+      {followListKind && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="modal follow-modal" role="dialog" aria-modal="true" aria-labelledby="follow-list-title">
+            <div className="modal-header">
+              <div>
+                <p className="eyebrow">Network</p>
+                <h2 id="follow-list-title">{followListTitle}</h2>
+              </div>
+              <button className="button-icon" type="button" onClick={handleCloseFollowList} aria-label="닫기">
+                <X size={20} aria-hidden="true" />
+              </button>
+            </div>
+
+            {followListError && <p className="form-error">{followListError}</p>}
+            {followListLoading && <p className="follow-empty">목록을 불러오는 중입니다.</p>}
+
+            {!followListLoading && followList.length === 0 ? (
+              <p className="follow-empty">아직 {followListTitle} 목록이 없습니다.</p>
+            ) : (
+              <div className="follow-list">
+                {followList.map((edge) => (
+                  <article className="follow-row" key={edge.uid}>
+                    {edge.photoURL ? (
+                      <img className="chat-avatar" src={edge.photoURL} alt={`${edge.nickname} 프로필`} />
+                    ) : (
+                      <span className="profile-avatar small">{edge.nickname.slice(0, 1) || 'D'}</span>
+                    )}
+                    <div className="person-info">
+                      <h2>{edge.nickname}</h2>
+                      <small>{followListKind === 'followers' ? '나를 팔로우 중' : '내가 팔로우 중'}</small>
+                    </div>
+                    <button
+                      className="button button-secondary"
+                      type="button"
+                      onClick={() => void handleRemoveFollow(edge)}
+                      disabled={followActionUid === edge.uid}
+                    >
+                      <UserMinus size={17} aria-hidden="true" />
+                      {followActionUid === edge.uid
+                        ? '처리 중'
+                        : followListKind === 'followers'
+                          ? '제거'
+                          : '팔로잉 취소'}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
     </PageContainer>
   )
 }
