@@ -1,4 +1,4 @@
-import { LocateFixed, Plus } from 'lucide-react'
+import { LocateFixed, Plus, Search, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -7,9 +7,19 @@ import { MapPostPreview } from '../components/map/MapPostPreview'
 import { PostFormModal, type PostFormSubmitPayload } from '../components/post/PostFormModal'
 import { useAuth } from '../hooks/useAuth'
 import { SEOUL_CITY_HALL, useCurrentLocation } from '../hooks/useCurrentLocation'
-import type { LatLng } from '../lib/kakaoMap'
+import {
+  searchKakaoPlacesByKeyword,
+  type KakaoPlaceSearchResult,
+  type LatLng,
+} from '../lib/kakaoMap'
 import { createPost, getVisiblePosts } from '../services/postService'
 import type { Post, PostFormInput } from '../types/post'
+
+interface SelectedPlacePrefill {
+  placeName: string
+  address: string
+  location: LatLng
+}
 
 export function MapPage() {
   const navigate = useNavigate()
@@ -17,10 +27,15 @@ export function MapPage() {
   const { loading: locationLoading, error: locationError, requestLocation } = useCurrentLocation()
   const [center, setCenter] = useState<LatLng>(SEOUL_CITY_HALL)
   const [selectedLocation, setSelectedLocation] = useState<LatLng | null>(null)
+  const [selectedPlace, setSelectedPlace] = useState<SelectedPlacePrefill | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [loadingPosts, setLoadingPosts] = useState(false)
+  const [placeQuery, setPlaceQuery] = useState('')
+  const [placeResults, setPlaceResults] = useState<KakaoPlaceSearchResult[]>([])
+  const [searchingPlaces, setSearchingPlaces] = useState(false)
+  const [placeSearchMessage, setPlaceSearchMessage] = useState('')
   const [error, setError] = useState('')
 
   const loadPosts = useCallback(async () => {
@@ -53,7 +68,53 @@ export function MapPage() {
 
   function handleMapClick(location: LatLng) {
     setSelectedLocation(location)
+    setSelectedPlace(null)
     setSelectedPost(null)
+  }
+
+  async function handlePlaceSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!placeQuery.trim()) {
+      setPlaceResults([])
+      setPlaceSearchMessage('')
+      return
+    }
+
+    setSearchingPlaces(true)
+    setPlaceSearchMessage('')
+
+    try {
+      const results = await searchKakaoPlacesByKeyword(placeQuery, center)
+      setPlaceResults(results)
+      setPlaceSearchMessage(results.length === 0 ? '검색 결과가 없습니다.' : '')
+    } catch (searchError) {
+      setPlaceResults([])
+      setPlaceSearchMessage(
+        searchError instanceof Error ? searchError.message : '장소 검색에 실패했습니다.',
+      )
+    } finally {
+      setSearchingPlaces(false)
+    }
+  }
+
+  function handleSelectPlace(place: KakaoPlaceSearchResult) {
+    const location = {
+      lat: Number(place.y),
+      lng: Number(place.x),
+    }
+
+    setCenter(location)
+    setSelectedLocation(location)
+    setSelectedPlace({
+      placeName: place.place_name,
+      address: place.road_address_name || place.address_name,
+      location,
+    })
+    setSelectedPost(null)
+    setPlaceQuery(place.place_name)
+    setPlaceResults([])
+    setPlaceSearchMessage('')
   }
 
   async function handleCreatePost(payload: PostFormSubmitPayload) {
@@ -95,6 +156,31 @@ export function MapPage() {
         />
 
         <div className="map-toolbar">
+          <form className="map-search-form" onSubmit={handlePlaceSearch}>
+            <Search size={18} aria-hidden="true" />
+            <input
+              value={placeQuery}
+              onChange={(event) => setPlaceQuery(event.target.value)}
+              placeholder="장소 검색"
+            />
+            {placeQuery && (
+              <button
+                className="button-icon ghost"
+                type="button"
+                onClick={() => {
+                  setPlaceQuery('')
+                  setPlaceResults([])
+                  setPlaceSearchMessage('')
+                }}
+                aria-label="검색어 지우기"
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            )}
+            <button className="button-icon map-search-submit" type="submit" aria-label="검색">
+              <Search size={17} aria-hidden="true" />
+            </button>
+          </form>
           <button className="button button-secondary" type="button" onClick={handleUseCurrentLocation}>
             <LocateFixed size={18} aria-hidden="true" />
             {locationLoading ? '확인 중' : '현재 위치'}
@@ -109,6 +195,24 @@ export function MapPage() {
             </span>
           )}
         </div>
+
+        {(placeResults.length > 0 || placeSearchMessage || searchingPlaces) && (
+          <div className="map-place-results">
+            {searchingPlaces ? (
+              <p>검색 중</p>
+            ) : placeSearchMessage ? (
+              <p>{placeSearchMessage}</p>
+            ) : (
+              placeResults.map((place) => (
+                <button key={place.id} type="button" onClick={() => handleSelectPlace(place)}>
+                  <strong>{place.place_name}</strong>
+                  <span>{place.road_address_name || place.address_name}</span>
+                  {place.distance && <small>{Number(place.distance).toLocaleString()}m</small>}
+                </button>
+              ))
+            )}
+          </div>
+        )}
 
         {(locationError || error) && <p className="map-error">{locationError || error}</p>}
         {!currentUser && (
@@ -145,6 +249,7 @@ export function MapPage() {
         isOpen={isFormOpen}
         mode="create"
         location={selectedLocation}
+        placePrefill={selectedPlace}
         onClose={() => setIsFormOpen(false)}
         onSubmit={handleCreatePost}
       />

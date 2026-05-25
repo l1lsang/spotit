@@ -24,5 +24,7 @@ export interface ChatMessage {
   uid: string
   authorNickname: string
   content: string
+  photoUrl?: string
+  photoName?: string
   createdAt?: Timestamp
 }

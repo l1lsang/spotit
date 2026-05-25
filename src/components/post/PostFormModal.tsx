@@ -14,19 +14,30 @@ interface PostFormModalProps {
   isOpen: boolean
   mode: 'create' | 'edit'
   location?: LatLng | null
+  placePrefill?: {
+    placeName: string
+    address: string
+    location: LatLng
+  } | null
   initialPost?: Post | null
   onClose: () => void
   onSubmit: (payload: PostFormSubmitPayload) => Promise<void>
 }
 
-function createInitialForm(initialPost?: Post | null, location?: LatLng | null): PostFormInput {
+function createInitialForm(
+  initialPost?: Post | null,
+  location?: LatLng | null,
+  placePrefill?: PostFormModalProps['placePrefill'],
+): PostFormInput {
+  const fallbackLocation = placePrefill?.location || location
+
   return {
     title: initialPost?.title || '',
     content: initialPost?.content || '',
-    placeName: initialPost?.placeName || '',
-    address: initialPost?.address || '',
-    lat: initialPost?.lat || location?.lat || 0,
-    lng: initialPost?.lng || location?.lng || 0,
+    placeName: initialPost?.placeName || placePrefill?.placeName || '',
+    address: initialPost?.address || placePrefill?.address || '',
+    lat: initialPost?.lat ?? fallbackLocation?.lat ?? 0,
+    lng: initialPost?.lng ?? fallbackLocation?.lng ?? 0,
     dateKey: initialPost?.dateKey || getTodayDateKey(),
     visibility: initialPost?.visibility === 'public' ? 'followers' : initialPost?.visibility || 'followers',
   }
@@ -36,11 +47,12 @@ export function PostFormModal({
   isOpen,
   mode,
   location,
+  placePrefill = null,
   initialPost = null,
   onClose,
   onSubmit,
 }: PostFormModalProps) {
-  const [form, setForm] = useState<PostFormInput>(() => createInitialForm(initialPost, location))
+  const [form, setForm] = useState<PostFormInput>(() => createInitialForm(initialPost, location, placePrefill))
   const [files, setFiles] = useState<File[]>([])
   const [existingPhotoUrls, setExistingPhotoUrls] = useState<string[]>([])
   const [error, setError] = useState('')
@@ -51,11 +63,11 @@ export function PostFormModal({
       return
     }
 
-    setForm(createInitialForm(initialPost, location))
+    setForm(createInitialForm(initialPost, location, placePrefill))
     setFiles([])
     setExistingPhotoUrls(initialPost?.photoUrls || [])
     setError('')
-  }, [initialPost, isOpen, location])
+  }, [initialPost, isOpen, location, placePrefill])
 
   if (!isOpen) {
     return null

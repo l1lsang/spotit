@@ -21,6 +21,11 @@ import type { DaymarkUser } from '../types/user'
 
 type ChatPerson = Pick<DaymarkUser, 'uid' | 'nickname' | 'photoURL'>
 
+interface ChatAttachmentInput {
+  photoUrl?: string
+  photoName?: string
+}
+
 interface TimestampLike {
   toMillis: () => number
 }
@@ -194,10 +199,12 @@ export async function sendChatMessage(
   chatId: string,
   author: Pick<DaymarkUser, 'uid' | 'nickname'>,
   content: string,
+  attachment: ChatAttachmentInput = {},
 ): Promise<void> {
   const trimmed = content.trim()
+  const hasPhoto = Boolean(attachment.photoUrl)
 
-  if (!trimmed) {
+  if (!trimmed && !hasPhoto) {
     return
   }
 
@@ -205,6 +212,7 @@ export async function sendChatMessage(
   const chatRef = doc(db, 'chats', chatId)
   const messageRef = doc(collection(db, 'chats', chatId, 'messages'))
   const batch = writeBatch(db)
+  const lastMessage = trimmed || '사진을 보냈습니다.'
 
   batch.set(messageRef, {
     id: messageRef.id,
@@ -212,10 +220,12 @@ export async function sendChatMessage(
     uid: author.uid,
     authorNickname: author.nickname,
     content: trimmed,
+    photoUrl: attachment.photoUrl || '',
+    photoName: attachment.photoName || '',
     createdAt: serverTimestamp(),
   })
   batch.update(chatRef, {
-    lastMessage: trimmed,
+    lastMessage,
     lastMessageUid: author.uid,
     lastMessageAt: serverTimestamp(),
     [`readAtBy.${author.uid}`]: serverTimestamp(),

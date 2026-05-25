@@ -281,6 +281,11 @@ img {
   color: var(--muted);
 }
 
+.button-icon.ghost {
+  color: var(--muted);
+  background: transparent;
+}
+
 .button-icon.danger {
   color: var(--danger);
 }
@@ -666,6 +671,36 @@ img {
   gap: 10px;
 }
 
+.map-search-form {
+  display: grid;
+  grid-template-columns: auto minmax(120px, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  width: min(380px, calc(100vw - 36px));
+  min-height: 42px;
+  padding: 0 5px 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
+
+.map-search-form input {
+  min-width: 0;
+  height: 40px;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  outline: none;
+}
+
+.map-search-submit {
+  color: #fffaf4;
+  background: var(--accent);
+}
+
 .map-toolbar span,
 .map-floating,
 .map-preview {
@@ -739,6 +774,61 @@ img {
   left: 18px;
   z-index: 5;
   max-width: min(420px, calc(100% - 36px));
+}
+
+.map-place-results {
+  position: absolute;
+  top: 72px;
+  left: 18px;
+  z-index: 8;
+  display: grid;
+  width: min(380px, calc(100% - 36px));
+  max-height: min(360px, calc(100% - 120px));
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.98);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
+
+.map-place-results p {
+  margin: 0;
+  padding: 14px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.map-place-results button {
+  display: grid;
+  gap: 4px;
+  padding: 13px 14px;
+  border: 0;
+  border-bottom: 1px solid rgba(234, 223, 206, 0.8);
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+}
+
+.map-place-results button:last-child {
+  border-bottom: 0;
+}
+
+.map-place-results button:hover {
+  background: #fff5ed;
+}
+
+.map-place-results span,
+.map-place-results small {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-place-results small {
+  color: var(--accent-strong);
+  font-weight: 900;
 }
 
 .map-floating {
@@ -1123,6 +1213,26 @@ img {
   background: var(--accent);
 }
 
+.message-photo-link {
+  display: block;
+  width: fit-content;
+  max-width: min(270px, 100%);
+}
+
+.message-photo {
+  width: 100%;
+  max-height: 300px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  object-fit: cover;
+  background: #efe6d7;
+  box-shadow: 0 8px 18px rgba(79, 64, 45, 0.08);
+}
+
+.message-row.mine .message-photo {
+  border-color: #f0c5b8;
+}
+
 .message-meta {
   display: flex;
   gap: 6px;
@@ -1140,15 +1250,63 @@ img {
 
 .message-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
   padding: 14px;
   border-top: 1px solid var(--line);
   background: var(--surface);
 }
 
+.message-attachment-preview {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf2;
+}
+
+.message-attachment-preview img {
+  width: 62px;
+  height: 62px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.message-photo-picker,
+.message-send-button {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+}
+
+.message-photo-picker {
+  position: relative;
+  overflow: hidden;
+}
+
+.message-photo-picker input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.message-send-button {
+  color: #fffaf4;
+  background: var(--accent);
+  box-shadow: 0 10px 24px rgba(232, 103, 79, 0.22);
+}
+
 .message-form textarea {
   width: 100%;
+  min-height: 44px;
+  max-height: 120px;
   resize: none;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1602,6 +1760,14 @@ img {
     min-height: 520px;
   }
 
+  .map-toolbar {
+    right: 18px;
+  }
+
+  .map-search-form {
+    width: 100%;
+  }
+
   .map-floating {
     left: 18px;
     flex-direction: column;
@@ -1664,8 +1830,7 @@ img {
   .profile-actions,
   .detail-actions,
   .feed-controls,
-  .person-actions,
-  .message-form {
+  .person-actions {
     display: grid;
     grid-template-columns: 1fr;
   }
@@ -1685,6 +1850,23 @@ img {
 
   .message-row {
     max-width: 88%;
+  }
+
+  .message-form {
+    padding: 10px;
+  }
+
+  .map-toolbar {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+  }
+
+  .map-place-results {
+    top: 112px;
+    left: 12px;
+    width: calc(100% - 24px);
+    max-height: 280px;
   }
 
   .profile-panel {

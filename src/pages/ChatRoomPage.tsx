@@ -1,4 +1,4 @@
-import { ArrowLeft, SendHorizonal } from 'lucide-react'
+import { ArrowLeft, ImagePlus, SendHorizonal, X } from 'lucide-react'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -11,6 +11,7 @@ import {
   subscribeToChat,
   subscribeToChatMessages,
 } from '../services/chatService'
+import { uploadChatPhoto } from '../services/storageService'
 import type { ChatMessage, DaymarkChat } from '../types/chat'
 
 function isMessageReadByOther(message: ChatMessage, chat: DaymarkChat, currentUid: string): boolean {
@@ -31,6 +32,8 @@ export function ChatRoomPage() {
   const [chat, setChat] = useState<DaymarkChat | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [content, setContent] = useState('')
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
@@ -98,10 +101,22 @@ export function ChatRoomPage() {
     })
   }, [messages])
 
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreviewUrl('')
+      return undefined
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(photoFile)
+    setPhotoPreviewUrl(nextPreviewUrl)
+
+    return () => URL.revokeObjectURL(nextPreviewUrl)
+  }, [photoFile])
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!chat || !profile || !content.trim()) {
+    if (!chat || !profile || (!content.trim() && !photoFile)) {
       return
     }
 
@@ -109,8 +124,21 @@ export function ChatRoomPage() {
     setError('')
 
     try {
-      await sendChatMessage(chat.id, profile, content)
+      const photoUrl = photoFile ? await uploadChatPhoto(profile.uid, chat.id, photoFile) : ''
+
+      await sendChatMessage(
+        chat.id,
+        profile,
+        content,
+        photoFile
+          ? {
+              photoUrl,
+              photoName: photoFile.name,
+            }
+          : undefined,
+      )
       setContent('')
+      setPhotoFile(null)
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : '메시지 전송에 실패했습니다.')
     } finally {
@@ -148,6 +176,7 @@ export function ChatRoomPage() {
   }
 
   const other = currentUser && chat ? getOtherParticipant(chat, currentUser.uid) : null
+  const canSend = Boolean(content.trim() || photoFile)
 
   return (
     <PageContainer className="content-page chat-room-page">
@@ -196,7 +225,21 @@ export function ChatRoomPage() {
                       ))}
                     <div className="message-stack">
                       {!isMine && <strong className="message-author">{message.authorNickname}</strong>}
-                      <p className="message-bubble">{message.content}</p>
+                      {message.photoUrl && (
+                        <a
+                          className="message-photo-link"
+                          href={message.photoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <img
+                            className="message-photo"
+                            src={message.photoUrl}
+                            alt={message.photoName || '채팅 사진'}
+                          />
+                        </a>
+                      )}
+                      {message.content && <p className="message-bubble">{message.content}</p>}
                       <div className="message-meta">
                         {isMine && <span>{readByOther ? '읽음' : '보냄'}</span>}
                         <time>{formatChatTime(message.createdAt)}</time>
@@ -210,16 +253,48 @@ export function ChatRoomPage() {
         </div>
 
         <form className="message-form" onSubmit={handleSubmit}>
+          {photoPreviewUrl && (
+            <div className="message-attachment-preview">
+              <img src={photoPreviewUrl} alt={photoFile?.name || '선택한 사진'} />
+              <button
+                className="button-icon subtle"
+                type="button"
+                onClick={() => setPhotoFile(null)}
+                aria-label="선택한 사진 제거"
+                disabled={sending}
+              >
+                <X size={17} aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          <label className="button-icon subtle message-photo-picker" aria-label="사진 첨부">
+            <ImagePlus size={19} aria-hidden="true" />
+            <input
+              type="file"
+              accept="image/*"
+              disabled={sending}
+              onChange={(event) => {
+                const selectedFile = event.target.files?.[0] || null
+                setPhotoFile(selectedFile)
+                event.target.value = ''
+              }}
+            />
+          </label>
           <textarea
-            rows={2}
+            rows={1}
             value={content}
             onChange={(event) => setContent(event.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="메시지를 입력하세요"
+            disabled={sending}
           />
-          <button className="button button-primary" type="submit" disabled={sending || !content.trim()}>
+          <button
+            className="button-icon message-send-button"
+            type="submit"
+            disabled={sending || !canSend}
+            aria-label="전송"
+          >
             <SendHorizonal size={17} aria-hidden="true" />
-            전송
           </button>
         </form>
       </section>

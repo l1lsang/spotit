@@ -31,3 +31,12 @@ export async function uploadProfilePhoto(uid: string, file: File): Promise<strin
 
   return getDownloadURL(snapshot.ref)
 }
+
+export async function uploadChatPhoto(uid: string, chatId: string, file: File): Promise<string> {
+  const storage = requireStorage()
+  const filename = `${Date.now()}-${sanitizeFilename(file.name)}`
+  const storageRef = ref(storage, `chats/${chatId}/${uid}/${filename}`)
+  const snapshot = await uploadBytes(storageRef, file)
+
+  return getDownloadURL(snapshot.ref)
+}
