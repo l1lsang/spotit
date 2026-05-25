@@ -8,6 +8,7 @@ import { LandingPage } from '../pages/LandingPage'
 import { LoginPage } from '../pages/LoginPage'
 import { MapPage } from '../pages/MapPage'
 import { MyPostsPage } from '../pages/MyPostsPage'
+import { NotificationsPage } from '../pages/NotificationsPage'
 import { PeoplePage } from '../pages/PeoplePage'
 import { PostDetailPage } from '../pages/PostDetailPage'
 import { ProfilePage } from '../pages/ProfilePage'
@@ -38,6 +39,14 @@ export function AppRouter() {
         <Route path="/map" element={<MapPage />} />
         <Route path="/feed" element={<FeedPage />} />
         <Route path="/posts/:postId" element={<PostDetailPage />} />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/people"
           element={

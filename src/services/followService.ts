@@ -10,6 +10,7 @@ import {
 import { requireDb } from '../lib/firebase'
 import type { FollowEdge } from '../types/follow'
 import type { DaymarkUser } from '../types/user'
+import { createNotification } from './notificationService'
 
 type FollowPerson = Pick<DaymarkUser, 'uid' | 'nickname' | 'photoURL'>
 
@@ -64,6 +65,15 @@ export async function followUser(currentUser: FollowPerson, targetUser: FollowPe
   })
 
   await batch.commit()
+
+  await createNotification({
+    recipientUid: targetUser.uid,
+    actor: currentUser,
+    type: 'follow',
+    title: '새 팔로워',
+    message: `${currentUser.nickname}님이 나를 팔로우하기 시작했습니다.`,
+    href: '/people',
+  })
 }
 
 export async function unfollowUser(currentUid: string, targetUid: string): Promise<void> {

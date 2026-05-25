@@ -26,6 +26,7 @@ VITE_FIREBASE_PROJECT_ID=
 VITE_FIREBASE_STORAGE_BUCKET=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
+VITE_FIREBASE_MESSAGING_VAPID_KEY=
 VITE_FIREBASE_KAKAO_PROVIDER_ID=oidc.kakao
 VITE_KAKAO_MAP_JS_KEY=
 ```
@@ -319,6 +320,24 @@ Vercel 기준:
 4. Build Command는 `npm run build`, Output Directory는 `dist`를 사용합니다.
 5. Kakao Developers Web 플랫폼과 Firebase Auth OIDC 설정에 Vercel 배포 도메인을 추가합니다.
 6. `vercel.json`의 SPA rewrite 설정으로 `/feed`, `/profile`, `/chats/:id` 같은 경로에서 새로고침해도 `index.html`이 로드됩니다.
+
+## 휴대폰 푸시 알림
+
+웹/PWA 푸시는 Firebase Cloud Messaging을 사용합니다.
+
+1. Firebase Console > Project settings > Cloud Messaging > Web Push certificates에서 VAPID key pair를 생성합니다.
+2. 공개 키를 `VITE_FIREBASE_MESSAGING_VAPID_KEY`에 넣습니다.
+3. Firestore 규칙에서 로그인 사용자가 `users/{uid}/fcmTokens/{tokenId}`를 본인 UID 아래에 생성/삭제할 수 있게 허용합니다.
+4. Cloud Functions 의존성을 설치합니다: `cd functions && npm install`
+5. Functions를 배포합니다: `firebase deploy --only functions`
+
+푸시 전송 흐름:
+
+```text
+앱 액션 -> users/{uid}/notifications/{notificationId} 생성
+Cloud Function -> users/{uid}/fcmTokens 토큰 조회
+Firebase Cloud Messaging -> 휴대폰/PWA 푸시 전송
+```
 
 ## 모바일 앱 확장 구조
 

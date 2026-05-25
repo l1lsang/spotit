@@ -134,6 +134,7 @@ img {
 }
 
 .header-nav a {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -147,6 +148,23 @@ img {
 .header-login {
   color: var(--ink);
   background: #fffdf8;
+}
+
+.notification-nav-link {
+  gap: 5px;
+}
+
+.nav-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: #fffaf4;
+  background: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 900;
 }
 
 .notice {
@@ -364,8 +382,8 @@ img {
   left: 16px;
   z-index: 30;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  max-width: 620px;
+  grid-template-columns: repeat(7, 1fr);
+  max-width: 720px;
   margin: 0 auto;
   padding: 8px;
   border: 1px solid rgba(234, 223, 206, 0.95);
@@ -373,6 +391,30 @@ img {
   background: rgba(255, 253, 248, 0.96);
   box-shadow: var(--shadow);
   backdrop-filter: blur(16px);
+}
+
+.bottom-nav-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.bottom-nav-icon i {
+  position: absolute;
+  top: -7px;
+  right: -12px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 2px solid var(--surface-strong);
+  border-radius: 999px;
+  color: #fffaf4;
+  background: var(--accent);
+  font-size: 0.62rem;
+  font-style: normal;
+  line-height: 1;
 }
 
 .bottom-nav a {
@@ -1760,6 +1802,11 @@ img {
   background: #fffefa;
 }
 
+.comment-main {
+  min-width: 0;
+  flex: 1;
+}
+
 .comment-item strong,
 .comment-item time {
   display: inline-block;
@@ -1777,6 +1824,66 @@ img {
   line-height: 1.55;
 }
 
+.comment-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.text-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.text-action:hover {
+  color: var(--accent-strong);
+}
+
+.reply-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0 0 0 16px;
+  border-left: 2px solid #f0e2d0;
+  list-style: none;
+}
+
+.reply-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid rgba(234, 223, 206, 0.9);
+  border-radius: 8px;
+  background: #fffaf2;
+}
+
+.reply-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.reply-form textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fffefa;
+}
+
+.reply-form .button {
+  justify-self: end;
+}
+
 .comment-form {
   display: grid;
   gap: 10px;
@@ -1789,6 +1896,89 @@ img {
   border-radius: 8px;
   padding: 12px;
   background: #fffefa;
+}
+
+.notification-list {
+  display: grid;
+  gap: 10px;
+}
+
+.push-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.94);
+  box-shadow: 0 10px 26px rgba(79, 64, 45, 0.08);
+}
+
+.push-panel strong {
+  display: block;
+}
+
+.push-panel p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.notification-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 10px 26px rgba(79, 64, 45, 0.08);
+  text-align: left;
+}
+
+.notification-row.unread {
+  border-color: #f0c5b8;
+  background: #fff8f1;
+}
+
+.notification-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  color: var(--accent-strong);
+  background: #fff2ea;
+}
+
+.notification-main {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.notification-main strong,
+.notification-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-main span,
+.notification-main time {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.notification-row i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--accent);
 }
 
 .profile-page {
@@ -2098,5 +2288,13 @@ img {
   .follow-row .button {
     grid-column: 1 / -1;
     width: 100%;
+  }
+
+  .reply-form .button {
+    width: 100%;
+  }
+
+  .push-panel {
+    display: grid;
   }
 }

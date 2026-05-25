@@ -9,7 +9,7 @@ import { useAuth } from '../hooks/useAuth'
 import type { PostComment } from '../types/comment'
 import type { Post, PostFormInput } from '../types/post'
 import { formatDateKey, formatTimestamp } from '../lib/date'
-import { addComment, deleteComment, listComments } from '../services/commentService'
+import { addComment, addReply, deleteComment, deleteReply, listComments } from '../services/commentService'
 import { getLikeStatus, togglePostLike } from '../services/likeService'
 import { deletePost, getPostById, updatePost } from '../services/postService'
 
@@ -56,12 +56,17 @@ export function PostDetailPage() {
   }, [loadDetail])
 
   async function handleToggleLike() {
-    if (!currentUser || !post) {
+    if (!currentUser || !profile || !post) {
       navigate('/login')
       return
     }
 
-    const nextLiked = await togglePostLike(post.id, currentUser.uid)
+    const nextLiked = await togglePostLike(
+      post.id,
+      { uid: currentUser.uid, nickname: profile.nickname, photoURL: profile.photoURL },
+      post.uid,
+      post.title,
+    )
     setLiked(nextLiked)
     setPost({
       ...post,
@@ -81,8 +86,31 @@ export function PostDetailPage() {
       return
     }
 
-    await addComment(post.id, { uid: currentUser.uid, nickname: profile.nickname }, commentContent)
+    await addComment(
+      post.id,
+      post.uid,
+      post.title,
+      { uid: currentUser.uid, nickname: profile.nickname, photoURL: profile.photoURL },
+      commentContent,
+    )
     setCommentContent('')
+    await loadDetail()
+  }
+
+  async function handleAddReply(comment: PostComment, content: string) {
+    if (!currentUser || !profile || !post) {
+      navigate('/login')
+      return
+    }
+
+    await addReply(
+      post.id,
+      post.uid,
+      post.title,
+      comment,
+      { uid: currentUser.uid, nickname: profile.nickname, photoURL: profile.photoURL },
+      content,
+    )
     await loadDetail()
   }
 
@@ -193,6 +221,7 @@ export function PostDetailPage() {
               comments={comments}
               currentUserUid={currentUser?.uid}
               postOwnerUid={post.uid}
+              onReply={handleAddReply}
               onDelete={(commentId) => {
                 if (!currentUser) {
                   navigate('/login')
@@ -200,6 +229,14 @@ export function PostDetailPage() {
                 }
 
                 void deleteComment(post.id, commentId, currentUser.uid, post.uid).then(loadDetail)
+              }}
+              onDeleteReply={(comment, reply) => {
+                if (!currentUser) {
+                  navigate('/login')
+                  return
+                }
+
+                void deleteReply(post.id, comment.id, reply.id, currentUser.uid, post.uid, comment.uid).then(loadDetail)
               }}
             />
 

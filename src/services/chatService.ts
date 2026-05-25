@@ -17,7 +17,9 @@ import {
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
 import type { ChatMessage, ChatParticipant, DaymarkChat } from '../types/chat'
+import type { NotificationActor } from '../types/notification'
 import type { DaymarkUser } from '../types/user'
+import { createNotifications } from './notificationService'
 
 type ChatPerson = Pick<DaymarkUser, 'uid' | 'nickname' | 'photoURL'>
 
@@ -197,7 +199,7 @@ export function subscribeToChatMessages(
 
 export async function sendChatMessage(
   chatId: string,
-  author: Pick<DaymarkUser, 'uid' | 'nickname'>,
+  author: NotificationActor,
   content: string,
   attachment: ChatAttachmentInput = {},
 ): Promise<void> {
@@ -210,6 +212,8 @@ export async function sendChatMessage(
 
   const db = requireDb()
   const chatRef = doc(db, 'chats', chatId)
+  const chatSnapshot = await getDoc(chatRef)
+  const chat = toChat(chatSnapshot)
   const messageRef = doc(collection(db, 'chats', chatId, 'messages'))
   const batch = writeBatch(db)
   const lastMessage = trimmed || '사진을 보냈습니다.'
@@ -233,6 +237,22 @@ export async function sendChatMessage(
   })
 
   await batch.commit()
+
+  if (chat) {
+    await createNotifications(
+      chat.participantIds
+        .filter((participantUid) => participantUid !== author.uid)
+        .map((recipientUid) => ({
+          recipientUid,
+          actor: author,
+          type: 'chat',
+          title: '새 채팅 메시지',
+          message: `${author.nickname}: ${lastMessage}`,
+          href: `/chats/${chatId}`,
+          chatId,
+        })),
+    )
+  }
 }
 
 export async function markChatAsRead(chatId: string, uid: string): Promise<void> {

@@ -121,12 +121,24 @@ export async function deleteUserAccountData(uid: string): Promise<void> {
   const deletedPaths = new Set<string>()
   const userRef = doc(db, 'users', uid)
 
-  const [followersSnapshot, followingSnapshot, postsSnapshot, commentsSnapshot, likesSnapshot, chatsSnapshot] =
-    await Promise.all([
+  const [
+    followersSnapshot,
+    followingSnapshot,
+    notificationsSnapshot,
+    actorNotificationsSnapshot,
+    postsSnapshot,
+    commentsSnapshot,
+    repliesSnapshot,
+    likesSnapshot,
+    chatsSnapshot,
+  ] = await Promise.all([
       getDocs(collection(db, 'users', uid, 'followers')),
       getDocs(collection(db, 'users', uid, 'following')),
+      getDocs(collection(db, 'users', uid, 'notifications')),
+      getDocs(query(collectionGroup(db, 'notifications'), where('actorUid', '==', uid))),
       getDocs(query(collection(db, 'posts'), where('uid', '==', uid))),
       getDocs(query(collectionGroup(db, 'comments'), where('uid', '==', uid))),
+      getDocs(query(collectionGroup(db, 'replies'), where('uid', '==', uid))),
       getDocs(query(collectionGroup(db, 'likes'), where('uid', '==', uid))),
       getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', uid))),
     ])
@@ -155,31 +167,74 @@ export async function deleteUserAccountData(uid: string): Promise<void> {
     )
   })
 
+  notificationsSnapshot.docs.forEach((notificationDoc) => addDeleteOperation(operations, deletedPaths, notificationDoc.ref))
+  actorNotificationsSnapshot.docs.forEach((notificationDoc) =>
+    addDeleteOperation(operations, deletedPaths, notificationDoc.ref),
+  )
+
   await Promise.all(
     postsSnapshot.docs.map(async (postDoc) => {
       const [postCommentsSnapshot, postLikesSnapshot] = await Promise.all([
         getDocs(collection(db, 'posts', postDoc.id, 'comments')),
         getDocs(collection(db, 'posts', postDoc.id, 'likes')),
       ])
+      const postCommentReplySnapshots = await Promise.all(
+        postCommentsSnapshot.docs.map((commentDoc) => getDocs(collection(commentDoc.ref, 'replies'))),
+      )
 
+      postCommentReplySnapshots.forEach((replySnapshot) => {
+        replySnapshot.docs.forEach((replyDoc) => addDeleteOperation(operations, deletedPaths, replyDoc.ref))
+      })
       postCommentsSnapshot.docs.forEach((commentDoc) => addDeleteOperation(operations, deletedPaths, commentDoc.ref))
       postLikesSnapshot.docs.forEach((likeDoc) => addDeleteOperation(operations, deletedPaths, likeDoc.ref))
       addDeleteOperation(operations, deletedPaths, postDoc.ref)
     }),
   )
 
-  commentsSnapshot.docs.forEach((commentDoc) => {
+  const commentReplyEntries = await Promise.all(
+    commentsSnapshot.docs.map(async (commentDoc) => ({
+      commentDoc,
+      repliesSnapshot: await getDocs(collection(commentDoc.ref, 'replies')),
+    })),
+  )
+
+  commentReplyEntries.forEach(({ commentDoc, repliesSnapshot }) => {
     const parentPostRef = commentDoc.ref.parent.parent
 
+    repliesSnapshot.docs.forEach((replyDoc) => addDeleteOperation(operations, deletedPaths, replyDoc.ref))
     addDeleteOperation(operations, deletedPaths, commentDoc.ref)
 
     if (parentPostRef && !myPostIds.has(parentPostRef.id)) {
       operations.push((batch) =>
         batch.update(parentPostRef, {
-          commentCount: increment(-1),
+          commentCount: increment(-(1 + ((commentDoc.data() as { replyCount?: number }).replyCount || 0))),
           updatedAt: serverTimestamp(),
         }),
       )
+    }
+  })
+
+  repliesSnapshot.docs.forEach((replyDoc) => {
+    const parentCommentRef = replyDoc.ref.parent.parent
+    const parentPostRef = parentCommentRef?.parent.parent
+
+    addDeleteOperation(operations, deletedPaths, replyDoc.ref)
+
+    if (
+      parentCommentRef &&
+      parentPostRef &&
+      !deletedPaths.has(parentCommentRef.path) &&
+      !myPostIds.has(parentPostRef.id)
+    ) {
+      operations.push((batch) => {
+        batch.update(parentCommentRef, {
+          replyCount: increment(-1),
+        })
+        batch.update(parentPostRef, {
+          commentCount: increment(-1),
+          updatedAt: serverTimestamp(),
+        })
+      })
     }
   })
 
