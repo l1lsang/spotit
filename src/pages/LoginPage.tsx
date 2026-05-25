@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FirebaseNotice } from '../components/layout/FirebaseNotice'
 import { useAuth } from '../hooks/useAuth'
-import { loginWithEmail, loginWithKakao } from '../services/authService'
+import { loginWithEmail, loginWithKakao, sendPasswordReset } from '../services/authService'
 
 interface LocationState {
   from?: string
@@ -17,6 +17,8 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [resetMessage, setResetMessage] = useState('')
+  const [resetSubmitting, setResetSubmitting] = useState(false)
   const [showThirdPartyPrivacy, setShowThirdPartyPrivacy] = useState(false)
   const from = (location.state as LocationState | null)?.from || '/map'
 
@@ -24,6 +26,7 @@ export function LoginPage() {
     event.preventDefault()
     setSubmitting(true)
     setError('')
+    setResetMessage('')
 
     try {
       await loginWithEmail(email, password)
@@ -38,6 +41,7 @@ export function LoginPage() {
   async function handleKakaoLogin() {
     setSubmitting(true)
     setError('')
+    setResetMessage('')
 
     try {
       await loginWithKakao()
@@ -50,6 +54,29 @@ export function LoginPage() {
       )
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handlePasswordReset() {
+    const trimmedEmail = email.trim()
+
+    if (!trimmedEmail) {
+      setError('비밀번호 재설정 메일을 받을 이메일을 입력해 주세요.')
+      setResetMessage('')
+      return
+    }
+
+    setResetSubmitting(true)
+    setError('')
+    setResetMessage('')
+
+    try {
+      await sendPasswordReset(trimmedEmail)
+      setResetMessage('비밀번호 재설정 메일을 보냈습니다. 메일함을 확인해 주세요.')
+    } catch (resetError) {
+      setError(resetError instanceof Error ? resetError.message : '비밀번호 재설정 메일 발송에 실패했습니다.')
+    } finally {
+      setResetSubmitting(false)
     }
   }
 
@@ -95,9 +122,18 @@ export function LoginPage() {
           </label>
 
           {error && <p className="form-error">{error}</p>}
+          {resetMessage && <p className="form-success">{resetMessage}</p>}
 
           <button className="button button-primary wide" type="submit" disabled={!firebaseReady || submitting}>
             {submitting ? '로그인 중' : '로그인'}
+          </button>
+          <button
+            className="auth-text-button"
+            type="button"
+            disabled={!firebaseReady || resetSubmitting}
+            onClick={() => void handlePasswordReset()}
+          >
+            {resetSubmitting ? '메일 보내는 중' : '비밀번호를 잊으셨나요?'}
           </button>
         </form>
 

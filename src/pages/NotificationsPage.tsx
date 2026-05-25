@@ -18,7 +18,7 @@ import {
 import type { DaymarkNotification } from '../types/notification'
 
 function getNotificationIcon(type: DaymarkNotification['type']) {
-  if (type === 'follow') {
+  if (type === 'follow' || type === 'follow_request') {
     return UserPlus
   }
 

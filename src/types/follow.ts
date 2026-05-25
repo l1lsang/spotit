@@ -6,3 +6,5 @@ export interface FollowEdge {
   photoURL: string
   createdAt: Timestamp
 }
+
+export type FollowRequest = FollowEdge

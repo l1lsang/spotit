@@ -2,6 +2,7 @@ import {
   createUserWithEmailAndPassword,
   deleteUser,
   OAuthProvider,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -28,6 +29,10 @@ export async function loginWithEmail(email: string, password: string): Promise<U
   await upsertUserProfile(credential.user)
 
   return credential.user
+}
+
+export async function sendPasswordReset(email: string): Promise<void> {
+  await sendPasswordResetEmail(requireAuth(), email.trim())
 }
 
 export async function loginWithKakao(): Promise<User> {

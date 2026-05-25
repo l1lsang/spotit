@@ -1,14 +1,22 @@
 import { updateProfile } from 'firebase/auth'
-import { Camera, LogOut, Save, Trash2, UserMinus, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Camera, Check, Lock, LogOut, Save, Trash2, UserMinus, X } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
 import { deleteAccount, logout } from '../services/authService'
-import { getFollowers, getFollowing, removeFollower, unfollowUser } from '../services/followService'
+import {
+  acceptFollowRequest,
+  declineFollowRequest,
+  getFollowers,
+  getFollowing,
+  getIncomingFollowRequests,
+  removeFollower,
+  unfollowUser,
+} from '../services/followService'
 import { uploadProfilePhoto } from '../services/storageService'
-import { updateUserNickname, updateUserPhotoURL } from '../services/userService'
-import type { FollowEdge } from '../types/follow'
+import { updateUserNickname, updateUserPhotoURL, updateUserPrivacy } from '../services/userService'
+import type { FollowEdge, FollowRequest } from '../types/follow'
 
 type FollowListKind = 'followers' | 'following'
 
@@ -25,8 +33,13 @@ export function ProfilePage() {
   const navigate = useNavigate()
   const { currentUser, profile, refreshProfile } = useAuth()
   const [nickname, setNickname] = useState(profile?.nickname || '')
+  const [isPrivate, setIsPrivate] = useState(Boolean(profile?.isPrivate))
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
+  const [followRequests, setFollowRequests] = useState<FollowRequest[]>([])
+  const [followRequestLoading, setFollowRequestLoading] = useState(false)
+  const [followRequestError, setFollowRequestError] = useState('')
+  const [followRequestActionUid, setFollowRequestActionUid] = useState('')
   const [followListKind, setFollowListKind] = useState<FollowListKind | null>(null)
   const [followList, setFollowList] = useState<FollowEdge[]>([])
   const [followListLoading, setFollowListLoading] = useState(false)
@@ -40,7 +53,33 @@ export function ProfilePage() {
 
   useEffect(() => {
     setNickname(profile?.nickname || '')
-  }, [profile?.nickname])
+    setIsPrivate(Boolean(profile?.isPrivate))
+  }, [profile?.isPrivate, profile?.nickname])
+
+  const loadFollowRequests = useCallback(async () => {
+    if (!currentUser) {
+      setFollowRequests([])
+      return
+    }
+
+    setFollowRequestLoading(true)
+    setFollowRequestError('')
+
+    try {
+      const nextRequests = await getIncomingFollowRequests(currentUser.uid)
+      setFollowRequests(sortFollowEdgesByCreatedAtDesc(nextRequests))
+    } catch (loadError) {
+      setFollowRequestError(
+        loadError instanceof Error ? loadError.message : '팔로우 요청을 불러오지 못했습니다.',
+      )
+    } finally {
+      setFollowRequestLoading(false)
+    }
+  }, [currentUser])
+
+  useEffect(() => {
+    void loadFollowRequests()
+  }, [loadFollowRequests])
 
   useEffect(() => {
     return () => {
@@ -74,10 +113,11 @@ export function ProfilePage() {
         ...(uploadedPhotoURL ? { photoURL: uploadedPhotoURL } : {}),
       })
       await updateUserNickname(currentUser.uid, nickname)
+      await updateUserPrivacy(currentUser.uid, isPrivate)
       await refreshProfile()
       setPhotoFile(null)
       setPhotoPreview('')
-      setMessage(photoFile ? '프로필을 저장했습니다.' : '닉네임을 저장했습니다.')
+      setMessage('프로필을 저장했습니다.')
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : '프로필 저장에 실패했습니다.')
     } finally {
@@ -202,6 +242,51 @@ export function ProfilePage() {
     }
   }
 
+  async function handleAcceptFollowRequest(request: FollowRequest) {
+    if (!profile) {
+      return
+    }
+
+    setFollowRequestActionUid(request.uid)
+    setFollowRequestError('')
+    setMessage('')
+
+    try {
+      await acceptFollowRequest(profile, request)
+      setFollowRequests((previous) => previous.filter((item) => item.uid !== request.uid))
+      await refreshProfile()
+      setMessage('팔로우 요청을 승인했습니다.')
+    } catch (acceptError) {
+      setFollowRequestError(
+        acceptError instanceof Error ? acceptError.message : '팔로우 요청을 승인하지 못했습니다.',
+      )
+    } finally {
+      setFollowRequestActionUid('')
+    }
+  }
+
+  async function handleDeclineFollowRequest(request: FollowRequest) {
+    if (!currentUser) {
+      return
+    }
+
+    setFollowRequestActionUid(request.uid)
+    setFollowRequestError('')
+    setMessage('')
+
+    try {
+      await declineFollowRequest(currentUser.uid, request.uid)
+      setFollowRequests((previous) => previous.filter((item) => item.uid !== request.uid))
+      setMessage('팔로우 요청을 거절했습니다.')
+    } catch (declineError) {
+      setFollowRequestError(
+        declineError instanceof Error ? declineError.message : '팔로우 요청을 거절하지 못했습니다.',
+      )
+    } finally {
+      setFollowRequestActionUid('')
+    }
+  }
+
   const followListTitle = followListKind === 'followers' ? '팔로워' : '팔로잉'
 
   return (
@@ -227,6 +312,12 @@ export function ProfilePage() {
         <div>
           <span className="muted-label">이메일</span>
           <p>{currentUser?.email || '카카오 계정'}</p>
+          {profile?.isPrivate && (
+            <span className="private-account-badge">
+              <Lock size={13} aria-hidden="true" />
+              비공개
+            </span>
+          )}
         </div>
         <div className="profile-stats">
           <button type="button" onClick={() => void handleOpenFollowList('followers')}>
@@ -239,6 +330,62 @@ export function ProfilePage() {
           </button>
         </div>
       </section>
+
+      {(profile?.isPrivate || followRequests.length > 0 || followRequestLoading) && (
+        <section className="follow-request-panel">
+          <div className="follow-request-heading">
+            <div>
+              <span className="muted-label">팔로우 요청</span>
+              <strong>{followRequests.length}</strong>
+            </div>
+            <button className="button button-secondary" type="button" onClick={() => void loadFollowRequests()}>
+              새로고침
+            </button>
+          </div>
+
+          {followRequestError && <p className="form-error">{followRequestError}</p>}
+          {followRequestLoading && <p className="follow-empty">요청을 불러오는 중입니다.</p>}
+          {!followRequestLoading && followRequests.length === 0 ? (
+            <p className="follow-empty">대기 중인 요청이 없습니다.</p>
+          ) : (
+            <div className="follow-list">
+              {followRequests.map((request) => (
+                <article className="follow-row request-row" key={request.uid}>
+                  {request.photoURL ? (
+                    <img className="chat-avatar" src={request.photoURL} alt={`${request.nickname} 프로필`} />
+                  ) : (
+                    <span className="profile-avatar small">{request.nickname.slice(0, 1) || 'D'}</span>
+                  )}
+                  <div className="person-info">
+                    <h2>{request.nickname}</h2>
+                    <small>승인 대기 중</small>
+                  </div>
+                  <div className="request-actions">
+                    <button
+                      className="button button-primary"
+                      type="button"
+                      onClick={() => void handleAcceptFollowRequest(request)}
+                      disabled={followRequestActionUid === request.uid}
+                    >
+                      <Check size={17} aria-hidden="true" />
+                      승인
+                    </button>
+                    <button
+                      className="button button-secondary"
+                      type="button"
+                      onClick={() => void handleDeclineFollowRequest(request)}
+                      disabled={followRequestActionUid === request.uid}
+                    >
+                      <X size={17} aria-hidden="true" />
+                      거절
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <form className="form profile-form" onSubmit={handleSubmit}>
         <label className="profile-photo-picker">
@@ -255,6 +402,19 @@ export function ProfilePage() {
             value={nickname}
             onChange={(event) => setNickname(event.target.value)}
           />
+        </label>
+
+        <label className="privacy-setting">
+          <input
+            type="checkbox"
+            checked={isPrivate}
+            onChange={(event) => setIsPrivate(event.target.checked)}
+          />
+          <span>
+            <Lock size={17} aria-hidden="true" />
+            비공개 계정
+          </span>
+          <small>새 팔로우를 승인제로 받기</small>
         </label>
 
         {message && <p className="form-success">{message}</p>}

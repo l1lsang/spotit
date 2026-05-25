@@ -51,6 +51,7 @@ export async function upsertUserProfile(user: FirebaseUser, nickname?: string): 
       ...baseProfile,
       photoURL: user.photoURL || '',
       nickname: nextNickname,
+      isPrivate: false,
       followerCount: 0,
       followingCount: 0,
       createdAt: serverTimestamp(),
@@ -82,6 +83,13 @@ export async function updateUserNickname(uid: string, nickname: string): Promise
 export async function updateUserPhotoURL(uid: string, photoURL: string): Promise<void> {
   await updateDoc(doc(requireDb(), 'users', uid), {
     photoURL,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export async function updateUserPrivacy(uid: string, isPrivate: boolean): Promise<void> {
+  await updateDoc(doc(requireDb(), 'users', uid), {
+    isPrivate,
     updatedAt: serverTimestamp(),
   })
 }
@@ -124,6 +132,8 @@ export async function deleteUserAccountData(uid: string): Promise<void> {
   const [
     followersSnapshot,
     followingSnapshot,
+    incomingFollowRequestsSnapshot,
+    sentFollowRequestsSnapshot,
     notificationsSnapshot,
     actorNotificationsSnapshot,
     postsSnapshot,
@@ -134,6 +144,8 @@ export async function deleteUserAccountData(uid: string): Promise<void> {
   ] = await Promise.all([
       getDocs(collection(db, 'users', uid, 'followers')),
       getDocs(collection(db, 'users', uid, 'following')),
+      getDocs(collection(db, 'users', uid, 'followRequests')),
+      getDocs(collection(db, 'users', uid, 'sentFollowRequests')),
       getDocs(collection(db, 'users', uid, 'notifications')),
       getDocs(query(collectionGroup(db, 'notifications'), where('actorUid', '==', uid))),
       getDocs(query(collection(db, 'posts'), where('uid', '==', uid))),
@@ -165,6 +177,16 @@ export async function deleteUserAccountData(uid: string): Promise<void> {
         updatedAt: serverTimestamp(),
       }),
     )
+  })
+
+  incomingFollowRequestsSnapshot.docs.forEach((requestDoc) => {
+    addDeleteOperation(operations, deletedPaths, requestDoc.ref)
+    addDeleteOperation(operations, deletedPaths, doc(db, 'users', requestDoc.id, 'sentFollowRequests', uid))
+  })
+
+  sentFollowRequestsSnapshot.docs.forEach((requestDoc) => {
+    addDeleteOperation(operations, deletedPaths, requestDoc.ref)
+    addDeleteOperation(operations, deletedPaths, doc(db, 'users', requestDoc.id, 'followRequests', uid))
   })
 
   notificationsSnapshot.docs.forEach((notificationDoc) => addDeleteOperation(operations, deletedPaths, notificationDoc.ref))

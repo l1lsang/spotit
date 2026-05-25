@@ -1,10 +1,18 @@
-import { MessageCircle, RefreshCw, Search, UserPlus, UserRoundCheck, X } from 'lucide-react'
+import { Clock, Lock, MessageCircle, RefreshCw, Search, UserPlus, UserRoundCheck, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
 import { getOrCreateDirectChat } from '../services/chatService'
-import { followUser, getFollowers, getFollowing, getFollowingIds, unfollowUser } from '../services/followService'
+import {
+  cancelFollowRequest,
+  followUser,
+  getFollowers,
+  getFollowing,
+  getFollowingIds,
+  getOutgoingFollowRequestIds,
+  unfollowUser,
+} from '../services/followService'
 import { listUsers } from '../services/userService'
 import type { FollowEdge } from '../types/follow'
 import type { DaymarkUser } from '../types/user'
@@ -25,12 +33,14 @@ export function PeoplePage() {
   const { currentUser, profile, firebaseReady, refreshProfile } = useAuth()
   const [users, setUsers] = useState<DaymarkUser[]>([])
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
+  const [pendingFollowRequestIds, setPendingFollowRequestIds] = useState<Set<string>>(new Set())
   const [followListOwner, setFollowListOwner] = useState<DaymarkUser | null>(null)
   const [followListKind, setFollowListKind] = useState<FollowListKind | null>(null)
   const [followList, setFollowList] = useState<FollowEdge[]>([])
   const [followListLoading, setFollowListLoading] = useState(false)
   const [followListError, setFollowListError] = useState('')
   const [keyword, setKeyword] = useState('')
+  const [followActionUid, setFollowActionUid] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -43,12 +53,14 @@ export function PeoplePage() {
     setError('')
 
     try {
-      const [nextUsers, nextFollowingIds] = await Promise.all([
+      const [nextUsers, nextFollowingIds, nextPendingRequestIds] = await Promise.all([
         listUsers(),
         getFollowingIds(currentUser.uid),
+        getOutgoingFollowRequestIds(currentUser.uid),
       ])
       setUsers(nextUsers.filter((user) => user.uid !== currentUser.uid))
       setFollowingIds(new Set(nextFollowingIds))
+      setPendingFollowRequestIds(new Set(nextPendingRequestIds))
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '사용자 목록을 불러오지 못했습니다.')
     } finally {
@@ -80,6 +92,10 @@ export function PeoplePage() {
     }
 
     const alreadyFollowing = followingIds.has(user.uid)
+    const alreadyRequested = pendingFollowRequestIds.has(user.uid)
+
+    setFollowActionUid(user.uid)
+    setError('')
 
     try {
       if (alreadyFollowing) {
@@ -89,15 +105,29 @@ export function PeoplePage() {
           next.delete(user.uid)
           return next
         })
+      } else if (alreadyRequested) {
+        await cancelFollowRequest(currentUser.uid, user.uid)
+        setPendingFollowRequestIds((previous) => {
+          const next = new Set(previous)
+          next.delete(user.uid)
+          return next
+        })
       } else {
-        await followUser(profile, user)
-        setFollowingIds((previous) => new Set(previous).add(user.uid))
+        const result = await followUser(profile, user)
+
+        if (result === 'requested') {
+          setPendingFollowRequestIds((previous) => new Set(previous).add(user.uid))
+        } else {
+          setFollowingIds((previous) => new Set(previous).add(user.uid))
+        }
       }
 
       await refreshProfile()
       await loadPeople()
     } catch (followError) {
       setError(followError instanceof Error ? followError.message : '팔로우 상태 변경에 실패했습니다.')
+    } finally {
+      setFollowActionUid('')
     }
   }
 
@@ -172,6 +202,14 @@ export function PeoplePage() {
         <div className="people-grid">
           {filteredUsers.map((user) => {
             const isFollowed = followingIds.has(user.uid)
+            const isRequested = pendingFollowRequestIds.has(user.uid)
+            const followButtonLabel = isFollowed
+              ? '팔로잉'
+              : isRequested
+                ? '요청 취소'
+                : user.isPrivate
+                  ? '요청'
+                  : '팔로우'
 
             return (
               <article className="person-card" key={user.uid}>
@@ -181,7 +219,15 @@ export function PeoplePage() {
                   <div className="profile-avatar small">{user.nickname.slice(0, 1) || 'D'}</div>
                 )}
                 <div className="person-info">
-                  <h2>{user.nickname}</h2>
+                  <div className="person-title">
+                    <h2>{user.nickname}</h2>
+                    {user.isPrivate && (
+                      <span className="private-account-badge compact">
+                        <Lock size={12} aria-hidden="true" />
+                        비공개
+                      </span>
+                    )}
+                  </div>
                   <p>{user.email || '카카오 계정'}</p>
                   <div className="person-stats">
                     <button type="button" onClick={() => void handleOpenFollowList(user, 'followers')}>
@@ -194,16 +240,21 @@ export function PeoplePage() {
                 </div>
                 <div className="person-actions">
                   <button
-                    className={`button ${isFollowed ? 'button-secondary' : 'button-primary'}`}
+                    className={`button ${isFollowed || isRequested ? 'button-secondary' : 'button-primary'}`}
                     type="button"
                     onClick={() => void handleToggleFollow(user)}
+                    disabled={followActionUid === user.uid}
                   >
                     {isFollowed ? (
                       <UserRoundCheck size={17} aria-hidden="true" />
+                    ) : isRequested ? (
+                      <Clock size={17} aria-hidden="true" />
+                    ) : user.isPrivate ? (
+                      <Lock size={17} aria-hidden="true" />
                     ) : (
                       <UserPlus size={17} aria-hidden="true" />
                     )}
-                    {isFollowed ? '팔로잉' : '팔로우'}
+                    {followActionUid === user.uid ? '처리 중' : followButtonLabel}
                   </button>
                   <button className="button button-secondary" type="button" onClick={() => void handleStartChat(user)}>
                     <MessageCircle size={17} aria-hidden="true" />
