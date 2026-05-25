@@ -1,0 +1,25 @@
+{
+  "name": "스팟잇",
+  "short_name": "스팟잇",
+  "description": "오늘의 장소를 지도 위에 남기고 나의 하루를 기록하는 감성 지도 SNS",
+  "start_url": "/map",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fbf7ef",
+  "theme_color": "#e8674f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

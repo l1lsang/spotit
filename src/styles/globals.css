@@ -160,6 +160,62 @@ img {
   line-height: 1.5;
 }
 
+.install-prompt {
+  position: fixed;
+  right: 14px;
+  bottom: 96px;
+  left: 14px;
+  z-index: 80;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 13px 44px 13px 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.98);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.install-prompt img {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.install-prompt strong {
+  display: block;
+  font-size: 0.94rem;
+}
+
+.install-prompt p {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.install-close {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 30px;
+  height: 30px;
+}
+
+.install-action {
+  min-height: 38px;
+  padding: 0 13px;
+}
+
 .page {
   width: min(1120px, calc(100% - 32px));
   margin: 0 auto;
@@ -2016,6 +2072,15 @@ img {
     left: 12px;
     width: calc(100% - 24px);
     max-height: 280px;
+  }
+
+  .install-prompt {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .install-action {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   .profile-panel {
