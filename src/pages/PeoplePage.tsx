@@ -1,18 +1,35 @@
-import { MessageCircle, RefreshCw, Search, UserPlus, UserRoundCheck } from 'lucide-react'
+import { MessageCircle, RefreshCw, Search, UserPlus, UserRoundCheck, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
 import { getOrCreateDirectChat } from '../services/chatService'
-import { followUser, getFollowingIds, unfollowUser } from '../services/followService'
+import { followUser, getFollowers, getFollowing, getFollowingIds, unfollowUser } from '../services/followService'
 import { listUsers } from '../services/userService'
+import type { FollowEdge } from '../types/follow'
 import type { DaymarkUser } from '../types/user'
+
+type FollowListKind = 'followers' | 'following'
+
+function sortFollowEdgesByCreatedAtDesc(edges: FollowEdge[]): FollowEdge[] {
+  return [...edges].sort((a, b) => {
+    const left = a.createdAt?.toMillis?.() || 0
+    const right = b.createdAt?.toMillis?.() || 0
+
+    return right - left
+  })
+}
 
 export function PeoplePage() {
   const navigate = useNavigate()
   const { currentUser, profile, firebaseReady, refreshProfile } = useAuth()
   const [users, setUsers] = useState<DaymarkUser[]>([])
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
+  const [followListOwner, setFollowListOwner] = useState<DaymarkUser | null>(null)
+  const [followListKind, setFollowListKind] = useState<FollowListKind | null>(null)
+  const [followList, setFollowList] = useState<FollowEdge[]>([])
+  const [followListLoading, setFollowListLoading] = useState(false)
+  const [followListError, setFollowListError] = useState('')
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -97,6 +114,32 @@ export function PeoplePage() {
     }
   }
 
+  async function handleOpenFollowList(user: DaymarkUser, kind: FollowListKind) {
+    setFollowListOwner(user)
+    setFollowListKind(kind)
+    setFollowList([])
+    setFollowListLoading(true)
+    setFollowListError('')
+
+    try {
+      const nextList = kind === 'followers' ? await getFollowers(user.uid) : await getFollowing(user.uid)
+      setFollowList(sortFollowEdgesByCreatedAtDesc(nextList))
+    } catch (loadError) {
+      setFollowListError(loadError instanceof Error ? loadError.message : '목록을 불러오지 못했습니다.')
+    } finally {
+      setFollowListLoading(false)
+    }
+  }
+
+  function handleCloseFollowList() {
+    setFollowListOwner(null)
+    setFollowListKind(null)
+    setFollowList([])
+    setFollowListError('')
+  }
+
+  const followListTitle = followListKind === 'followers' ? '팔로워' : '팔로잉'
+
   return (
     <PageContainer className="content-page">
       <section className="page-heading">
@@ -140,9 +183,14 @@ export function PeoplePage() {
                 <div className="person-info">
                   <h2>{user.nickname}</h2>
                   <p>{user.email || '카카오 계정'}</p>
-                  <small>
-                    팔로워 {user.followerCount || 0} · 팔로잉 {user.followingCount || 0}
-                  </small>
+                  <div className="person-stats">
+                    <button type="button" onClick={() => void handleOpenFollowList(user, 'followers')}>
+                      팔로워 {user.followerCount || 0}
+                    </button>
+                    <button type="button" onClick={() => void handleOpenFollowList(user, 'following')}>
+                      팔로잉 {user.followingCount || 0}
+                    </button>
+                  </div>
                 </div>
                 <div className="person-actions">
                   <button
@@ -165,6 +213,45 @@ export function PeoplePage() {
               </article>
             )
           })}
+        </div>
+      )}
+
+      {followListOwner && followListKind && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="modal follow-modal" role="dialog" aria-modal="true" aria-labelledby="follow-list-title">
+            <div className="modal-header">
+              <div>
+                <p className="eyebrow">{followListOwner.nickname}</p>
+                <h2 id="follow-list-title">{followListTitle}</h2>
+              </div>
+              <button className="button-icon" type="button" onClick={handleCloseFollowList} aria-label="닫기">
+                <X size={20} aria-hidden="true" />
+              </button>
+            </div>
+
+            {followListError && <p className="form-error">{followListError}</p>}
+            {followListLoading && <p className="follow-empty">목록을 불러오는 중입니다.</p>}
+
+            {!followListLoading && followList.length === 0 ? (
+              <p className="follow-empty">아직 {followListTitle} 목록이 없습니다.</p>
+            ) : (
+              <div className="follow-list">
+                {followList.map((edge) => (
+                  <article className="follow-row view-only" key={edge.uid}>
+                    {edge.photoURL ? (
+                      <img className="chat-avatar" src={edge.photoURL} alt={`${edge.nickname} 프로필`} />
+                    ) : (
+                      <span className="profile-avatar small">{edge.nickname.slice(0, 1) || 'D'}</span>
+                    )}
+                    <div className="person-info">
+                      <h2>{edge.nickname}</h2>
+                      <small>{followListKind === 'followers' ? '팔로워' : '팔로잉'}</small>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       )}
     </PageContainer>
