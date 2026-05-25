@@ -1,7 +1,25 @@
 import type { User as FirebaseUser } from 'firebase/auth'
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import {
+  collection,
+  collectionGroup,
+  doc,
+  getDoc,
+  getDocs,
+  increment,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+  writeBatch,
+  type DocumentReference,
+  type Firestore,
+  type WriteBatch,
+} from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
 import type { DaymarkUser } from '../types/user'
+
+type BatchOperation = (batch: WriteBatch) => void
 
 export function getFallbackNickname(user: Pick<FirebaseUser, 'displayName' | 'email'>): string {
   return user.displayName || user.email?.split('@')[0] || 'daymarker'
@@ -72,4 +90,153 @@ export async function listUsers(): Promise<DaymarkUser[]> {
   const snapshot = await getDocs(collection(requireDb(), 'users'))
 
   return snapshot.docs.map((userDoc) => userDoc.data() as DaymarkUser)
+}
+
+async function commitBatchOperations(db: Firestore, operations: BatchOperation[]): Promise<void> {
+  const chunkSize = 450
+
+  for (let index = 0; index < operations.length; index += chunkSize) {
+    const batch = writeBatch(db)
+    operations.slice(index, index + chunkSize).forEach((operation) => operation(batch))
+    await batch.commit()
+  }
+}
+
+function addDeleteOperation(
+  operations: BatchOperation[],
+  deletedPaths: Set<string>,
+  reference: DocumentReference,
+): void {
+  if (deletedPaths.has(reference.path)) {
+    return
+  }
+
+  deletedPaths.add(reference.path)
+  operations.push((batch) => batch.delete(reference))
+}
+
+export async function deleteUserAccountData(uid: string): Promise<void> {
+  const db = requireDb()
+  const operations: BatchOperation[] = []
+  const deletedPaths = new Set<string>()
+  const userRef = doc(db, 'users', uid)
+
+  const [followersSnapshot, followingSnapshot, postsSnapshot, commentsSnapshot, likesSnapshot, chatsSnapshot] =
+    await Promise.all([
+      getDocs(collection(db, 'users', uid, 'followers')),
+      getDocs(collection(db, 'users', uid, 'following')),
+      getDocs(query(collection(db, 'posts'), where('uid', '==', uid))),
+      getDocs(query(collectionGroup(db, 'comments'), where('uid', '==', uid))),
+      getDocs(query(collectionGroup(db, 'likes'), where('uid', '==', uid))),
+      getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', uid))),
+    ])
+
+  const myPostIds = new Set(postsSnapshot.docs.map((postDoc) => postDoc.id))
+
+  followersSnapshot.docs.forEach((followerDoc) => {
+    addDeleteOperation(operations, deletedPaths, followerDoc.ref)
+    addDeleteOperation(operations, deletedPaths, doc(db, 'users', followerDoc.id, 'following', uid))
+    operations.push((batch) =>
+      batch.update(doc(db, 'users', followerDoc.id), {
+        followingCount: increment(-1),
+        updatedAt: serverTimestamp(),
+      }),
+    )
+  })
+
+  followingSnapshot.docs.forEach((followingDoc) => {
+    addDeleteOperation(operations, deletedPaths, followingDoc.ref)
+    addDeleteOperation(operations, deletedPaths, doc(db, 'users', followingDoc.id, 'followers', uid))
+    operations.push((batch) =>
+      batch.update(doc(db, 'users', followingDoc.id), {
+        followerCount: increment(-1),
+        updatedAt: serverTimestamp(),
+      }),
+    )
+  })
+
+  await Promise.all(
+    postsSnapshot.docs.map(async (postDoc) => {
+      const [postCommentsSnapshot, postLikesSnapshot] = await Promise.all([
+        getDocs(collection(db, 'posts', postDoc.id, 'comments')),
+        getDocs(collection(db, 'posts', postDoc.id, 'likes')),
+      ])
+
+      postCommentsSnapshot.docs.forEach((commentDoc) => addDeleteOperation(operations, deletedPaths, commentDoc.ref))
+      postLikesSnapshot.docs.forEach((likeDoc) => addDeleteOperation(operations, deletedPaths, likeDoc.ref))
+      addDeleteOperation(operations, deletedPaths, postDoc.ref)
+    }),
+  )
+
+  commentsSnapshot.docs.forEach((commentDoc) => {
+    const parentPostRef = commentDoc.ref.parent.parent
+
+    addDeleteOperation(operations, deletedPaths, commentDoc.ref)
+
+    if (parentPostRef && !myPostIds.has(parentPostRef.id)) {
+      operations.push((batch) =>
+        batch.update(parentPostRef, {
+          commentCount: increment(-1),
+          updatedAt: serverTimestamp(),
+        }),
+      )
+    }
+  })
+
+  likesSnapshot.docs.forEach((likeDoc) => {
+    const parentPostRef = likeDoc.ref.parent.parent
+
+    addDeleteOperation(operations, deletedPaths, likeDoc.ref)
+
+    if (parentPostRef && !myPostIds.has(parentPostRef.id)) {
+      operations.push((batch) =>
+        batch.update(parentPostRef, {
+          likeCount: increment(-1),
+          updatedAt: serverTimestamp(),
+        }),
+      )
+    }
+  })
+
+  await Promise.all(
+    chatsSnapshot.docs.map(async (chatDoc) => {
+      const chat = chatDoc.data() as { lastMessageUid?: string }
+      const messagesSnapshot = await getDocs(collection(db, 'chats', chatDoc.id, 'messages'))
+
+      operations.push((batch) =>
+        batch.update(chatDoc.ref, {
+          [`participants.${uid}.nickname`]: '탈퇴한 사용자',
+          [`participants.${uid}.photoURL`]: '',
+          ...(chat.lastMessageUid === uid
+            ? {
+                lastMessage: '탈퇴한 사용자의 메시지입니다.',
+                lastMessageUid: '',
+              }
+            : {}),
+          updatedAt: serverTimestamp(),
+        }),
+      )
+
+      messagesSnapshot.docs.forEach((messageDoc) => {
+        const message = messageDoc.data() as { uid?: string }
+
+        if (message.uid !== uid) {
+          return
+        }
+
+        operations.push((batch) =>
+          batch.update(messageDoc.ref, {
+            uid: 'deleted-user',
+            authorNickname: '탈퇴한 사용자',
+            content: '탈퇴한 사용자의 메시지입니다.',
+            photoUrl: '',
+            photoName: '',
+          }),
+        )
+      })
+    }),
+  )
+
+  addDeleteOperation(operations, deletedPaths, userRef)
+  await commitBatchOperations(db, operations)
 }

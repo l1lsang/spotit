@@ -501,6 +501,64 @@ img {
   box-shadow: 0 10px 22px rgba(77, 61, 0, 0.12);
 }
 
+.privacy-consent {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.privacy-consent-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: fit-content;
+  margin: 0 auto;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.privacy-consent-toggle:hover {
+  color: var(--accent-strong);
+}
+
+.privacy-consent-detail {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf2;
+  color: #5f584e;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.privacy-consent-detail p {
+  margin: 0 0 10px;
+}
+
+.privacy-consent-detail dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.privacy-consent-detail div {
+  display: grid;
+  gap: 3px;
+}
+
+.privacy-consent-detail dt {
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.privacy-consent-detail dd {
+  margin: 0;
+}
+
 .auth-switch a {
   color: var(--accent-strong);
   font-weight: 800;
@@ -1811,6 +1869,22 @@ img {
   margin: 22px 0 4px;
   color: var(--muted);
   text-align: center;
+}
+
+.account-delete-modal {
+  width: min(520px, 100%);
+}
+
+.delete-account-copy {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+  color: #5f584e;
+  line-height: 1.6;
+}
+
+.delete-account-copy p {
+  margin: 0;
 }
 
 @media (max-width: 860px) {

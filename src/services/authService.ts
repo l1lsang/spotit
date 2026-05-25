@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   OAuthProvider,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -8,7 +9,7 @@ import {
   type User,
 } from 'firebase/auth'
 import { requireAuth } from '../lib/firebase'
-import { upsertUserProfile } from './userService'
+import { deleteUserAccountData, upsertUserProfile } from './userService'
 
 export async function signupWithEmail(
   email: string,
@@ -43,4 +44,9 @@ export async function loginWithKakao(): Promise<User> {
 
 export async function logout(): Promise<void> {
   await signOut(requireAuth())
+}
+
+export async function deleteAccount(user: User): Promise<void> {
+  await deleteUserAccountData(user.uid)
+  await deleteUser(user)
 }

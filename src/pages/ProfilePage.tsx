@@ -1,10 +1,10 @@
 import { updateProfile } from 'firebase/auth'
-import { Camera, LogOut, Save, UserMinus, X } from 'lucide-react'
+import { Camera, LogOut, Save, Trash2, UserMinus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
-import { logout } from '../services/authService'
+import { deleteAccount, logout } from '../services/authService'
 import { getFollowers, getFollowing, removeFollower, unfollowUser } from '../services/followService'
 import { uploadProfilePhoto } from '../services/storageService'
 import { updateUserNickname, updateUserPhotoURL } from '../services/userService'
@@ -32,6 +32,8 @@ export function ProfilePage() {
   const [followListLoading, setFollowListLoading] = useState(false)
   const [followListError, setFollowListError] = useState('')
   const [followActionUid, setFollowActionUid] = useState('')
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -107,6 +109,34 @@ export function ProfilePage() {
   async function handleLogout() {
     await logout()
     navigate('/', { replace: true })
+  }
+
+  async function handleDeleteAccount() {
+    if (!currentUser) {
+      return
+    }
+
+    setDeletingAccount(true)
+    setError('')
+    setMessage('')
+
+    try {
+      await deleteAccount(currentUser)
+      navigate('/', { replace: true })
+    } catch (deleteError) {
+      const errorCode = (deleteError as { code?: string }).code
+
+      setError(
+        errorCode === 'auth/requires-recent-login'
+          ? '보안을 위해 최근 로그인 후 다시 탈퇴를 진행해 주세요.'
+          : deleteError instanceof Error
+            ? deleteError.message
+            : '계정 탈퇴에 실패했습니다.',
+      )
+      setIsDeleteOpen(false)
+    } finally {
+      setDeletingAccount(false)
+    }
   }
 
   async function loadFollowList(kind: FollowListKind) {
@@ -239,6 +269,10 @@ export function ProfilePage() {
             <LogOut size={17} aria-hidden="true" />
             로그아웃
           </button>
+          <button className="button button-danger" type="button" onClick={() => setIsDeleteOpen(true)}>
+            <Trash2 size={17} aria-hidden="true" />
+            계정 탈퇴
+          </button>
         </div>
       </form>
 
@@ -290,6 +324,53 @@ export function ProfilePage() {
                 ))}
               </div>
             )}
+          </section>
+        </div>
+      )}
+
+      {isDeleteOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="modal account-delete-modal" role="dialog" aria-modal="true" aria-labelledby="delete-account-title">
+            <div className="modal-header">
+              <div>
+                <p className="eyebrow">Delete account</p>
+                <h2 id="delete-account-title">계정을 탈퇴할까요?</h2>
+              </div>
+              <button
+                className="button-icon"
+                type="button"
+                onClick={() => setIsDeleteOpen(false)}
+                aria-label="닫기"
+                disabled={deletingAccount}
+              >
+                <X size={20} aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="delete-account-copy">
+              <p>탈퇴하면 프로필, 팔로우 관계, 내가 작성한 기록, 댓글, 좋아요가 삭제됩니다.</p>
+              <p>채팅방에 남아 있던 내 메시지는 탈퇴한 사용자 메시지로 익명 처리됩니다.</p>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="button button-secondary"
+                type="button"
+                onClick={() => setIsDeleteOpen(false)}
+                disabled={deletingAccount}
+              >
+                취소
+              </button>
+              <button
+                className="button button-danger"
+                type="button"
+                onClick={() => void handleDeleteAccount()}
+                disabled={deletingAccount}
+              >
+                <Trash2 size={17} aria-hidden="true" />
+                {deletingAccount ? '탈퇴 처리 중' : '탈퇴하기'}
+              </button>
+            </div>
           </section>
         </div>
       )}
