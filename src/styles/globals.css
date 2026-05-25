@@ -91,6 +91,13 @@ img {
   min-width: 0;
 }
 
+.brand-text-logo {
+  width: 132px;
+  height: 42px;
+  object-fit: contain;
+  object-position: left center;
+}
+
 .brand-lockup strong {
   display: block;
   font-size: 1.03rem;

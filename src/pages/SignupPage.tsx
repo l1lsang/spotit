@@ -33,11 +33,7 @@ export function SignupPage() {
     <main className="auth-page">
       <section className="auth-panel">
         <Link className="brand-lockup auth-brand" to="/">
-          <span className="brand-mark">S</span>
-          <span>
-            <strong>스팟잇</strong>
-            <small>오늘, 이곳</small>
-          </span>
+          <img className="brand-text-logo" src="/textlogo.png" alt="스팟잇" />
         </Link>
 
         <FirebaseNotice />

@@ -1,4 +1,4 @@
-import { LogIn, MapPin } from 'lucide-react'
+import { LogIn } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -8,13 +8,7 @@ export function Header() {
   return (
     <header className="site-header">
       <Link className="brand-lockup" to="/map" aria-label="스팟잇 지도 홈">
-        <span className="brand-mark">
-          <MapPin size={20} aria-hidden="true" />
-        </span>
-        <span>
-          <strong>스팟잇</strong>
-          <small>오늘, 이곳</small>
-        </span>
+        <img className="brand-text-logo" src="/textlogo.png" alt="스팟잇" />
       </Link>
 
       <nav className="header-nav" aria-label="주요 메뉴">
