@@ -26,6 +26,7 @@ export function MapPage() {
   const { currentUser, profile, firebaseReady } = useAuth()
   const { loading: locationLoading, error: locationError, requestLocation } = useCurrentLocation()
   const [center, setCenter] = useState<LatLng>(SEOUL_CITY_HALL)
+  const [initialLocationReady, setInitialLocationReady] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<LatLng | null>(null)
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlacePrefill | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
@@ -61,9 +62,31 @@ export function MapPage() {
     void loadPosts()
   }, [loadPosts])
 
+  useEffect(() => {
+    let active = true
+
+    async function centerOnCurrentLocation() {
+      const nextLocation = await requestLocation()
+
+      if (!active) {
+        return
+      }
+
+      setCenter(nextLocation)
+      setInitialLocationReady(true)
+    }
+
+    void centerOnCurrentLocation()
+
+    return () => {
+      active = false
+    }
+  }, [requestLocation])
+
   async function handleUseCurrentLocation() {
     const nextLocation = await requestLocation()
     setCenter(nextLocation)
+    setInitialLocationReady(true)
   }
 
   function handleMapClick(location: LatLng) {
@@ -146,14 +169,23 @@ export function MapPage() {
   return (
     <PageContainer fullBleed className="map-page">
       <div className="map-shell">
-        <KakaoMapView
-          center={center}
-          posts={posts}
-          selectedLocation={selectedLocation}
-          onMapClick={handleMapClick}
-          onMarkerClick={setSelectedPost}
-          currentUserUid={currentUser?.uid}
-        />
+        {initialLocationReady ? (
+          <KakaoMapView
+            center={center}
+            posts={posts}
+            selectedLocation={selectedLocation}
+            onMapClick={handleMapClick}
+            onMarkerClick={setSelectedPost}
+            currentUserUid={currentUser?.uid}
+          />
+        ) : (
+          <section className="kakao-map" aria-label="장소 기록 지도">
+            <div className="map-state">
+              <strong>현재 위치를 확인하는 중입니다.</strong>
+              <p>잠시 후 내 위치를 중심으로 지도를 표시합니다.</p>
+            </div>
+          </section>
+        )}
 
         <div className="map-toolbar">
           <form className="map-search-form" onSubmit={handlePlaceSearch}>

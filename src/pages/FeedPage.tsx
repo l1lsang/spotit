@@ -12,12 +12,18 @@ export function FeedPage() {
   const { currentUser, firebaseReady } = useAuth()
   const { loading: locationLoading, error: locationError, requestLocation } = useCurrentLocation()
   const [center, setCenter] = useState<LatLng>(SEOUL_CITY_HALL)
+  const [initialLocationReady, setInitialLocationReady] = useState(false)
   const [radiusKm, setRadiusKm] = useState(10)
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const loadPosts = useCallback(async () => {
+    if (!initialLocationReady) {
+      setPosts([])
+      return
+    }
+
     if (!firebaseReady || !currentUser) {
       setPosts([])
       return
@@ -33,16 +39,40 @@ export function FeedPage() {
     } finally {
       setLoading(false)
     }
-  }, [center, currentUser, firebaseReady, radiusKm])
+  }, [center, currentUser, firebaseReady, initialLocationReady, radiusKm])
 
   useEffect(() => {
     void loadPosts()
   }, [loadPosts])
 
+  useEffect(() => {
+    let active = true
+
+    async function centerOnCurrentLocation() {
+      const nextLocation = await requestLocation()
+
+      if (!active) {
+        return
+      }
+
+      setCenter(nextLocation)
+      setInitialLocationReady(true)
+    }
+
+    void centerOnCurrentLocation()
+
+    return () => {
+      active = false
+    }
+  }, [requestLocation])
+
   async function handleUseCurrentLocation() {
     const nextLocation = await requestLocation()
     setCenter(nextLocation)
+    setInitialLocationReady(true)
   }
+
+  const waitingForLocation = !initialLocationReady || locationLoading
 
   return (
     <PageContainer className="content-page">
@@ -74,16 +104,19 @@ export function FeedPage() {
 
       {(error || locationError) && <p className="form-error">{error || locationError}</p>}
       {!currentUser && <p className="empty-text">로그인하면 팔로우한 사람들의 인근 기록을 볼 수 있습니다.</p>}
+      {waitingForLocation && <p className="empty-text">현재 위치를 확인하는 중입니다.</p>}
       {loading && <p className="empty-text">기록을 불러오는 중입니다.</p>}
 
-      {!loading && posts.length === 0 ? (
-        <p className="empty-text">아직 볼 수 있는 기록이 없습니다.</p>
-      ) : (
-        <div className="post-grid">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} showVisibility={post.uid === currentUser?.uid} />
-          ))}
-        </div>
+      {!waitingForLocation && !loading && (
+        posts.length === 0 ? (
+          <p className="empty-text">아직 볼 수 있는 기록이 없습니다.</p>
+        ) : (
+          <div className="post-grid">
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} showVisibility={post.uid === currentUser?.uid} />
+            ))}
+          </div>
+        )
       )}
     </PageContainer>
   )
