@@ -1,5 +1,5 @@
 import { updateProfile } from 'firebase/auth'
-import { Camera, Check, Lock, LogOut, Save, Trash2, UserMinus, X } from 'lucide-react'
+import { BookOpen, Camera, Check, Lock, LogOut, Save, Trash2, UserMinus, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -421,6 +421,10 @@ export function ProfilePage() {
         {error && <p className="form-error">{error}</p>}
 
         <div className="profile-actions">
+          <button className="button button-secondary" type="button" onClick={() => navigate('/my')}>
+            <BookOpen size={17} aria-hidden="true" />
+            내 기록
+          </button>
           <button className="button button-primary" type="submit" disabled={submitting}>
             <Save size={17} aria-hidden="true" />
             {submitting ? '저장 중' : '저장'}

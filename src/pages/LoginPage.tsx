@@ -84,7 +84,7 @@ export function LoginPage() {
     <main className="auth-page">
       <section className="auth-panel">
         <Link className="brand-lockup auth-brand" to="/">
-          <img className="brand-text-logo" src="/textlogo.png" alt="스팟잇" />
+          <img className="brand-logo" src="/logo.png" alt="스팟온" />
         </Link>
 
         <FirebaseNotice />
@@ -169,7 +169,7 @@ export function LoginPage() {
           {showThirdPartyPrivacy && (
             <div className="privacy-consent-detail">
               <p>
-                스팟잇은 회원 인증과 서비스 제공을 위해 아래 범위에서 개인정보를 제3자에게 제공할 수 있습니다.
+                스팟온은 회원 인증과 서비스 제공을 위해 아래 범위에서 개인정보를 제3자에게 제공할 수 있습니다.
               </p>
               <dl>
                 <div>

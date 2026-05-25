@@ -55,7 +55,7 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   const payload = event.data ? event.data.json() : {}
   const data = payload.data || payload.notification?.data || {}
-  const title = data.title || payload.notification?.title || '스팟잇'
+  const title = data.title || payload.notification?.title || '스팟온'
   const body = data.body || payload.notification?.body || ''
   const href = data.href || payload.fcmOptions?.link || '/notifications'
 

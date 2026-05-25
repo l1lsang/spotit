@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Disallow: /notifications
+Disallow: /people
+Disallow: /chats
+Disallow: /my
+Disallow: /profile
+
+Sitemap: https://spotit-one.vercel.app/sitemap.xml
