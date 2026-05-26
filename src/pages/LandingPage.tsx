@@ -11,7 +11,7 @@ export function LandingPage() {
       <section className="landing-content">
         <div className="landing-copy">
           <p className="eyebrow">지도 기반 장소 기록 SNS</p>
-          <h1>스팟온</h1>
+          <h1>스팟잇</h1>
           <p className="landing-subtitle">
             오늘의 장소를 지도 위에 남기고, 사진과 글로 나의 하루를 기록하세요.
           </p>

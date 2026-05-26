@@ -155,7 +155,7 @@ export function ChatRoomPage() {
 
   if (loading) {
     return (
-      <PageContainer className="content-page">
+      <PageContainer className="content-page" hideBottomNav>
         <p className="empty-text">채팅방을 불러오는 중입니다.</p>
       </PageContainer>
     )
@@ -163,7 +163,7 @@ export function ChatRoomPage() {
 
   if (error && !chat) {
     return (
-      <PageContainer className="content-page">
+      <PageContainer className="content-page" hideBottomNav>
         <div className="empty-state">
           <h1>채팅방을 열 수 없습니다.</h1>
           <p>{error}</p>
@@ -179,7 +179,7 @@ export function ChatRoomPage() {
   const canSend = Boolean(content.trim() || photoFile)
 
   return (
-    <PageContainer className="content-page chat-room-page">
+    <PageContainer className="content-page chat-room-page" hideBottomNav>
       <section className="chat-room">
         <header className="chat-room-header">
           <Link className="button-icon subtle" to="/chats" aria-label="채팅 목록으로">

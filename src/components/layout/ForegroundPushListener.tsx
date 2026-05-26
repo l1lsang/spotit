@@ -18,7 +18,7 @@ export function ForegroundPushListener() {
         return
       }
 
-      const title = payload.data?.title || payload.notification?.title || '스팟온'
+      const title = payload.data?.title || payload.notification?.title || '스팟잇'
       const body = payload.data?.body || payload.notification?.body || ''
       const href = payload.data?.href || '/notifications'
       const notification = new Notification(title, {

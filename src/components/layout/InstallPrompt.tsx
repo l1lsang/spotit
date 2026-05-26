@@ -101,7 +101,7 @@ export function InstallPrompt() {
       </button>
       <img src="/logo.png" alt="" aria-hidden="true" />
       <div>
-        <strong>스팟온을 홈 화면에 추가</strong>
+        <strong>스팟잇을 홈 화면에 추가</strong>
         {isIos ? (
           <p>
             Safari 공유 버튼을 누른 뒤 <Share size={13} aria-hidden="true" /> 홈 화면에 추가를 선택하세요.

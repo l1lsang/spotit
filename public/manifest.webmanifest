@@ -1,6 +1,6 @@
 {
-  "name": "스팟온",
-  "short_name": "스팟온",
+  "name": "스팟잇",
+  "short_name": "스팟잇",
   "description": "오늘의 장소를 지도 위에 남기고 나의 하루를 기록하는 감성 지도 SNS",
   "start_url": "/map",
   "scope": "/",
