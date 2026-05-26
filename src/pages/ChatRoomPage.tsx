@@ -72,9 +72,13 @@ export function ChatRoomPage() {
       animationFrame = window.requestAnimationFrame(() => {
         const viewport = window.visualViewport
         const height = viewport?.height || window.innerHeight
+        const width = viewport?.width || window.innerWidth
+        const offsetLeft = viewport?.offsetLeft || 0
         const offsetTop = viewport?.offsetTop || 0
 
         root.style.setProperty('--chat-viewport-height', `${height}px`)
+        root.style.setProperty('--chat-viewport-width', `${width}px`)
+        root.style.setProperty('--chat-viewport-offset-left', `${offsetLeft}px`)
         root.style.setProperty('--chat-viewport-offset-top', `${offsetTop}px`)
         scrollMessagesToBottom()
       })
@@ -93,6 +97,8 @@ export function ChatRoomPage() {
 
       body.classList.remove('chat-room-active')
       root.style.removeProperty('--chat-viewport-height')
+      root.style.removeProperty('--chat-viewport-width')
+      root.style.removeProperty('--chat-viewport-offset-left')
       root.style.removeProperty('--chat-viewport-offset-top')
       window.removeEventListener('resize', updateChatViewport)
       window.visualViewport?.removeEventListener('resize', updateChatViewport)

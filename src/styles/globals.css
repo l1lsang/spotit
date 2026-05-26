@@ -42,6 +42,7 @@ body.chat-room-active {
 
 body.chat-room-active #root {
   height: var(--chat-viewport-height, 100dvh);
+  width: var(--chat-viewport-width, 100vw);
   overflow: hidden;
 }
 
@@ -1317,9 +1318,12 @@ img {
 
 .chat-room-page {
   position: fixed;
-  inset: var(--chat-viewport-offset-top, 0px) 0 auto;
+  top: var(--chat-viewport-offset-top, 0px);
+  right: auto;
+  bottom: auto;
+  left: var(--chat-viewport-offset-left, 0px);
   z-index: 90;
-  width: 100%;
+  width: var(--chat-viewport-width, 100vw);
   max-width: none;
   height: var(--chat-viewport-height, 100dvh);
   min-height: 0;
@@ -1335,7 +1339,7 @@ img {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: 0;
   background: rgba(255, 253, 248, 0.94);
   box-shadow: none;
