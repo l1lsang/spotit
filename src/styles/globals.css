@@ -264,6 +264,70 @@ img {
   padding: 0 13px;
 }
 
+.permission-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(46, 42, 36, 0.34);
+}
+
+.permission-modal {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 15px;
+  width: min(390px, 100%);
+  padding: 26px 20px 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.98);
+  box-shadow: 0 28px 70px rgba(46, 42, 36, 0.26);
+  text-align: center;
+}
+
+.permission-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.permission-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  color: #fffaf4;
+  background: var(--accent);
+  box-shadow: 0 12px 28px rgba(232, 103, 79, 0.22);
+}
+
+.permission-modal h2 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.permission-modal p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.permission-modal .form-error {
+  width: 100%;
+  margin: 0;
+}
+
+.permission-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  width: 100%;
+}
+
 .page {
   width: min(1120px, calc(100% - 32px));
   margin: 0 auto;
