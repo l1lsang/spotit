@@ -7,6 +7,8 @@ interface PageContainerProps {
   className?: string
   fullBleed?: boolean
   hideBottomNav?: boolean
+  hideFirebaseNotice?: boolean
+  hideHeader?: boolean
 }
 
 export function PageContainer({
@@ -14,11 +16,13 @@ export function PageContainer({
   className = '',
   fullBleed = false,
   hideBottomNav = false,
+  hideFirebaseNotice = false,
+  hideHeader = false,
 }: PropsWithChildren<PageContainerProps>) {
   return (
     <div className={`app-shell ${hideBottomNav ? 'app-shell-no-bottom-nav' : ''}`}>
-      <Header />
-      <FirebaseNotice />
+      {!hideHeader && <Header />}
+      {!hideFirebaseNotice && <FirebaseNotice />}
       <main className={`${fullBleed ? 'page page-full' : 'page'} ${className}`}>{children}</main>
       {!hideBottomNav && <BottomNav />}
     </div>

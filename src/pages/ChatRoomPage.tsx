@@ -1,5 +1,5 @@
 import { ArrowLeft, ImagePlus, SendHorizonal, X } from 'lucide-react'
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
@@ -38,6 +38,67 @@ export function ChatRoomPage() {
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
+  const chatPageProps = {
+    className: 'chat-room-page',
+    fullBleed: true,
+    hideBottomNav: true,
+    hideFirebaseNotice: true,
+    hideHeader: true,
+  }
+
+  const scrollMessagesToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    const list = listRef.current
+
+    if (!list) {
+      return
+    }
+
+    list.scrollTo({
+      top: list.scrollHeight,
+      behavior,
+    })
+  }, [])
+
+  useEffect(() => {
+    const root = document.documentElement
+    const body = document.body
+    let animationFrame = 0
+
+    function updateChatViewport() {
+      if (animationFrame) {
+        window.cancelAnimationFrame(animationFrame)
+      }
+
+      animationFrame = window.requestAnimationFrame(() => {
+        const viewport = window.visualViewport
+        const height = viewport?.height || window.innerHeight
+        const offsetTop = viewport?.offsetTop || 0
+
+        root.style.setProperty('--chat-viewport-height', `${height}px`)
+        root.style.setProperty('--chat-viewport-offset-top', `${offsetTop}px`)
+        scrollMessagesToBottom()
+      })
+    }
+
+    body.classList.add('chat-room-active')
+    updateChatViewport()
+    window.addEventListener('resize', updateChatViewport)
+    window.visualViewport?.addEventListener('resize', updateChatViewport)
+    window.visualViewport?.addEventListener('scroll', updateChatViewport)
+
+    return () => {
+      if (animationFrame) {
+        window.cancelAnimationFrame(animationFrame)
+      }
+
+      body.classList.remove('chat-room-active')
+      root.style.removeProperty('--chat-viewport-height')
+      root.style.removeProperty('--chat-viewport-offset-top')
+      window.removeEventListener('resize', updateChatViewport)
+      window.visualViewport?.removeEventListener('resize', updateChatViewport)
+      window.visualViewport?.removeEventListener('scroll', updateChatViewport)
+    }
+  }, [scrollMessagesToBottom])
 
   useEffect(() => {
     if (!firebaseReady || !currentUser || !chatId) {
@@ -95,11 +156,12 @@ export function ChatRoomPage() {
   }, [chat, currentUser])
 
   useEffect(() => {
-    listRef.current?.scrollTo({
-      top: listRef.current.scrollHeight,
-      behavior: 'smooth',
-    })
-  }, [messages])
+    scrollMessagesToBottom('smooth')
+  }, [messages, scrollMessagesToBottom])
+
+  useEffect(() => {
+    scrollMessagesToBottom()
+  }, [photoPreviewUrl, scrollMessagesToBottom])
 
   useEffect(() => {
     if (!photoFile) {
@@ -155,22 +217,26 @@ export function ChatRoomPage() {
 
   if (loading) {
     return (
-      <PageContainer className="content-page" hideBottomNav>
-        <p className="empty-text">채팅방을 불러오는 중입니다.</p>
+      <PageContainer {...chatPageProps}>
+        <section className="chat-room chat-room-state">
+          <p className="empty-text">채팅방을 불러오는 중입니다.</p>
+        </section>
       </PageContainer>
     )
   }
 
   if (error && !chat) {
     return (
-      <PageContainer className="content-page" hideBottomNav>
-        <div className="empty-state">
-          <h1>채팅방을 열 수 없습니다.</h1>
-          <p>{error}</p>
-          <button className="button button-primary" type="button" onClick={() => navigate('/chats')}>
-            채팅 목록으로
-          </button>
-        </div>
+      <PageContainer {...chatPageProps}>
+        <section className="chat-room chat-room-state">
+          <div className="empty-state">
+            <h1>채팅방을 열 수 없습니다.</h1>
+            <p>{error}</p>
+            <button className="button button-primary" type="button" onClick={() => navigate('/chats')}>
+              채팅 목록으로
+            </button>
+          </div>
+        </section>
       </PageContainer>
     )
   }
@@ -179,7 +245,7 @@ export function ChatRoomPage() {
   const canSend = Boolean(content.trim() || photoFile)
 
   return (
-    <PageContainer className="content-page chat-room-page" hideBottomNav>
+    <PageContainer {...chatPageProps}>
       <section className="chat-room">
         <header className="chat-room-header">
           <Link className="button-icon subtle" to="/chats" aria-label="채팅 목록으로">
