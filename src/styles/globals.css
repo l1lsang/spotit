@@ -47,6 +47,17 @@ body.chat-room-active #root {
   overflow: hidden;
 }
 
+body.chat-room-active .app-shell {
+  min-height: var(--chat-viewport-height, 100dvh);
+  padding-bottom: 0;
+  background: var(--surface);
+}
+
+body.chat-room-active .bottom-nav,
+body.chat-room-active .install-prompt {
+  display: none;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -1383,19 +1394,17 @@ img {
 
 .chat-room-page {
   position: fixed;
-  top: var(--chat-viewport-offset-top, 0px);
-  right: 0;
-  bottom: auto;
-  left: 0;
+  inset: var(--chat-viewport-offset-top, 0px) 0 auto 0;
   z-index: 90;
-  width: auto;
+  display: flex;
+  width: 100vw;
   max-width: none;
   height: var(--chat-viewport-height, 100dvh);
   min-height: 0;
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: var(--surface);
+  background: #fbf7ef;
 }
 
 .chat-room {
@@ -1407,7 +1416,7 @@ img {
   overflow: hidden;
   border: 0;
   border-radius: 0;
-  background: rgba(255, 253, 248, 0.94);
+  background: transparent;
   box-shadow: none;
 }
 
@@ -1588,6 +1597,11 @@ img {
     max(12px, env(safe-area-inset-left));
   border-top: 1px solid var(--line);
   background: var(--surface);
+}
+
+body.chat-room-active.chat-keyboard-open .message-form,
+body.chat-room-active .message-form:focus-within {
+  padding-bottom: 0;
 }
 
 .message-attachment-preview {

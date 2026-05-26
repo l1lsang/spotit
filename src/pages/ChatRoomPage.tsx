@@ -1,7 +1,6 @@
 import { ArrowLeft, ImagePlus, SendHorizonal, X } from 'lucide-react'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
 import { formatChatDateSeparator, formatChatTime, getTimestampDateKey } from '../lib/date'
 import {
@@ -38,13 +37,6 @@ export function ChatRoomPage() {
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
-  const chatPageProps = {
-    className: 'chat-room-page',
-    fullBleed: true,
-    hideBottomNav: true,
-    hideFirebaseNotice: true,
-    hideHeader: true,
-  }
 
   const scrollMessagesToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     const list = listRef.current
@@ -73,9 +65,11 @@ export function ChatRoomPage() {
         const viewport = window.visualViewport
         const height = viewport?.height || window.innerHeight
         const offsetTop = viewport?.offsetTop || 0
+        const keyboardInset = Math.max(0, window.innerHeight - height - offsetTop)
 
         root.style.setProperty('--chat-viewport-height', `${height}px`)
         root.style.setProperty('--chat-viewport-offset-top', `${offsetTop}px`)
+        body.classList.toggle('chat-keyboard-open', keyboardInset > 80)
         scrollMessagesToBottom()
       })
     }
@@ -92,6 +86,7 @@ export function ChatRoomPage() {
       }
 
       body.classList.remove('chat-room-active')
+      body.classList.remove('chat-keyboard-open')
       root.style.removeProperty('--chat-viewport-height')
       root.style.removeProperty('--chat-viewport-offset-top')
       window.removeEventListener('resize', updateChatViewport)
@@ -217,17 +212,17 @@ export function ChatRoomPage() {
 
   if (loading) {
     return (
-      <PageContainer {...chatPageProps}>
+      <main className="chat-room-page">
         <section className="chat-room chat-room-state">
           <p className="empty-text">채팅방을 불러오는 중입니다.</p>
         </section>
-      </PageContainer>
+      </main>
     )
   }
 
   if (error && !chat) {
     return (
-      <PageContainer {...chatPageProps}>
+      <main className="chat-room-page">
         <section className="chat-room chat-room-state">
           <div className="empty-state">
             <h1>채팅방을 열 수 없습니다.</h1>
@@ -237,7 +232,7 @@ export function ChatRoomPage() {
             </button>
           </div>
         </section>
-      </PageContainer>
+      </main>
     )
   }
 
@@ -245,7 +240,7 @@ export function ChatRoomPage() {
   const canSend = Boolean(content.trim() || photoFile)
 
   return (
-    <PageContainer {...chatPageProps}>
+    <main className="chat-room-page">
       <section className="chat-room">
         <header className="chat-room-header">
           <Link className="button-icon subtle" to="/chats" aria-label="채팅 목록으로">
@@ -364,6 +359,6 @@ export function ChatRoomPage() {
           </button>
         </form>
       </section>
-    </PageContainer>
+    </main>
   )
 }
