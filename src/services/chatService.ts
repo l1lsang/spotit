@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -112,6 +113,7 @@ export async function getOrCreateDirectChat(
   if (!snapshot.exists()) {
     await setDoc(chatRef, {
       id: chatId,
+      kind: 'direct',
       participantIds: [currentUser.uid, targetUser.uid].sort(),
       participants,
       lastMessage: '',
@@ -133,6 +135,93 @@ export async function getOrCreateDirectChat(
   }
 
   return chatId
+}
+
+export async function createGroupChat(
+  owner: ChatPerson,
+  members: ChatPerson[],
+  name: string,
+): Promise<string> {
+  const uniqueParticipants = new Map<string, ChatPerson>()
+
+  uniqueParticipants.set(owner.uid, owner)
+  members.forEach((member) => {
+    if (member.uid !== owner.uid) {
+      uniqueParticipants.set(member.uid, member)
+    }
+  })
+
+  if (uniqueParticipants.size < 2) {
+    throw new Error('단체방에는 나를 제외한 멤버가 한 명 이상 필요합니다.')
+  }
+
+  const db = requireDb()
+  const chatRef = doc(collection(db, 'chats'))
+  const participants = Object.fromEntries(
+    [...uniqueParticipants.values()].map((participant) => [participant.uid, toParticipant(participant)]),
+  )
+
+  await setDoc(chatRef, {
+    id: chatRef.id,
+    kind: 'group',
+    name: name.trim() || '새 단체방',
+    ownerUid: owner.uid,
+    participantIds: [...uniqueParticipants.keys()].sort(),
+    participants,
+    lastMessage: '',
+    lastMessageUid: '',
+    lastMessageAt: null,
+    readAtBy: {},
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+
+  return chatRef.id
+}
+
+export async function addParticipantsToChat(chatId: string, members: ChatPerson[]): Promise<void> {
+  const db = requireDb()
+  const chatRef = doc(db, 'chats', chatId)
+  const snapshot = await getDoc(chatRef)
+  const chat = toChat(snapshot)
+
+  if (!chat) {
+    throw new Error('채팅방을 찾을 수 없습니다.')
+  }
+
+  if (chat.kind !== 'group') {
+    throw new Error('단체방에만 초대할 수 있습니다.')
+  }
+
+  const participants = { ...chat.participants }
+  const participantIds = new Set(chat.participantIds)
+
+  members.forEach((member) => {
+    participantIds.add(member.uid)
+    participants[member.uid] = toParticipant(member)
+  })
+
+  await updateDoc(chatRef, {
+    participantIds: [...participantIds].sort(),
+    participants,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export async function getChatInviteCandidates(chatId: string): Promise<DaymarkUser[]> {
+  const db = requireDb()
+  const chat = toChat(await getDoc(doc(db, 'chats', chatId)))
+
+  if (!chat) {
+    return []
+  }
+
+  const snapshot = await getDocs(collection(db, 'users'))
+  const participantIds = new Set(chat.participantIds)
+
+  return snapshot.docs
+    .map((userDoc) => userDoc.data() as DaymarkUser)
+    .filter((user) => !participantIds.has(user.uid))
 }
 
 export async function getChatById(chatId: string, viewerUid: string): Promise<DaymarkChat | null> {

@@ -24,6 +24,7 @@ import {
 } from '../types/mapFeature'
 import {
   POST_PIN_GROUPS,
+  getPostPinGroupLabel,
   getPostPinGroupColor,
   type Post,
   type PostFormInput,
@@ -435,7 +436,7 @@ export function MapPage() {
               {POST_PIN_GROUPS.slice(0, 4).map((group) => (
                 <i
                   key={group.id}
-                  title={group.label}
+                  title={getPostPinGroupLabel(group.id, profile?.pinGroupNames)}
                   style={{ backgroundColor: getPostPinGroupColor(group.id) }}
                 />
               ))}
@@ -616,6 +617,7 @@ export function MapPage() {
         mode="create"
         location={selectedLocation}
         placePrefill={selectedPlace}
+        pinGroupNames={profile?.pinGroupNames}
         onClose={() => setIsFormOpen(false)}
         onSubmit={handleCreatePost}
       />

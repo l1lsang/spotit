@@ -1,10 +1,12 @@
-import { ArrowLeft, ImagePlus, SendHorizonal, X } from 'lucide-react'
+import { ArrowLeft, ImagePlus, SendHorizonal, UserPlus, UsersRound, X } from 'lucide-react'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { formatChatDateSeparator, formatChatTime, getTimestampDateKey } from '../lib/date'
 import {
   getOtherParticipant,
+  addParticipantsToChat,
+  getChatInviteCandidates,
   markChatAsRead,
   sendChatMessage,
   subscribeToChat,
@@ -12,6 +14,7 @@ import {
 } from '../services/chatService'
 import { uploadChatPhoto } from '../services/storageService'
 import type { ChatMessage, DaymarkChat } from '../types/chat'
+import type { DaymarkUser } from '../types/user'
 
 function isMessageReadByOther(message: ChatMessage, chat: DaymarkChat, currentUid: string): boolean {
   const other = getOtherParticipant(chat, currentUid)
@@ -33,9 +36,14 @@ export function ChatRoomPage() {
   const [content, setContent] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('')
+  const [inviteCandidates, setInviteCandidates] = useState<DaymarkUser[]>([])
+  const [selectedInviteIds, setSelectedInviteIds] = useState<Set<string>>(new Set())
+  const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [inviteError, setInviteError] = useState('')
   const [sending, setSending] = useState(false)
+  const [inviting, setInviting] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
 
   const scrollMessagesToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
@@ -203,6 +211,59 @@ export function ChatRoomPage() {
     }
   }
 
+  async function handleOpenInvite() {
+    if (!chat) {
+      return
+    }
+
+    setIsInviteOpen(true)
+    setInviteError('')
+
+    try {
+      setInviteCandidates(await getChatInviteCandidates(chat.id))
+      setSelectedInviteIds(new Set())
+    } catch (loadError) {
+      setInviteError(loadError instanceof Error ? loadError.message : '초대할 사람을 불러오지 못했습니다.')
+    }
+  }
+
+  function toggleInviteUser(uid: string) {
+    setSelectedInviteIds((previous) => {
+      const next = new Set(previous)
+
+      if (next.has(uid)) {
+        next.delete(uid)
+      } else {
+        next.add(uid)
+      }
+
+      return next
+    })
+  }
+
+  async function handleInviteMembers(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!chat) {
+      return
+    }
+
+    const members = inviteCandidates.filter((user) => selectedInviteIds.has(user.uid))
+
+    setInviting(true)
+    setInviteError('')
+
+    try {
+      await addParticipantsToChat(chat.id, members)
+      setIsInviteOpen(false)
+      setSelectedInviteIds(new Set())
+    } catch (inviteErrorValue) {
+      setInviteError(inviteErrorValue instanceof Error ? inviteErrorValue.message : '초대하지 못했습니다.')
+    } finally {
+      setInviting(false)
+    }
+  }
+
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
@@ -238,6 +299,8 @@ export function ChatRoomPage() {
 
   const other = currentUser && chat ? getOtherParticipant(chat, currentUser.uid) : null
   const canSend = Boolean(content.trim() || photoFile)
+  const isGroup = chat?.kind === 'group'
+  const roomTitle = isGroup ? chat?.name || '단체방' : other?.nickname || '채팅'
 
   return (
     <main className="chat-room-page">
@@ -246,15 +309,24 @@ export function ChatRoomPage() {
           <Link className="button-icon subtle" to="/chats" aria-label="채팅 목록으로">
             <ArrowLeft size={19} aria-hidden="true" />
           </Link>
-          {other?.photoURL ? (
+          {isGroup ? (
+            <span className="profile-avatar small group-avatar">
+              <UsersRound size={22} aria-hidden="true" />
+            </span>
+          ) : other?.photoURL ? (
             <img className="chat-avatar" src={other.photoURL} alt={`${other.nickname} 프로필`} />
           ) : (
             <span className="profile-avatar small">{other?.nickname.slice(0, 1) || 'D'}</span>
           )}
           <div>
-            <h1>{other?.nickname || '채팅'}</h1>
-            <p>1:1 대화</p>
+            <h1>{roomTitle}</h1>
+            <p>{isGroup ? `${chat?.participantIds.length || 0}명` : '1:1 대화'}</p>
           </div>
+          {isGroup && (
+            <button className="button-icon subtle chat-header-action" type="button" onClick={() => void handleOpenInvite()} aria-label="초대">
+              <UserPlus size={18} aria-hidden="true" />
+            </button>
+          )}
         </header>
 
         {error && <p className="form-error">{error}</p>}
@@ -279,10 +351,14 @@ export function ChatRoomPage() {
                   )}
                   <article className={`message-row ${isMine ? 'mine' : 'other'}`}>
                     {!isMine &&
-                      (other?.photoURL ? (
-                        <img className="message-avatar" src={other.photoURL} alt={`${other.nickname} 프로필`} />
+                      ((isGroup ? chat?.participants[message.uid]?.photoURL : other?.photoURL) ? (
+                        <img
+                          className="message-avatar"
+                          src={isGroup ? chat?.participants[message.uid]?.photoURL : other?.photoURL}
+                          alt={`${message.authorNickname} 프로필`}
+                        />
                       ) : (
-                        <span className="profile-avatar tiny">{other?.nickname.slice(0, 1) || 'D'}</span>
+                        <span className="profile-avatar tiny">{message.authorNickname.slice(0, 1) || 'D'}</span>
                       ))}
                     <div className="message-stack">
                       {!isMine && <strong className="message-author">{message.authorNickname}</strong>}
@@ -359,6 +435,58 @@ export function ChatRoomPage() {
           </button>
         </form>
       </section>
+
+      {isInviteOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="modal group-modal" role="dialog" aria-modal="true" aria-labelledby="invite-title">
+            <div className="modal-header">
+              <div>
+                <p className="eyebrow">Invite</p>
+                <h2 id="invite-title">단체방 초대</h2>
+              </div>
+              <button className="button-icon" type="button" onClick={() => setIsInviteOpen(false)} aria-label="닫기">
+                <X size={20} aria-hidden="true" />
+              </button>
+            </div>
+
+            <form className="form" onSubmit={handleInviteMembers}>
+              <div className="invite-list">
+                {inviteCandidates.length === 0 ? (
+                  <p className="empty-text">초대할 수 있는 사람이 없습니다.</p>
+                ) : (
+                  inviteCandidates.map((user) => (
+                    <label className="invite-row" key={user.uid}>
+                      <input
+                        type="checkbox"
+                        checked={selectedInviteIds.has(user.uid)}
+                        onChange={() => toggleInviteUser(user.uid)}
+                      />
+                      {user.photoURL ? (
+                        <img className="chat-avatar" src={user.photoURL} alt={`${user.nickname} 프로필`} />
+                      ) : (
+                        <span className="profile-avatar small">{user.nickname.slice(0, 1) || 'D'}</span>
+                      )}
+                      <span>{user.nickname}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+
+              {inviteError && <p className="form-error">{inviteError}</p>}
+
+              <div className="modal-actions">
+                <button className="button button-secondary" type="button" onClick={() => setIsInviteOpen(false)}>
+                  취소
+                </button>
+                <button className="button button-primary" type="submit" disabled={inviting || selectedInviteIds.size === 0}>
+                  <UserPlus size={17} aria-hidden="true" />
+                  {inviting ? '초대 중' : '초대하기'}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </main>
   )
 }

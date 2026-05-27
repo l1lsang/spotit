@@ -5,8 +5,10 @@ import type { LatLng } from '../../lib/kakaoMap'
 import {
   DEFAULT_POST_PIN_GROUP,
   POST_PIN_GROUPS,
+  getPostPinGroupLabel,
   type Post,
   type PostFormInput,
+  type PostPinGroup,
   type PostVisibility,
 } from '../../types/post'
 import { PhotoUploader } from './PhotoUploader'
@@ -26,6 +28,7 @@ interface PostFormModalProps {
     location: LatLng
   } | null
   initialPost?: Post | null
+  pinGroupNames?: Partial<Record<PostPinGroup, string>>
   onClose: () => void
   onSubmit: (payload: PostFormSubmitPayload) => Promise<void>
 }
@@ -56,6 +59,7 @@ export function PostFormModal({
   location,
   placePrefill = null,
   initialPost = null,
+  pinGroupNames,
   onClose,
   onSubmit,
 }: PostFormModalProps) {
@@ -163,14 +167,18 @@ export function PostFormModal({
             <fieldset className="field">
               <legend>공개 범위</legend>
               <div className="segmented">
-                {(['followers', 'private'] as PostVisibility[]).map((visibility) => (
+                {(['followers', 'public', 'private'] as PostVisibility[]).map((visibility) => (
                   <button
                     key={visibility}
                     type="button"
                     className={form.visibility === visibility ? 'active' : ''}
                     onClick={() => updateField('visibility', visibility)}
                   >
-                    {visibility === 'followers' ? '팔로워 공개' : '비공개'}
+                    {visibility === 'followers'
+                      ? '팔로워'
+                      : visibility === 'public'
+                        ? '전체'
+                        : '비공개'}
                   </button>
                 ))}
               </div>
@@ -189,11 +197,11 @@ export function PostFormModal({
                   aria-pressed={form.pinColor === group.id}
                 >
                   <i style={{ backgroundColor: group.value }} />
-                  {group.label}
+                  {getPostPinGroupLabel(group.id, pinGroupNames)}
                 </button>
               ))}
             </div>
-            <small className="field-help">내 계정에서만 색깔 그룹으로 보이고, 다른 사람에게는 같은 색으로 보입니다.</small>
+            <small className="field-help">프로필에서 색깔별 그룹 이름을 바꿀 수 있습니다.</small>
           </fieldset>
 
           <label className="field">

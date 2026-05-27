@@ -8,6 +8,9 @@ export interface ChatParticipant {
 
 export interface DaymarkChat {
   id: string
+  kind?: 'direct' | 'group'
+  name?: string
+  ownerUid?: string
   participantIds: string[]
   participants: Record<string, ChatParticipant>
   lastMessage: string

@@ -30,6 +30,18 @@ export function getPostPinGroupColor(pinGroup: PostPinGroup | string | undefined
   )
 }
 
+export function getPostPinGroupLabel(
+  pinGroup: PostPinGroup | string | undefined,
+  customNames?: Partial<Record<PostPinGroup, string>>,
+): string {
+  const normalizedPinGroup = typeof pinGroup === 'string' && isPostPinGroup(pinGroup)
+    ? pinGroup
+    : DEFAULT_POST_PIN_GROUP
+  const customName = customNames?.[normalizedPinGroup]?.trim()
+
+  return customName || POST_PIN_GROUPS.find((group) => group.id === normalizedPinGroup)?.label || '기본'
+}
+
 export interface Post {
   id: string
   uid: string

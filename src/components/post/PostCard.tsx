@@ -1,4 +1,4 @@
-import { CalendarDays, Lock, MapPin, UsersRound } from 'lucide-react'
+import { CalendarDays, Globe2, Lock, MapPin, UsersRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDateKey } from '../../lib/date'
@@ -31,10 +31,16 @@ export function PostCard({ post, showVisibility = false, actions }: PostCardProp
               <span className={`pill ${post.visibility === 'private' ? 'private' : ''}`}>
                 {post.visibility === 'private' ? (
                   <Lock size={13} aria-hidden="true" />
+                ) : post.visibility === 'public' ? (
+                  <Globe2 size={13} aria-hidden="true" />
                 ) : (
                   <UsersRound size={13} aria-hidden="true" />
                 )}
-                {post.visibility === 'private' ? 'private' : 'followers'}
+                {post.visibility === 'private'
+                  ? 'private'
+                  : post.visibility === 'public'
+                    ? 'public'
+                    : 'followers'}
               </span>
             )}
           </div>

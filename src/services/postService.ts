@@ -80,7 +80,7 @@ function assertOwner(post: Post, uid: string): void {
 }
 
 function normalizeVisibility(visibility: Post['visibility']): Post['visibility'] {
-  return visibility === 'public' ? 'followers' : visibility
+  return visibility === 'public' ? 'public' : visibility
 }
 
 function normalizePinColor(pinColor: unknown): PostPinGroup {
@@ -108,13 +108,13 @@ function distanceKm(from: LatLng, to: LatLng): number {
 
 async function getPostsByAuthor(uid: string, viewerUid: string): Promise<Post[]> {
   const postsRef = collection(requireDb(), 'posts')
-  const postsQuery =
-    uid === viewerUid
-      ? query(postsRef, where('uid', '==', uid))
-      : query(postsRef, where('uid', '==', uid), where('visibility', '==', 'followers'))
+  const postsQuery = query(postsRef, where('uid', '==', uid))
   const snapshot = await getDocs(postsQuery)
 
-  return snapshot.docs.map(toPost).filter((post): post is Post => Boolean(post))
+  return snapshot.docs
+    .map(toPost)
+    .filter((post): post is Post => Boolean(post))
+    .filter((post) => uid === viewerUid || canFollowerSee(post))
 }
 
 export async function createPost(
@@ -211,6 +211,10 @@ export async function getPostById(postId: string, viewerUid?: string): Promise<P
 
   if (normalizedPost.visibility === 'private') {
     return null
+  }
+
+  if (normalizedPost.visibility === 'public') {
+    return normalizedPost
   }
 
   if (!(await isFollowing(viewerUid, normalizedPost.uid))) {

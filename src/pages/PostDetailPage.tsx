@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Pencil, Trash2 } from 'lucide-react'
+import { Heart, MessageCircle, Pencil, Share2, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -24,6 +24,7 @@ export function PostDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [isEditOpen, setIsEditOpen] = useState(false)
+  const [shareMessage, setShareMessage] = useState('')
 
   const isOwner = Boolean(currentUser && post?.uid === currentUser.uid)
 
@@ -123,6 +124,33 @@ export function PostDetailPage() {
     navigate('/my')
   }
 
+  async function handleSharePost() {
+    if (!post) {
+      return
+    }
+
+    const shareUrl = `${window.location.origin}/posts/${post.id}`
+    const shareData = {
+      title: post.title,
+      text: `${post.placeName} 핀을 공유합니다.`,
+      url: shareUrl,
+    }
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+        setShareMessage('공유 창을 열었습니다.')
+      } else {
+        await navigator.clipboard.writeText(shareUrl)
+        setShareMessage('공유 링크를 복사했습니다.')
+      }
+    } catch (shareError) {
+      if ((shareError as { name?: string }).name !== 'AbortError') {
+        setShareMessage('공유 링크를 만들지 못했습니다.')
+      }
+    }
+  }
+
   async function handleUpdatePost(payload: PostFormSubmitPayload) {
     if (!currentUser || !post) {
       return
@@ -202,6 +230,10 @@ export function PostDetailPage() {
               <MessageCircle size={18} aria-hidden="true" />
               댓글 {post.commentCount}
             </span>
+            <button className="button button-secondary" type="button" onClick={() => void handleSharePost()}>
+              <Share2 size={17} aria-hidden="true" />
+              핀 공유
+            </button>
             {isOwner && (
               <>
                 <button className="button button-secondary" type="button" onClick={() => setIsEditOpen(true)}>
@@ -215,6 +247,7 @@ export function PostDetailPage() {
               </>
             )}
           </div>
+          {shareMessage && <p className="form-success compact-message">{shareMessage}</p>}
 
           <section className="comments-section">
             <h2>댓글</h2>
@@ -274,7 +307,13 @@ export function PostDetailPage() {
           />
           <div className="info-panel">
             <h2>기록 정보</h2>
-            <p>{post.visibility === 'private' ? '비공개 기록' : '팔로워 공개 기록'}</p>
+            <p>
+              {post.visibility === 'private'
+                ? '비공개 기록'
+                : post.visibility === 'public'
+                  ? '전체 공개 기록'
+                  : '팔로워 공개 기록'}
+            </p>
             <small>작성 {formatTimestamp(post.createdAt)}</small>
           </div>
         </aside>
@@ -284,6 +323,7 @@ export function PostDetailPage() {
         isOpen={isEditOpen}
         mode="edit"
         initialPost={post}
+        pinGroupNames={profile?.pinGroupNames}
         onClose={() => setIsEditOpen(false)}
         onSubmit={handleUpdatePost}
       />

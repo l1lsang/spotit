@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
 import type { DaymarkUser } from '../types/user'
+import type { PostPinGroup } from '../types/post'
 
 type BatchOperation = (batch: WriteBatch) => void
 
@@ -90,6 +91,16 @@ export async function updateUserPhotoURL(uid: string, photoURL: string): Promise
 export async function updateUserPrivacy(uid: string, isPrivate: boolean): Promise<void> {
   await updateDoc(doc(requireDb(), 'users', uid), {
     isPrivate,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export async function updateUserPinGroupNames(
+  uid: string,
+  pinGroupNames: Partial<Record<PostPinGroup, string>>,
+): Promise<void> {
+  await updateDoc(doc(requireDb(), 'users', uid), {
+    pinGroupNames,
     updatedAt: serverTimestamp(),
   })
 }

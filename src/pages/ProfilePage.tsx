@@ -15,8 +15,14 @@ import {
   unfollowUser,
 } from '../services/followService'
 import { uploadProfilePhoto } from '../services/storageService'
-import { updateUserNickname, updateUserPhotoURL, updateUserPrivacy } from '../services/userService'
+import {
+  updateUserNickname,
+  updateUserPhotoURL,
+  updateUserPinGroupNames,
+  updateUserPrivacy,
+} from '../services/userService'
 import type { FollowEdge, FollowRequest } from '../types/follow'
+import { POST_PIN_GROUPS, type PostPinGroup } from '../types/post'
 
 type FollowListKind = 'followers' | 'following'
 
@@ -34,6 +40,9 @@ export function ProfilePage() {
   const { currentUser, profile, refreshProfile } = useAuth()
   const [nickname, setNickname] = useState(profile?.nickname || '')
   const [isPrivate, setIsPrivate] = useState(Boolean(profile?.isPrivate))
+  const [pinGroupNames, setPinGroupNames] = useState<Partial<Record<PostPinGroup, string>>>(
+    profile?.pinGroupNames || {},
+  )
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
   const [followRequests, setFollowRequests] = useState<FollowRequest[]>([])
@@ -54,7 +63,8 @@ export function ProfilePage() {
   useEffect(() => {
     setNickname(profile?.nickname || '')
     setIsPrivate(Boolean(profile?.isPrivate))
-  }, [profile?.isPrivate, profile?.nickname])
+    setPinGroupNames(profile?.pinGroupNames || {})
+  }, [profile?.isPrivate, profile?.nickname, profile?.pinGroupNames])
 
   const loadFollowRequests = useCallback(async () => {
     if (!currentUser) {
@@ -114,6 +124,7 @@ export function ProfilePage() {
       })
       await updateUserNickname(currentUser.uid, nickname)
       await updateUserPrivacy(currentUser.uid, isPrivate)
+      await updateUserPinGroupNames(currentUser.uid, pinGroupNames)
       await refreshProfile()
       setPhotoFile(null)
       setPhotoPreview('')
@@ -416,6 +427,31 @@ export function ProfilePage() {
           </span>
           <small>새 팔로우를 승인제로 받기</small>
         </label>
+
+        <fieldset className="field pin-group-name-settings">
+          <legend>핀 색깔 그룹 이름</legend>
+          <div className="pin-name-grid">
+            {POST_PIN_GROUPS.map((group) => (
+              <label key={group.id} className="pin-name-field">
+                <span>
+                  <i style={{ backgroundColor: group.value }} />
+                  {group.label}
+                </span>
+                <input
+                  maxLength={18}
+                  value={pinGroupNames[group.id] || ''}
+                  onChange={(event) =>
+                    setPinGroupNames((previous) => ({
+                      ...previous,
+                      [group.id]: event.target.value,
+                    }))
+                  }
+                  placeholder={`${group.label} 그룹`}
+                />
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
         {message && <p className="form-success">{message}</p>}
         {error && <p className="form-error">{error}</p>}

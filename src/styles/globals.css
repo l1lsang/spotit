@@ -853,12 +853,94 @@ img {
 
 .segmented {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
   min-height: 46px;
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #f7efe3;
+}
+
+.page-actions,
+.preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.compact-message {
+  margin-top: 12px;
+}
+
+.pin-group-name-settings {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf2;
+}
+
+.pin-name-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.pin-name-field {
+  display: grid;
+  gap: 6px;
+}
+
+.pin-name-field span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.pin-name-field i {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.group-modal {
+  width: min(560px, 100%);
+}
+
+.invite-list {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.invite-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffefa;
+  font-weight: 900;
+}
+
+.invite-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.group-avatar {
+  color: #fffaf4;
+  background: var(--ink);
+}
+
+.chat-header-action {
+  margin-left: auto;
 }
 
 .segmented button {
