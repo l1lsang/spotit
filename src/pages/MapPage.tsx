@@ -47,7 +47,7 @@ import {
 } from '../types/mapFeature'
 import type { Post, PostFormInput } from '../types/post'
 
-type MapMode = 'live' | 'projects'
+type MapMode = 'main' | 'live' | 'projects'
 type PanelMessageType = 'success' | 'error'
 
 interface SelectedPlacePrefill {
@@ -130,7 +130,7 @@ export function MapPage() {
   const [searchingPlaces, setSearchingPlaces] = useState(false)
   const [placeSearchMessage, setPlaceSearchMessage] = useState('')
   const [error, setError] = useState('')
-  const [mapMode, setMapMode] = useState<MapMode>('live')
+  const [mapMode, setMapMode] = useState<MapMode>('main')
   const [statusUpdates, setStatusUpdates] = useState<LivePlaceStatusUpdate[]>([])
   const [selectedStatusTags, setSelectedStatusTags] = useState<LivePlaceStatusKey[]>([])
   const [statusNote, setStatusNote] = useState('')
@@ -200,6 +200,8 @@ export function MapPage() {
       }),
     [projectMetaById, projectPins],
   )
+  const visiblePosts = mapMode === 'main' ? posts : []
+  const visibleProjectPins = mapMode === 'projects' ? mapProjectPins : []
   const selectedProjectPins = useMemo(
     () => projectPins.filter((pin) => pin.projectId === selectedProjectId),
     [projectPins, selectedProjectId],
@@ -320,6 +322,18 @@ export function MapPage() {
     const nextLocation = await requestLocation()
     setCenter(nextLocation)
     setInitialLocationReady(true)
+  }
+
+  function handleModeChange(nextMode: MapMode) {
+    setMapMode(nextMode)
+
+    if (nextMode !== 'main') {
+      setSelectedPost(null)
+    }
+
+    if (nextMode !== 'projects') {
+      setSelectedProjectPin(null)
+    }
   }
 
   function handleMapClick(location: LatLng) {
@@ -475,7 +489,7 @@ export function MapPage() {
       setNewProjectDescription('')
       setNewProjectColor(DEFAULT_PROJECT_PIN_COLOR)
       setSelectedProjectId(projectId)
-      setMapMode('projects')
+      handleModeChange('projects')
       setProjectPanelMessageType('success')
       setProjectPanelMessage('프로젝트를 만들었습니다.')
     } catch (projectError) {
@@ -572,7 +586,7 @@ export function MapPage() {
         },
       )
       setProjectPinNote('')
-      setMapMode('projects')
+      handleModeChange('projects')
       setProjectPanelMessageType('success')
       setProjectPanelMessage('프로젝트 지도에 저장했습니다.')
     } catch (pinError) {
@@ -615,8 +629,8 @@ export function MapPage() {
         {initialLocationReady ? (
           <KakaoMapView
             center={center}
-            posts={posts}
-            projectPins={mapProjectPins}
+            posts={visiblePosts}
+            projectPins={visibleProjectPins}
             selectedLocation={selectedLocation}
             onMapClick={handleMapClick}
             onMarkerClick={(post) => {
@@ -663,16 +677,23 @@ export function MapPage() {
 
           <div className="map-mode-tabs" role="tablist" aria-label="지도 모드">
             <button
+              className={mapMode === 'main' ? 'active' : ''}
+              type="button"
+              onClick={() => handleModeChange('main')}
+            >
+              메인 지도
+            </button>
+            <button
               className={mapMode === 'live' ? 'active' : ''}
               type="button"
-              onClick={() => setMapMode('live')}
+              onClick={() => handleModeChange('live')}
             >
               실시간 상태
             </button>
             <button
               className={mapMode === 'projects' ? 'active' : ''}
               type="button"
-              onClick={() => setMapMode('projects')}
+              onClick={() => handleModeChange('projects')}
             >
               친구 지도
             </button>
@@ -685,14 +706,24 @@ export function MapPage() {
           <span>
             {mapMode === 'projects'
               ? `프로젝트 핀 ${mapProjectPins.length}개`
-              : loadingPosts
-                ? '기록 불러오는 중'
-                : `팔로우 기반 ${posts.length}개의 기록`}
+              : mapMode === 'live'
+                ? selectedPlace
+                  ? `상태 업데이트 ${statusUpdates.length}개`
+                  : '검색 기반 실시간 상태'
+                : loadingPosts
+                  ? '기록 불러오는 중'
+                  : `팔로우 기반 ${posts.length}개의 기록`}
           </span>
-          {currentUser && (
+          {currentUser && mapMode === 'main' && (
             <span className="map-legend">
               <i className="mine" />
               내 기록
+              <i className="other" />
+              팔로잉
+            </span>
+          )}
+          {currentUser && mapMode === 'projects' && (
+            <span className="map-legend">
               <i
                 className="project"
                 style={{
@@ -724,8 +755,9 @@ export function MapPage() {
           </div>
         )}
 
-        <aside className="map-side-panel" aria-label={mapMode === 'live' ? '실시간 장소 상태' : '친구 지도'}>
-          {mapMode === 'live' ? (
+        {mapMode !== 'main' && (
+          <aside className="map-side-panel" aria-label={mapMode === 'live' ? '실시간 장소 상태' : '친구 지도'}>
+            {mapMode === 'live' ? (
             <>
               <div className="map-panel-header">
                 <div>
@@ -1037,31 +1069,43 @@ export function MapPage() {
                 </>
               )}
             </>
-          )}
-        </aside>
+            )}
+          </aside>
+        )}
 
         {(locationError || error) && <p className="map-error">{locationError || error}</p>}
-        {!currentUser && mapMode === 'live' && (
+        {!currentUser && mapMode !== 'projects' && (
           <div className="map-floating map-login-prompt">
-            <p>로그인하면 장소 상태와 친구 지도를 함께 남길 수 있습니다.</p>
+            <p>
+              {mapMode === 'main'
+                ? '로그인하면 팔로우한 사람들의 핀 위치가 지도에 표시됩니다.'
+                : '로그인하면 지금 장소 상태를 바로 남길 수 있습니다.'}
+            </p>
             <button className="button button-primary" type="button" onClick={() => navigate('/login')}>
               로그인
             </button>
           </div>
         )}
 
-        {selectedLocation && !selectedPlace && !isFormOpen && currentUser && (
+        {selectedLocation && mapMode === 'main' && !isFormOpen && currentUser && (
           <div className="map-floating map-record-floating">
-            <p>
-              선택한 좌표 {selectedLocation.lat.toFixed(5)}, {selectedLocation.lng.toFixed(5)}
-            </p>
+            {selectedPlace ? (
+              <p>
+                <strong>{selectedPlace.placeName}</strong>
+                <span>{selectedPlace.address || '주소 정보 없음'}</span>
+              </p>
+            ) : (
+              <p>
+                선택한 좌표 {selectedLocation.lat.toFixed(5)}, {selectedLocation.lng.toFixed(5)}
+              </p>
+            )}
             <button
               className="button button-primary"
               type="button"
               onClick={() => (currentUser ? setIsFormOpen(true) : navigate('/login'))}
             >
               <Plus size={18} aria-hidden="true" />
-              이곳에 기록하기
+              {selectedPlace ? '이 장소 기록하기' : '이곳에 기록하기'}
             </button>
           </div>
         )}

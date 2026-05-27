@@ -1179,6 +1179,21 @@ img {
   font-weight: 700;
 }
 
+.map-record-floating p {
+  display: grid;
+  gap: 3px;
+}
+
+.map-record-floating p strong {
+  color: var(--ink);
+}
+
+.map-record-floating p span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
 .map-preview {
   position: absolute;
   right: 18px;
