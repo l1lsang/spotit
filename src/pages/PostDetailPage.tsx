@@ -137,6 +137,7 @@ export function PostDetailPage() {
       lng: payload.lng,
       dateKey: payload.dateKey,
       visibility: payload.visibility,
+      pinColor: payload.pinColor,
     }
 
     await updatePost(post.id, input, payload.existingPhotoUrls, payload.files, currentUser.uid)

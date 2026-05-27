@@ -9,19 +9,15 @@ import {
   type KakaoMarkerInstance,
   type LatLng,
 } from '../../lib/kakaoMap'
-import type { ProjectPinMapMarker } from '../../types/mapFeature'
 import type { Post } from '../../types/post'
 import { createPostMarker } from './PostMarker'
-import { createProjectPinMarker } from './ProjectPinMarker'
 
 interface KakaoMapViewProps {
   center: LatLng
   posts: Post[]
-  projectPins?: ProjectPinMapMarker[]
   selectedLocation?: LatLng | null
   onMapClick: (location: LatLng) => void
   onMarkerClick: (post: Post) => void
-  onProjectPinClick?: (pin: ProjectPinMapMarker) => void
   currentUserUid?: string
   className?: string
 }
@@ -29,11 +25,9 @@ interface KakaoMapViewProps {
 export function KakaoMapView({
   center,
   posts,
-  projectPins = [],
   selectedLocation = null,
   onMapClick,
   onMarkerClick,
-  onProjectPinClick,
   currentUserUid,
   className = '',
 }: KakaoMapViewProps) {
@@ -41,11 +35,9 @@ export function KakaoMapView({
   const mapRef = useRef<KakaoMapInstance | null>(null)
   const mapClickHandlerRef = useRef<KakaoEventHandler | null>(null)
   const postMarkersRef = useRef<KakaoMarkerInstance[]>([])
-  const projectPinMarkersRef = useRef<KakaoMarkerInstance[]>([])
   const selectedMarkerRef = useRef<KakaoMarkerInstance | null>(null)
   const onMapClickRef = useRef(onMapClick)
   const onMarkerClickRef = useRef(onMarkerClick)
-  const onProjectPinClickRef = useRef(onProjectPinClick)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(
     isKakaoMapConfigured ? 'loading' : 'error',
   )
@@ -58,10 +50,6 @@ export function KakaoMapView({
   useEffect(() => {
     onMarkerClickRef.current = onMarkerClick
   }, [onMarkerClick])
-
-  useEffect(() => {
-    onProjectPinClickRef.current = onProjectPinClick
-  }, [onProjectPinClick])
 
   useEffect(() => {
     if (!isKakaoMapConfigured) {
@@ -111,7 +99,6 @@ export function KakaoMapView({
       }
 
       postMarkersRef.current.forEach((marker) => marker.setMap(null))
-      projectPinMarkersRef.current.forEach((marker) => marker.setMap(null))
       selectedMarkerRef.current?.setMap(null)
       mapRef.current = null
     }
@@ -139,20 +126,6 @@ export function KakaoMapView({
       ),
     )
   }, [currentUserUid, posts, status])
-
-  useEffect(() => {
-    if (status !== 'ready' || !mapRef.current) {
-      return
-    }
-
-    const kakao = getKakaoMaps()
-    projectPinMarkersRef.current.forEach((marker) => marker.setMap(null))
-    projectPinMarkersRef.current = projectPins.map((pin) =>
-      createProjectPinMarker(kakao, mapRef.current as KakaoMapInstance, pin, () =>
-        onProjectPinClickRef.current?.(pin),
-      ),
-    )
-  }, [projectPins, status])
 
   useEffect(() => {
     if (status !== 'ready' || !mapRef.current) {

@@ -3,7 +3,7 @@ import type {
   KakaoMapsNamespace,
   KakaoMarkerInstance,
 } from '../../lib/kakaoMap'
-import type { Post } from '../../types/post'
+import { getPostPinGroupColor, type Post } from '../../types/post'
 
 export function createPostMarker(
   kakao: KakaoMapsNamespace,
@@ -16,6 +16,9 @@ export function createPostMarker(
   const markerElement = document.createElement('button')
   markerElement.type = 'button'
   markerElement.className = `daymark-map-pin ${isMine ? 'mine' : 'other'}`
+  if (isMine) {
+    markerElement.style.setProperty('--post-pin-color', getPostPinGroupColor(post.pinColor))
+  }
   markerElement.setAttribute('aria-label', `${post.title} 핀 보기`)
   markerElement.innerHTML = `<span></span>`
   markerElement.addEventListener('click', (event) => {

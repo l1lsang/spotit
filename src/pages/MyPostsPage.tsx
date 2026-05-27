@@ -58,6 +58,7 @@ export function MyPostsPage() {
       lng: payload.lng,
       dateKey: payload.dateKey,
       visibility: payload.visibility,
+      pinColor: payload.pinColor,
     }
 
     await updatePost(editingPost.id, input, payload.existingPhotoUrls, payload.files, currentUser.uid)

@@ -2,7 +2,13 @@ import { Save, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { getTodayDateKey } from '../../lib/date'
 import type { LatLng } from '../../lib/kakaoMap'
-import type { Post, PostFormInput, PostVisibility } from '../../types/post'
+import {
+  DEFAULT_POST_PIN_GROUP,
+  POST_PIN_GROUPS,
+  type Post,
+  type PostFormInput,
+  type PostVisibility,
+} from '../../types/post'
 import { PhotoUploader } from './PhotoUploader'
 
 export interface PostFormSubmitPayload extends PostFormInput {
@@ -40,6 +46,7 @@ function createInitialForm(
     lng: initialPost?.lng ?? fallbackLocation?.lng ?? 0,
     dateKey: initialPost?.dateKey || getTodayDateKey(),
     visibility: initialPost?.visibility === 'public' ? 'followers' : initialPost?.visibility || 'followers',
+    pinColor: initialPost?.pinColor || DEFAULT_POST_PIN_GROUP,
   }
 }
 
@@ -169,6 +176,25 @@ export function PostFormModal({
               </div>
             </fieldset>
           </div>
+
+          <fieldset className="field">
+            <legend>내 지도 핀 그룹</legend>
+            <div className="pin-group-palette">
+              {POST_PIN_GROUPS.map((group) => (
+                <button
+                  key={group.id}
+                  className={`color-swatch-button ${form.pinColor === group.id ? 'active' : ''}`}
+                  type="button"
+                  onClick={() => updateField('pinColor', group.id)}
+                  aria-pressed={form.pinColor === group.id}
+                >
+                  <i style={{ backgroundColor: group.value }} />
+                  {group.label}
+                </button>
+              ))}
+            </div>
+            <small className="field-help">내 계정에서만 색깔 그룹으로 보이고, 다른 사람에게는 같은 색으로 보입니다.</small>
+          </fieldset>
 
           <label className="field">
             <span>메모</span>

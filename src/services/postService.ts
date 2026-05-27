@@ -15,7 +15,13 @@ import {
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
 import type { LatLng } from '../lib/kakaoMap'
-import type { Post, PostFormInput } from '../types/post'
+import {
+  DEFAULT_POST_PIN_GROUP,
+  isPostPinGroup,
+  type Post,
+  type PostFormInput,
+  type PostPinGroup,
+} from '../types/post'
 import { getFollowingIds, isFollowing } from './followService'
 import { uploadPostPhotos } from './storageService'
 
@@ -51,6 +57,7 @@ function toPost(
   return {
     ...post,
     id: post.id || snapshot.id,
+    pinColor: normalizePinColor(post.pinColor),
     photoUrls: post.photoUrls || [],
     likeCount: post.likeCount || 0,
     commentCount: post.commentCount || 0,
@@ -74,6 +81,12 @@ function assertOwner(post: Post, uid: string): void {
 
 function normalizeVisibility(visibility: Post['visibility']): Post['visibility'] {
   return visibility === 'public' ? 'followers' : visibility
+}
+
+function normalizePinColor(pinColor: unknown): PostPinGroup {
+  return typeof pinColor === 'string' && isPostPinGroup(pinColor)
+    ? pinColor
+    : DEFAULT_POST_PIN_GROUP
 }
 
 function canFollowerSee(post: Post): boolean {
@@ -119,6 +132,7 @@ export async function createPost(
     authorNickname: author.nickname,
     ...input,
     visibility: normalizeVisibility(input.visibility),
+    pinColor: normalizePinColor(input.pinColor),
     photoUrls,
     likeCount: 0,
     commentCount: 0,
@@ -226,6 +240,7 @@ export async function updatePost(
 
   await updateDoc(doc(requireDb(), 'posts', postId), {
     ...input,
+    pinColor: normalizePinColor(input.pinColor),
     photoUrls: [...existingPhotoUrls, ...uploadedPhotoUrls],
     updatedAt: serverTimestamp(),
   })
