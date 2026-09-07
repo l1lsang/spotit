@@ -1,17 +1,15 @@
 import { LocateFixed, MapPin, Plus, Search, SendHorizonal, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
-import { KakaoMapView } from '../components/map/KakaoMapView'
+import { MapView } from '../components/map/MapView'
+import { MapPinList } from '../components/map/MapPinList'
 import { MapPostPreview } from '../components/map/MapPostPreview'
 import { PostFormModal, type PostFormSubmitPayload } from '../components/post/PostFormModal'
 import { useAuth } from '../hooks/useAuth'
 import { SEOUL_CITY_HALL, useCurrentLocation } from '../hooks/useCurrentLocation'
-import {
-  searchKakaoPlacesByKeyword,
-  type KakaoPlaceSearchResult,
-  type LatLng,
-} from '../lib/kakaoMap'
+import { getMapProvider, type LatLng, type MapProvider, type PlaceSearchResult } from '../lib/mapLocation'
+import { searchPlaces } from '../lib/placeSearch'
 import {
   createLivePlaceStatus,
   subscribePlaceStatusUpdates,
@@ -87,10 +85,6 @@ function getStatusLabel(statusKey: LivePlaceStatusKey): string {
   return statusLabelById.get(statusKey) || statusKey
 }
 
-function getPlaceId(place: KakaoPlaceSearchResult): string {
-  return place.id || `${place.place_name}-${place.x}-${place.y}`
-}
-
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
 }
@@ -105,10 +99,14 @@ export function MapPage() {
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlacePrefill | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
+  const [clusterPosts, setClusterPosts] = useState<Post[]>([])
+  const [providerOverride, setProviderOverride] = useState<MapProvider | 'auto'>('auto')
+  const provider = providerOverride === 'auto' ? getMapProvider(center) : providerOverride
+  const searchRequestRef = useRef(0)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [loadingPosts, setLoadingPosts] = useState(false)
   const [placeQuery, setPlaceQuery] = useState('')
-  const [placeResults, setPlaceResults] = useState<KakaoPlaceSearchResult[]>([])
+  const [placeResults, setPlaceResults] = useState<PlaceSearchResult[]>([])
   const [searchingPlaces, setSearchingPlaces] = useState(false)
   const [placeSearchMessage, setPlaceSearchMessage] = useState('')
   const [error, setError] = useState('')
@@ -203,12 +201,18 @@ export function MapPage() {
 
   async function handleUseCurrentLocation() {
     const nextLocation = await requestLocation()
+    setProviderOverride('auto')
+    setSelectedPost(null)
+    setClusterPosts([])
+    setSelectedLocation(null)
+    setSelectedPlace(null)
     setCenter(nextLocation)
     setInitialLocationReady(true)
   }
 
   function handleModeChange(nextMode: MapMode) {
     setMapMode(nextMode)
+    setClusterPosts([])
 
     if (nextMode !== 'main') {
       setSelectedPost(null)
@@ -219,9 +223,27 @@ export function MapPage() {
     setSelectedLocation(location)
     setSelectedPlace(null)
     setSelectedPost(null)
+    setClusterPosts([])
+  }
+
+  function handleSelectPost(post: Post) {
+    setProviderOverride('auto')
+    setSelectedPost(post)
+    setSelectedLocation(null)
+    setSelectedPlace(null)
+    setCenter({ lat: post.lat, lng: post.lng })
+  }
+
+  function handleClusterClick(group: Post[]) {
+    setClusterPosts(group)
+    setSelectedPost(null)
+    setSelectedLocation(null)
+    setSelectedPlace(null)
   }
 
   function handleClearSearch() {
+    searchRequestRef.current += 1
+    setSearchingPlaces(false)
     setPlaceQuery('')
     setPlaceResults([])
     setPlaceSearchMessage('')
@@ -231,10 +253,12 @@ export function MapPage() {
 
   async function handlePlaceSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const requestId = ++searchRequestRef.current
 
     if (!placeQuery.trim()) {
       setPlaceResults([])
       setPlaceSearchMessage('')
+      setSearchingPlaces(false)
       return
     }
 
@@ -242,33 +266,34 @@ export function MapPage() {
     setPlaceSearchMessage('')
 
     try {
-      const results = await searchKakaoPlacesByKeyword(placeQuery, center)
+      const results = await searchPlaces(placeQuery, center, provider)
+      if (requestId !== searchRequestRef.current) return
       setPlaceResults(results)
       setPlaceSearchMessage(results.length === 0 ? '검색 결과가 없습니다.' : '')
     } catch (searchError) {
+      if (requestId !== searchRequestRef.current) return
       setPlaceResults([])
       setPlaceSearchMessage(getErrorMessage(searchError, '장소 검색에 실패했습니다.'))
     } finally {
-      setSearchingPlaces(false)
+      if (requestId === searchRequestRef.current) setSearchingPlaces(false)
     }
   }
 
-  function handleSelectPlace(place: KakaoPlaceSearchResult) {
-    const location = {
-      lat: Number(place.y),
-      lng: Number(place.x),
-    }
+  function handleSelectPlace(place: PlaceSearchResult) {
+    const location = place.location
+    setClusterPosts([])
+    setProviderOverride(place.provider)
 
     setCenter(location)
     setSelectedLocation(location)
     setSelectedPlace({
-      placeId: getPlaceId(place),
-      placeName: place.place_name,
-      address: place.road_address_name || place.address_name,
+      placeId: place.id,
+      placeName: place.name,
+      address: place.address,
       location,
     })
     setSelectedPost(null)
-    setPlaceQuery(place.place_name)
+    setPlaceQuery(place.name)
     setPlaceResults([])
     setPlaceSearchMessage('')
   }
@@ -361,16 +386,19 @@ export function MapPage() {
     <PageContainer fullBleed className="map-page">
       <div className="map-shell">
         {initialLocationReady ? (
-          <KakaoMapView
+          <MapView
             center={center}
+            provider={provider}
             posts={visiblePosts}
             selectedLocation={selectedLocation}
+            selectedPostId={selectedPost?.id}
             onMapClick={handleMapClick}
-            onMarkerClick={setSelectedPost}
+            onMarkerClick={(post) => { setClusterPosts([]); handleSelectPost(post) }}
+            onClusterClick={handleClusterClick}
             currentUserUid={currentUser?.uid}
           />
         ) : (
-          <section className="kakao-map" aria-label="장소 기록 지도">
+          <section className="location-map" aria-label="장소 기록 지도">
             <div className="map-state">
               <strong>현재 위치를 확인하는 중입니다.</strong>
               <p>잠시 후 내 위치를 중심으로 지도를 표시합니다.</p>
@@ -385,6 +413,7 @@ export function MapPage() {
               value={placeQuery}
               onChange={(event) => setPlaceQuery(event.target.value)}
               placeholder="장소 검색"
+              aria-label="장소 검색"
             />
             {placeQuery && (
               <button
@@ -396,10 +425,22 @@ export function MapPage() {
                 <X size={16} aria-hidden="true" />
               </button>
             )}
-            <button className="button-icon map-search-submit" type="submit" aria-label="검색">
+            <button className="button-icon map-search-submit" type="submit" aria-label="검색" disabled={searchingPlaces || !initialLocationReady}>
               <Search size={17} aria-hidden="true" />
             </button>
           </form>
+
+          <select className="map-provider-select" aria-label="지도 제공자" value={providerOverride} onChange={(event) => {
+            setProviderOverride(event.target.value as MapProvider | 'auto')
+            searchRequestRef.current += 1
+            setSearchingPlaces(false)
+            setPlaceResults([])
+            setPlaceSearchMessage('')
+          }}>
+            <option value="auto">자동 · {getMapProvider(center) === 'kakao' ? '카카오맵' : 'Google Maps'}</option>
+            <option value="kakao">카카오맵</option>
+            <option value="google">Google Maps</option>
+          </select>
 
           <div className="map-mode-tabs" role="tablist" aria-label="지도 모드">
             <button
@@ -455,10 +496,10 @@ export function MapPage() {
               <p>{placeSearchMessage}</p>
             ) : (
               placeResults.map((place) => (
-                <button key={getPlaceId(place)} type="button" onClick={() => handleSelectPlace(place)}>
-                  <strong>{place.place_name}</strong>
-                  <span>{place.road_address_name || place.address_name}</span>
-                  {place.distance && <small>{Number(place.distance).toLocaleString()}m</small>}
+                <button key={place.id} type="button" onClick={() => handleSelectPlace(place)}>
+                  <strong>{place.name}</strong>
+                  <span>{place.address}</span>
+                  {place.distanceMeters !== undefined && <small>{place.distanceMeters.toLocaleString()}m</small>}
                 </button>
               ))
             )}
@@ -609,7 +650,11 @@ export function MapPage() {
           </div>
         )}
 
-        {selectedPost && <MapPostPreview post={selectedPost} onClose={() => setSelectedPost(null)} />}
+        {clusterPosts.length > 1 && !selectedPost && <MapPinList posts={clusterPosts} onSelect={handleSelectPost} onClose={() => setClusterPosts([])} />}
+        {selectedPost && <MapPostPreview key={selectedPost.id} post={selectedPost}
+          onClose={() => { setSelectedPost(null); setClusterPosts([]) }}
+          onBack={clusterPosts.length > 1 ? () => setSelectedPost(null) : undefined}
+        />}
       </div>
 
       <PostFormModal

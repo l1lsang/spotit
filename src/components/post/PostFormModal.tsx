@@ -2,6 +2,7 @@ import { Save, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { getTodayDateKey } from '../../lib/date'
 import type { LatLng } from '../../lib/kakaoMap'
+import { isValidLocation } from '../../lib/mapLocation'
 import {
   DEFAULT_POST_PIN_GROUP,
   POST_PIN_GROUPS,
@@ -91,7 +92,7 @@ export function PostFormModal({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!form.lat || !form.lng) {
+    if ((!initialPost && !location && !placePrefill) || !isValidLocation(form)) {
       setError('지도에서 기록할 위치를 먼저 선택해 주세요.')
       return
     }

@@ -1,7 +1,5 @@
-export interface LatLng {
-  lat: number
-  lng: number
-}
+import type { LatLng } from './mapLocation'
+export type { LatLng } from './mapLocation'
 
 export interface KakaoLatLngInstance {
   getLat: () => number
@@ -16,6 +14,9 @@ export type KakaoEventHandler = (event?: KakaoMapMouseEvent) => void
 
 export interface KakaoMapInstance {
   setCenter: (latLng: KakaoLatLngInstance) => void
+  getCenter: () => KakaoLatLngInstance
+  getProjection: () => { pointFromCoords: (location: KakaoLatLngInstance) => { x: number; y: number } }
+  relayout: () => void
 }
 
 export interface KakaoMarkerInstance {
@@ -61,8 +62,11 @@ export interface KakaoMapsNamespace {
     content: HTMLElement | string
     xAnchor?: number
     yAnchor?: number
+    clickable?: boolean
+    zIndex?: number
   }) => KakaoMarkerInstance
   event: {
+    preventMap: () => void
     addListener: (
       target: KakaoMapInstance | KakaoMarkerInstance,
       type: string,
@@ -104,7 +108,7 @@ const kakaoMapKey = import.meta.env.VITE_KAKAO_MAP_JS_KEY
 
 export const isKakaoMapConfigured = Boolean(kakaoMapKey)
 export const kakaoMapConfigMessage =
-  'Kakao Map JavaScript 키가 없습니다. .env에 VITE_KAKAO_MAP_JS_KEY를 설정해 주세요.'
+  '국내 지도가 아직 준비되지 않았습니다. 잠시 후 다시 이용해 주세요.'
 
 export function loadKakaoMapSdk(): Promise<void> {
   if (!isKakaoMapConfigured) {
@@ -119,22 +123,26 @@ export function loadKakaoMapSdk(): Promise<void> {
     return window.__daymarkKakaoMapPromise
   }
 
-  window.__daymarkKakaoMapPromise = new Promise((resolve, reject) => {
-    const existingScript = document.querySelector<HTMLScriptElement>('#kakao-map-sdk')
-
-    if (existingScript) {
-      existingScript.addEventListener('load', () => window.kakao?.maps.load(resolve))
-      existingScript.addEventListener('error', () => reject(new Error('Kakao Map SDK 로드 실패')))
-      return
-    }
-
+  window.__daymarkKakaoMapPromise = new Promise<void>((resolve, reject) => {
     const script = document.createElement('script')
+    const timeout = window.setTimeout(fail, 20_000)
+    function fail() {
+      window.clearTimeout(timeout)
+      script.remove()
+      reject(new Error('카카오 지도를 불러오지 못했습니다. 네트워크 연결을 확인해 주세요.'))
+    }
     script.id = 'kakao-map-sdk'
     script.async = true
     script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoMapKey}&autoload=false&libraries=services`
-    script.onload = () => window.kakao?.maps.load(resolve)
-    script.onerror = () => reject(new Error('Kakao Map SDK 로드 실패'))
+    script.onload = () => window.kakao?.maps.load(() => {
+      window.clearTimeout(timeout)
+      resolve()
+    })
+    script.onerror = fail
     document.head.appendChild(script)
+  }).catch((error: unknown) => {
+    window.__daymarkKakaoMapPromise = undefined
+    throw error
   })
 
   return window.__daymarkKakaoMapPromise

@@ -988,7 +988,7 @@ img {
   background: #eee4d6;
 }
 
-.kakao-map {
+.location-map {
   position: relative;
   width: 100%;
   height: 100%;
@@ -1164,6 +1164,51 @@ img {
   transform: rotate(-45deg) translateY(-2px);
 }
 
+.daymark-map-pin.cluster {
+  min-width: 44px;
+  width: auto;
+  height: 44px;
+  padding: 0 9px;
+  border-radius: 50%;
+  transform: none;
+}
+
+.daymark-map-pin.cluster span {
+  width: auto;
+  height: auto;
+  color: #fff;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.daymark-map-pin.selected,
+.daymark-map-pin:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.map-location-pin {
+  width: 22px;
+  height: 22px;
+  border: 4px solid white;
+  border-radius: 50%;
+  background: #297e99;
+  box-shadow: 0 0 0 5px #297e9940;
+}
+
+.map-provider-select {
+  min-height: 42px;
+  max-width: 190px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: #fffdf8;
+  font: inherit;
+  font-size: 0.86rem;
+}
+
 .map-error {
   position: absolute;
   top: 78px;
@@ -1291,6 +1336,58 @@ img {
   margin: 0 38px 10px 0;
   font-size: 1.18rem;
 }
+
+.preview-address,
+.preview-coordinates,
+.map-pin-list-hint {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.preview-map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 12px;
+  color: var(--teal);
+  text-decoration: underline;
+  font-size: 0.9rem;
+}
+
+.map-preview {
+  max-height: min(440px, 60%);
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
+.map-pin-list ul {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.map-pin-list li + li { border-top: 1px solid var(--line); }
+
+.map-pin-list-item {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 14px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.map-pin-list-item:hover,
+.map-pin-list-item:focus-visible { background: #f2ebe0; }
+.map-pin-list-item span { display: flex; align-items: center; gap: 4px; }
+.map-pin-list-item small { color: var(--muted); }
+.map-list-back { margin: 0 0 12px; padding: 0; border: 0; color: var(--teal); background: transparent; }
 
 .map-side-panel {
   position: absolute;
@@ -2872,6 +2969,51 @@ body.chat-room-active .message-form:focus-within {
     top: 12px;
     right: 12px;
     left: 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .map-toolbar .map-search-form {
+    grid-column: 1 / -1;
+    order: 0;
+  }
+
+  .map-toolbar .map-mode-tabs {
+    grid-column: 1 / -1;
+    order: 1;
+  }
+
+  .map-provider-select {
+    order: 2;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    padding-inline: 8px;
+  }
+
+  .map-toolbar > .button {
+    order: 3;
+    min-width: 0;
+  }
+
+  .map-toolbar > span {
+    grid-column: 1 / -1;
+    order: 4;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    justify-self: start;
+  }
+
+  .map-toolbar > .pin-group-legend {
+    display: none;
+  }
+
+  .map-preview {
+    max-height: 40%;
+    right: 12px;
+    bottom: 18px;
+    width: calc(100% - 24px);
   }
 
   .map-place-results {

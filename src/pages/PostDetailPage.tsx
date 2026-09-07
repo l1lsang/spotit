@@ -2,7 +2,8 @@ import { Heart, MessageCircle, Pencil, Share2, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
-import { KakaoMapView } from '../components/map/KakaoMapView'
+import { MapView } from '../components/map/MapView'
+import { getExternalMapUrl } from '../lib/mapLocation'
 import { CommentList } from '../components/post/CommentList'
 import { PostFormModal, type PostFormSubmitPayload } from '../components/post/PostFormModal'
 import { useAuth } from '../hooks/useAuth'
@@ -296,8 +297,9 @@ export function PostDetailPage() {
             <small>
               좌표 {post.lat.toFixed(5)}, {post.lng.toFixed(5)}
             </small>
+            <a className="preview-map-link" href={getExternalMapUrl(post, post.placeName)} target="_blank" rel="noopener noreferrer">지도에서 위치 열기</a>
           </div>
-          <KakaoMapView
+          <MapView
             className="mini-map"
             center={{ lat: post.lat, lng: post.lng }}
             posts={[post]}
