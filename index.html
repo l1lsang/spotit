@@ -68,5 +68,24 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script type="module">
+      // Load the optional Figma exporter only for an explicit local capture.
+      if (import.meta.env.DEV && location.hash.includes('figmacapture=')) {
+        const waitForScreen = async () => {
+          const root = document.getElementById('root');
+          if (!root?.textContent.trim() || root.querySelector('.screen-message')) {
+            setTimeout(waitForScreen, 250);
+            return;
+          }
+          await document.fonts.ready;
+          setTimeout(() => {
+            const captureScript = document.createElement('script');
+            captureScript.src = 'https://mcp.figma.com/mcp/html-to-design/capture.js';
+            document.head.appendChild(captureScript);
+          }, 2000);
+        };
+        waitForScreen();
+      }
+    </script>
   </body>
 </html>
