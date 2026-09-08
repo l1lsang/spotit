@@ -718,6 +718,220 @@ img {
   box-shadow: 0 10px 22px rgba(77, 61, 0, 0.12);
 }
 
+.google-button {
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: #3c4043;
+}
+
+.google-button:hover {
+  background: #f8f9fa;
+  border-color: #c5c8cb;
+}
+
+.google-button svg {
+  flex-shrink: 0;
+}
+
+.google-signin-notice {
+  display: grid;
+  gap: 5px;
+  margin: -2px 0 16px;
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 0.75rem;
+}
+
+.signup-panel {
+  width: min(480px, 100%);
+}
+
+.signup-panel .auth-heading h1 {
+  font-size: clamp(1.35rem, 5.2vw, 1.8rem);
+  letter-spacing: -0.04em;
+  outline: none;
+}
+
+.signup-progress {
+  display: flex;
+  gap: 20px;
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+}
+
+.signup-progress li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.signup-progress li > span {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+
+.signup-progress .active {
+  color: var(--accent-strong);
+}
+
+.signup-progress .active > span {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.signup-progress .complete > span {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
+}
+
+.signup-fields {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.username-input {
+  position: relative;
+}
+
+.username-input > svg,
+.username-input > span {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.field .username-input input {
+  padding-left: 41px;
+}
+
+.field-hint,
+.field-counter,
+.field-label-row small {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.field-error:empty {
+  display: none;
+}
+
+.field-counter {
+  text-align: right;
+}
+
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.signup-photo-section {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 6px 0 10px;
+  text-align: center;
+}
+
+.signup-photo-section strong {
+  overflow-wrap: anywhere;
+}
+
+.signup-photo-picker {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  margin-bottom: 4px;
+  border: 2px dashed #d9c9b3;
+  border-radius: 50%;
+  color: var(--muted);
+  background: #f7efe3;
+  cursor: pointer;
+}
+
+.signup-photo-picker:focus-within,
+.profile-photo-picker:focus-within {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.signup-photo-picker img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.signup-photo-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.signup-camera {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  color: #fff;
+  background: var(--accent);
+}
+
+.signup-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-panel .profile-username {
+  margin-bottom: 8px;
+  color: var(--teal);
+  overflow-wrap: anywhere;
+}
+
+.profile-panel .profile-bio,
+.person-info .profile-bio {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .privacy-consent {
   display: grid;
   gap: 10px;

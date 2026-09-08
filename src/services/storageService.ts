@@ -1,5 +1,6 @@
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { requireStorage } from '../lib/firebase'
+import { getProfilePhotoError } from '../lib/userProfile'
 
 function sanitizeFilename(filename: string): string {
   return filename.replace(/[^a-zA-Z0-9._-]/g, '_')
@@ -24,6 +25,8 @@ export async function uploadPostPhotos(
 }
 
 export async function uploadProfilePhoto(uid: string, file: File): Promise<string> {
+  const validationError = getProfilePhotoError(file)
+  if (validationError) throw new Error(validationError)
   const storage = requireStorage()
   const filename = `${Date.now()}-${sanitizeFilename(file.name)}`
   const storageRef = ref(storage, `profiles/${uid}/${filename}`)

@@ -7,8 +7,8 @@ import {
   getDocs,
   increment,
   query,
+  runTransaction,
   serverTimestamp,
-  setDoc,
   updateDoc,
   where,
   writeBatch,
@@ -17,6 +17,7 @@ import {
   type WriteBatch,
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
+import { BIO_MAX_LENGTH, NICKNAME_MAX_LENGTH, createRandomUsername, getUsernameError, normalizeUsername } from '../lib/userProfile'
 import type { DaymarkUser } from '../types/user'
 import type { PostPinGroup } from '../types/post'
 
@@ -36,42 +37,111 @@ export async function getUserProfile(uid: string): Promise<DaymarkUser | null> {
   return snapshot.data() as DaymarkUser
 }
 
-export async function upsertUserProfile(user: FirebaseUser, nickname?: string): Promise<DaymarkUser> {
+export async function isUsernameAvailable(value: string, uid?: string): Promise<boolean> {
+  const validationError = getUsernameError(value)
+  if (validationError) throw new Error(validationError)
+  const snapshot = await getDoc(doc(requireDb(), 'usernames', `@${normalizeUsername(value)}`))
+  return !snapshot.exists() || snapshot.data().uid === uid
+}
+
+export class UsernameTakenError extends Error {
+  constructor() {
+    super('이미 사용 중인 사용자 이름입니다. 다른 이름을 입력해 주세요.')
+    this.name = 'UsernameTakenError'
+  }
+}
+
+export async function upsertUserProfile(user: FirebaseUser): Promise<DaymarkUser> {
   const db = requireDb()
   const userRef = doc(db, 'users', user.uid)
-  const snapshot = await getDoc(userRef)
-  const nextNickname = nickname?.trim() || getFallbackNickname(user)
-  const baseProfile = {
-    uid: user.uid,
-    email: user.email || '',
-    updatedAt: serverTimestamp(),
-  }
 
-  if (!snapshot.exists()) {
-    await setDoc(userRef, {
-      ...baseProfile,
-      photoURL: user.photoURL || '',
-      nickname: nextNickname,
-      isPrivate: false,
-      followerCount: 0,
-      followingCount: 0,
-      createdAt: serverTimestamp(),
+  // Only legacy profiles receive a random handle; new accounts choose their own.
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const migrated = await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(userRef)
+      if (!snapshot.exists()) {
+        transaction.set(userRef, {
+          uid: user.uid,
+          email: user.email || '',
+          photoURL: user.photoURL || '',
+          nickname: getFallbackNickname(user),
+          bio: '',
+          onboardingComplete: false,
+          isPrivate: false,
+          followerCount: 0,
+          followingCount: 0,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+        return true
+      }
+
+      const profile = snapshot.data() as DaymarkUser
+      if (profile.username || profile.onboardingComplete === false) return true
+
+      const username = createRandomUsername()
+      const usernameRef = doc(db, 'usernames', `@${username}`)
+      if ((await transaction.get(usernameRef)).exists()) return false
+      transaction.set(usernameRef, { uid: user.uid })
+      transaction.update(userRef, {
+        username,
+        bio: profile.bio || '',
+        onboardingComplete: true,
+        updatedAt: serverTimestamp(),
+      })
+      return true
     })
-  } else {
-    await setDoc(
-      userRef,
-      {
-        ...baseProfile,
-        ...(user.photoURL ? { photoURL: user.photoURL } : {}),
-        ...(nickname ? { nickname: nextNickname } : {}),
-      },
-      { merge: true },
-    )
+
+    if (migrated) {
+      return (await getDoc(userRef)).data() as DaymarkUser
+    }
   }
 
-  const updated = await getDoc(userRef)
+  throw new Error('사용자 이름을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+}
 
-  return updated.data() as DaymarkUser
+export interface UserProfileDetails {
+  username: string
+  nickname: string
+  bio: string
+  photoURL?: string
+}
+
+export async function updateUserProfileDetails(uid: string, details: UserProfileDetails): Promise<void> {
+  const username = normalizeUsername(details.username)
+  const validationError = getUsernameError(username)
+  if (validationError) throw new Error(validationError)
+  const nickname = details.nickname.trim()
+  if (!nickname || nickname.length > NICKNAME_MAX_LENGTH) throw new Error('닉네임은 1~24자로 입력해 주세요.')
+  if (details.bio.length > BIO_MAX_LENGTH) throw new Error('소개글은 150자 이내로 입력해 주세요.')
+
+  const db = requireDb()
+  const userRef = doc(db, 'users', uid)
+  const usernameRef = doc(db, 'usernames', `@${username}`)
+  await runTransaction(db, async (transaction) => {
+    const userSnapshot = await transaction.get(userRef)
+    const usernameSnapshot = await transaction.get(usernameRef)
+    if (!userSnapshot.exists()) throw new Error('프로필을 불러오지 못했습니다. 다시 시도해 주세요.')
+    if (usernameSnapshot.exists() && usernameSnapshot.data().uid !== uid) throw new UsernameTakenError()
+
+    const previousUsername = userSnapshot.data().username as string | undefined
+    const previousRef = previousUsername && previousUsername !== username
+      ? doc(db, 'usernames', `@${previousUsername}`)
+      : null
+    const previousSnapshot = previousRef ? await transaction.get(previousRef) : null
+
+    // The reservation and profile are committed together, including simultaneous signups.
+    transaction.set(usernameRef, { uid })
+    transaction.update(userRef, {
+      username,
+      nickname,
+      bio: details.bio.trim(),
+      ...(details.photoURL !== undefined ? { photoURL: details.photoURL } : {}),
+      onboardingComplete: true,
+      updatedAt: serverTimestamp(),
+    })
+    if (previousRef && previousSnapshot?.data()?.uid === uid) transaction.delete(previousRef)
+  })
 }
 
 export async function updateUserNickname(uid: string, nickname: string): Promise<void> {
@@ -109,6 +179,7 @@ export async function listUsers(): Promise<DaymarkUser[]> {
   const snapshot = await getDocs(collection(requireDb(), 'users'))
 
   return snapshot.docs.map((userDoc) => userDoc.data() as DaymarkUser)
+    .filter((user) => user.onboardingComplete !== false)
 }
 
 async function commitBatchOperations(db: Firestore, operations: BatchOperation[]): Promise<void> {
@@ -325,6 +396,14 @@ export async function deleteUserAccountData(uid: string): Promise<void> {
     }),
   )
 
-  addDeleteOperation(operations, deletedPaths, userRef)
   await commitBatchOperations(db, operations)
+  // Release the handle atomically with removal of its owner profile.
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(userRef)
+    const username = snapshot.data()?.username as string | undefined
+    const usernameRef = username ? doc(db, 'usernames', `@${username}`) : null
+    const usernameSnapshot = usernameRef ? await transaction.get(usernameRef) : null
+    if (usernameRef && usernameSnapshot?.data()?.uid === uid) transaction.delete(usernameRef)
+    transaction.delete(userRef)
+  })
 }

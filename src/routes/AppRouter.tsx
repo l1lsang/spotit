@@ -29,66 +29,87 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return children
 }
 
+function OnboardingGuard({ children }: { children: ReactNode }) {
+  const { currentUser, profile, loading, profileError, refreshProfile } = useAuth()
+  const location = useLocation()
+  if (location.pathname === '/signup') return children
+  if (loading) return <div className="screen-message">로그인 상태를 확인하는 중입니다.</div>
+  if (currentUser && profileError) {
+    return (
+      <div className="screen-message" role="alert">
+        <p>{profileError}</p>
+        <button className="button button-primary" onClick={() => void refreshProfile().catch(() => undefined)}>
+          다시 시도
+        </button>
+      </div>
+    )
+  }
+  if (currentUser && profile?.onboardingComplete === false) return <Navigate to="/signup" replace />
+  return children
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/map" element={<MapPage />} />
-        <Route path="/feed" element={<FeedPage />} />
-        <Route path="/posts/:postId" element={<PostDetailPage />} />
-        <Route
-          path="/notifications"
-          element={
-            <ProtectedRoute>
-              <NotificationsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/people"
-          element={
-            <ProtectedRoute>
-              <PeoplePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/chats"
-          element={
-            <ProtectedRoute>
-              <ChatListPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/chats/:chatId"
-          element={
-            <ProtectedRoute>
-              <ChatRoomPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/my"
-          element={
-            <ProtectedRoute>
-              <MyPostsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <ProfilePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <OnboardingGuard>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/map" element={<MapPage />} />
+          <Route path="/feed" element={<FeedPage />} />
+          <Route path="/posts/:postId" element={<PostDetailPage />} />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <NotificationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/people"
+            element={
+              <ProtectedRoute>
+                <PeoplePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chats"
+            element={
+              <ProtectedRoute>
+                <ChatListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chats/:chatId"
+            element={
+              <ProtectedRoute>
+                <ChatRoomPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my"
+            element={
+              <ProtectedRoute>
+                <MyPostsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </OnboardingGuard>
     </BrowserRouter>
   )
 }

@@ -5,6 +5,9 @@ export interface DaymarkUser {
   uid: string
   email: string
   nickname: string
+  username?: string
+  bio?: string
+  onboardingComplete?: boolean
   photoURL: string
   pinGroupNames?: Partial<Record<PostPinGroup, string>>
   isPrivate?: boolean

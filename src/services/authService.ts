@@ -1,12 +1,12 @@
 import {
   createUserWithEmailAndPassword,
   deleteUser,
+  GoogleAuthProvider,
   OAuthProvider,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
-  updateProfile,
   type User,
 } from 'firebase/auth'
 import { requireAuth } from '../lib/firebase'
@@ -15,11 +15,8 @@ import { deleteUserAccountData, upsertUserProfile } from './userService'
 export async function signupWithEmail(
   email: string,
   password: string,
-  nickname: string,
 ): Promise<User> {
-  const credential = await createUserWithEmailAndPassword(requireAuth(), email, password)
-  await updateProfile(credential.user, { displayName: nickname.trim() })
-  await upsertUserProfile(credential.user, nickname)
+  const credential = await createUserWithEmailAndPassword(requireAuth(), email.trim(), password)
 
   return credential.user
 }
@@ -44,6 +41,14 @@ export async function loginWithKakao(): Promise<User> {
   const credential = await signInWithPopup(requireAuth(), provider)
   await upsertUserProfile(credential.user)
 
+  return credential.user
+}
+
+export async function loginWithGoogle(): Promise<User> {
+  const provider = new GoogleAuthProvider()
+  provider.setCustomParameters({ prompt: 'select_account' })
+  const credential = await signInWithPopup(requireAuth(), provider)
+  await upsertUserProfile(credential.user)
   return credential.user
 }
 

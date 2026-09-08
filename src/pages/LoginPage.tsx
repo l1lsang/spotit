@@ -2,8 +2,10 @@ import { ChevronDown, ChevronUp, KeyRound, Mail, MessageCircle } from 'lucide-re
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FirebaseNotice } from '../components/layout/FirebaseNotice'
+import { GoogleSignInNotice } from '../components/layout/GoogleSignInNotice'
+import { GoogleLogo } from '../components/layout/GoogleLogo'
 import { useAuth } from '../hooks/useAuth'
-import { loginWithEmail, loginWithKakao, sendPasswordReset } from '../services/authService'
+import { loginWithEmail, loginWithGoogle, loginWithKakao, sendPasswordReset } from '../services/authService'
 
 interface LocationState {
   from?: string
@@ -17,6 +19,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [socialProvider, setSocialProvider] = useState<'google' | 'kakao' | null>(null)
   const [resetMessage, setResetMessage] = useState('')
   const [resetSubmitting, setResetSubmitting] = useState(false)
   const [showThirdPartyPrivacy, setShowThirdPartyPrivacy] = useState(false)
@@ -39,6 +42,7 @@ export function LoginPage() {
   }
 
   async function handleKakaoLogin() {
+    setSocialProvider('kakao')
     setSubmitting(true)
     setError('')
     setResetMessage('')
@@ -53,7 +57,33 @@ export function LoginPage() {
           : '카카오 로그인에 실패했습니다. Firebase OIDC 설정을 확인해 주세요.',
       )
     } finally {
+      setSocialProvider(null)
       setSubmitting(false)
+    }
+  }
+
+  async function handleGoogleLogin() {
+    setSubmitting(true)
+    setSocialProvider('google')
+    setError('')
+    setResetMessage('')
+    try {
+      await loginWithGoogle()
+      navigate(from, { replace: true })
+    } catch (loginError) {
+      const code = (loginError as { code?: string }).code
+      const messages: Record<string, string> = {
+        'auth/popup-blocked': '팝업이 차단되었습니다. 팝업을 허용한 뒤 다시 시도해 주세요.',
+        'auth/operation-not-allowed': '구글 로그인이 아직 준비되지 않았습니다. 이메일로 로그인해 주세요.',
+        'auth/account-exists-with-different-credential': '같은 이메일로 가입한 계정이 있습니다. 기존 로그인 방법을 이용해 주세요.',
+        'auth/unauthorized-domain': '이 주소에서는 구글 로그인을 사용할 수 없습니다. 서비스 주소를 확인해 주세요.',
+      }
+      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
+        setError(messages[code || ''] || '구글 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+      }
+    } finally {
+      setSubmitting(false)
+      setSocialProvider(null)
     }
   }
 
@@ -125,7 +155,7 @@ export function LoginPage() {
           {resetMessage && <p className="form-success">{resetMessage}</p>}
 
           <button className="button button-primary wide" type="submit" disabled={!firebaseReady || submitting}>
-            {submitting ? '로그인 중' : '로그인'}
+            {submitting && !socialProvider ? '로그인 중' : '로그인'}
           </button>
           <button
             className="auth-text-button"
@@ -142,13 +172,25 @@ export function LoginPage() {
         </div>
 
         <button
+          className="button google-button wide"
+          aria-describedby="google-signin-notice"
+          type="button"
+          disabled={!firebaseReady || submitting}
+          onClick={handleGoogleLogin}
+        >
+          <GoogleLogo />
+          {socialProvider === 'google' ? '구글 로그인 중' : '구글로 로그인하기'}
+        </button>
+        <GoogleSignInNotice />
+
+        <button
           className="button kakao-button wide"
           type="button"
           disabled={!firebaseReady || submitting}
           onClick={handleKakaoLogin}
         >
           <MessageCircle size={18} aria-hidden="true" />
-          카카오로 로그인
+          {socialProvider === 'kakao' ? '카카오 로그인 중' : '카카오로 로그인'}
         </button>
 
         <section className="privacy-consent">

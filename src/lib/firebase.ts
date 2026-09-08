@@ -1,7 +1,7 @@
 import { getApps, initializeApp, type FirebaseApp } from 'firebase/app'
-import { getAuth, type Auth } from 'firebase/auth'
-import { getFirestore, type Firestore } from 'firebase/firestore'
-import { getStorage, type FirebaseStorage } from 'firebase/storage'
+import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth'
+import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore'
+import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -30,6 +30,11 @@ if (isFirebaseConfigured) {
     initializedAuth = getAuth(initializedApp)
     initializedDb = getFirestore(initializedApp)
     initializedStorage = getStorage(initializedApp)
+    if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true') {
+      connectAuthEmulator(initializedAuth, 'http://127.0.0.1:9099', { disableWarnings: true })
+      connectFirestoreEmulator(initializedDb, '127.0.0.1', 8080)
+      connectStorageEmulator(initializedStorage, '127.0.0.1', 9199)
+    }
   } catch (error) {
     initializationError =
       error instanceof Error ? error.message : 'Firebase 초기화 중 알 수 없는 오류가 발생했습니다.'

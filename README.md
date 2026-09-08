@@ -37,6 +37,8 @@ VITE_GOOGLE_MAPS_MAP_ID=
 
 ## Firebase 설정
 
+사용자 이름을 포함한 2단계 가입, Google 로그인, 기존 사용자 일괄 적용과 필요한 보안 규칙은 [계정 기능 설정](docs/account-setup.md)을 참고합니다.
+
 1. Firebase Console에서 Web 앱을 생성합니다.
 2. Authentication에서 이메일/비밀번호 로그인을 활성화합니다.
 3. Firestore Database와 Storage를 생성합니다.
@@ -90,6 +92,7 @@ Kakao Map SDK 로드와 타입 래퍼는 `src/lib/kakaoMap.ts`, 공통 지도 �
 
 ```text
 users/{uid}
+usernames/@{username}
 users/{uid}/followers/{followerUid}
 users/{uid}/following/{targetUid}
 posts/{postId}
@@ -106,6 +109,9 @@ chats/{chatId}/messages/{messageId}
   uid: string
   email: string
   nickname: string
+  username: string
+  bio: string
+  onboardingComplete: boolean
   photoURL: string
   followerCount: number
   followingCount: number

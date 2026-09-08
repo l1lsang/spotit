@@ -1,0 +1,55 @@
+rules_version = '2';
+// Isolated profile rules for emulator tests. See docs/account-setup.md for integration.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validProfileIdentity(uid) {
+      let data = request.resource.data;
+      return (!('username' in data) && data.onboardingComplete == false)
+        || (data.username is string
+          && data.username.matches('^[a-z0-9._]{1,30}$')
+          && getAfter(/databases/$(database)/documents/usernames/$('@' + data.username)).data.uid == uid);
+    }
+
+    function validProfileText() {
+      let data = request.resource.data;
+      return (!('bio' in data) || (data.bio is string && data.bio.size() <= 150))
+        && (data.onboardingComplete == false
+          || (data.nickname is string && data.nickname.size() > 0 && data.nickname.size() <= 24));
+    }
+
+    function releasesOldUsername() {
+      return !('username' in resource.data)
+        || request.resource.data.username == resource.data.username
+        || !existsAfter(/databases/$(database)/documents/usernames/$('@' + resource.data.username));
+    }
+
+    match /usernames/{usernameKey} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if request.resource.data.keys().hasOnly(['uid'])
+        && isOwner(request.resource.data.uid)
+        && usernameKey.matches('^@[a-z0-9._]{1,30}$')
+        && (!exists(/databases/$(database)/documents/usernames/$(usernameKey))
+          || resource.data.uid == request.auth.uid)
+        && usernameKey == '@' + getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.username;
+      allow delete: if isOwner(resource.data.uid)
+        && (!existsAfter(/databases/$(database)/documents/users/$(request.auth.uid))
+          || usernameKey != '@' + getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.username);
+    }
+
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow create: if isOwner(uid) && request.resource.data.uid == uid
+        && validProfileIdentity(uid) && validProfileText();
+      allow update: if isOwner(uid) && request.resource.data.uid == uid
+        && validProfileIdentity(uid) && validProfileText() && releasesOldUsername();
+      allow delete: if isOwner(uid)
+        && (!('username' in resource.data)
+          || !existsAfter(/databases/$(database)/documents/usernames/$('@' + resource.data.username)));
+    }
+  }
+}

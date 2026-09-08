@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
+import { BIO_MAX_LENGTH, USERNAME_MAX_LENGTH, getProfilePhotoError, getUsernameError } from '../lib/userProfile'
 import { deleteAccount, logout } from '../services/authService'
 import {
   acceptFollowRequest,
@@ -16,8 +17,7 @@ import {
 } from '../services/followService'
 import { uploadProfilePhoto } from '../services/storageService'
 import {
-  updateUserNickname,
-  updateUserPhotoURL,
+  updateUserProfileDetails,
   updateUserPinGroupNames,
   updateUserPrivacy,
 } from '../services/userService'
@@ -39,6 +39,8 @@ export function ProfilePage() {
   const navigate = useNavigate()
   const { currentUser, profile, refreshProfile } = useAuth()
   const [nickname, setNickname] = useState(profile?.nickname || '')
+  const [username, setUsername] = useState(profile?.username || '')
+  const [bio, setBio] = useState(profile?.bio || '')
   const [isPrivate, setIsPrivate] = useState(Boolean(profile?.isPrivate))
   const [pinGroupNames, setPinGroupNames] = useState<Partial<Record<PostPinGroup, string>>>(
     profile?.pinGroupNames || {},
@@ -62,9 +64,23 @@ export function ProfilePage() {
 
   useEffect(() => {
     setNickname(profile?.nickname || '')
+  }, [profile?.nickname])
+
+  useEffect(() => {
+    setUsername(profile?.username || '')
+  }, [profile?.username])
+
+  useEffect(() => {
+    setBio(profile?.bio || '')
+  }, [profile?.bio])
+
+  useEffect(() => {
     setIsPrivate(Boolean(profile?.isPrivate))
+  }, [profile?.isPrivate])
+
+  useEffect(() => {
     setPinGroupNames(profile?.pinGroupNames || {})
-  }, [profile?.isPrivate, profile?.nickname, profile?.pinGroupNames])
+  }, [profile?.pinGroupNames])
 
   const loadFollowRequests = useCallback(async () => {
     if (!currentUser) {
@@ -106,6 +122,12 @@ export function ProfilePage() {
       return
     }
 
+    const validationError = getUsernameError(username)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
     setSubmitting(true)
     setError('')
     setMessage('')
@@ -115,14 +137,16 @@ export function ProfilePage() {
 
       if (photoFile) {
         uploadedPhotoURL = await uploadProfilePhoto(currentUser.uid, photoFile)
-        await updateUserPhotoURL(currentUser.uid, uploadedPhotoURL)
       }
 
       await updateProfile(currentUser, {
         displayName: nickname.trim(),
         ...(uploadedPhotoURL ? { photoURL: uploadedPhotoURL } : {}),
       })
-      await updateUserNickname(currentUser.uid, nickname)
+      await updateUserProfileDetails(currentUser.uid, {
+        username, nickname, bio,
+        ...(uploadedPhotoURL ? { photoURL: uploadedPhotoURL } : {}),
+      })
       await updateUserPrivacy(currentUser.uid, isPrivate)
       await updateUserPinGroupNames(currentUser.uid, pinGroupNames)
       await refreshProfile()
@@ -143,8 +167,9 @@ export function ProfilePage() {
       return
     }
 
-    if (!file.type.startsWith('image/')) {
-      setError('이미지 파일만 업로드할 수 있습니다.')
+    const validationError = getProfilePhotoError(file)
+    if (validationError) {
+      setError(validationError)
       return
     }
 
@@ -321,8 +346,10 @@ export function ProfilePage() {
           <div className="profile-avatar">{nickname.slice(0, 1) || 'D'}</div>
         )}
         <div>
+          {profile?.username && <p className="profile-username">@{profile.username}</p>}
           <span className="muted-label">이메일</span>
           <p>{currentUser?.email || '카카오 계정'}</p>
+          {profile?.bio && <p className="profile-bio">{profile.bio}</p>}
           {profile?.isPrivate && (
             <span className="private-account-badge">
               <Lock size={13} aria-hidden="true" />
@@ -402,7 +429,17 @@ export function ProfilePage() {
         <label className="profile-photo-picker">
           <Camera size={18} aria-hidden="true" />
           <span>{photoFile ? photoFile.name : '프로필 사진 변경'}</span>
-          <input type="file" accept="image/*" onChange={handlePhotoChange} />
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhotoChange} />
+        </label>
+
+        <label className="field">
+          <span>사용자 이름</span>
+          <div className="username-input">
+            <span aria-hidden="true">@</span>
+            <input required maxLength={USERNAME_MAX_LENGTH} autoCapitalize="none" spellCheck={false}
+              autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value.toLowerCase())} />
+          </div>
+          <small className="field-hint">영어, 숫자, 밑줄(_), 점(.) · 최대 30자 · 다른 사용자와 중복될 수 없어요.</small>
         </label>
 
         <label className="field">
@@ -413,6 +450,13 @@ export function ProfilePage() {
             value={nickname}
             onChange={(event) => setNickname(event.target.value)}
           />
+        </label>
+
+        <label className="field">
+          <span>소개글</span>
+          <textarea maxLength={BIO_MAX_LENGTH} rows={3} value={bio}
+            onChange={(event) => setBio(event.target.value)} placeholder="나를 소개하는 한마디" />
+          <small className="field-counter">{bio.length} / {BIO_MAX_LENGTH}</small>
         </label>
 
         <label className="privacy-setting">
