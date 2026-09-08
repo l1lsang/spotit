@@ -3,16 +3,16 @@ import { useEffect, useState } from 'react'
 import { getTodayDateKey } from '../../lib/date'
 import type { LatLng } from '../../lib/kakaoMap'
 import { isValidLocation } from '../../lib/mapLocation'
+import { useAuth } from '../../hooks/useAuth'
 import {
-  DEFAULT_POST_PIN_GROUP,
-  POST_PIN_GROUPS,
-  getPostPinGroupLabel,
+  normalizePinColor,
+  getPostPinColor,
   type Post,
   type PostFormInput,
-  type PostPinGroup,
   type PostVisibility,
 } from '../../types/post'
 import { PhotoUploader } from './PhotoUploader'
+import { PinThemePicker } from './PinThemePicker'
 
 export interface PostFormSubmitPayload extends PostFormInput {
   files: File[]
@@ -29,7 +29,6 @@ interface PostFormModalProps {
     location: LatLng
   } | null
   initialPost?: Post | null
-  pinGroupNames?: Partial<Record<PostPinGroup, string>>
   onClose: () => void
   onSubmit: (payload: PostFormSubmitPayload) => Promise<void>
 }
@@ -50,7 +49,8 @@ function createInitialForm(
     lng: initialPost?.lng ?? fallbackLocation?.lng ?? 0,
     dateKey: initialPost?.dateKey || getTodayDateKey(),
     visibility: initialPost?.visibility === 'public' ? 'followers' : initialPost?.visibility || 'followers',
-    pinColor: initialPost?.pinColor || DEFAULT_POST_PIN_GROUP,
+    pinColor: normalizePinColor(initialPost?.pinColor),
+    pinThemeId: initialPost?.pinThemeId || '',
   }
 }
 
@@ -60,10 +60,10 @@ export function PostFormModal({
   location,
   placePrefill = null,
   initialPost = null,
-  pinGroupNames,
   onClose,
   onSubmit,
 }: PostFormModalProps) {
+  const { profile } = useAuth()
   const [form, setForm] = useState<PostFormInput>(() => createInitialForm(initialPost, location, placePrefill))
   const [files, setFiles] = useState<File[]>([])
   const [existingPhotoUrls, setExistingPhotoUrls] = useState<string[]>([])
@@ -101,7 +101,7 @@ export function PostFormModal({
     setError('')
 
     try {
-      await onSubmit({ ...form, files, existingPhotoUrls })
+      await onSubmit({ ...form, pinColor: getPostPinColor(form, profile?.pinThemes), files, existingPhotoUrls })
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : '기록 저장에 실패했습니다.')
     } finally {
@@ -186,24 +186,7 @@ export function PostFormModal({
             </fieldset>
           </div>
 
-          <fieldset className="field">
-            <legend>내 지도 핀 그룹</legend>
-            <div className="pin-group-palette">
-              {POST_PIN_GROUPS.map((group) => (
-                <button
-                  key={group.id}
-                  className={`color-swatch-button ${form.pinColor === group.id ? 'active' : ''}`}
-                  type="button"
-                  onClick={() => updateField('pinColor', group.id)}
-                  aria-pressed={form.pinColor === group.id}
-                >
-                  <i style={{ backgroundColor: group.value }} />
-                  {getPostPinGroupLabel(group.id, pinGroupNames)}
-                </button>
-              ))}
-            </div>
-            <small className="field-help">프로필에서 색깔별 그룹 이름을 바꿀 수 있습니다.</small>
-          </fieldset>
+          <PinThemePicker value={form} onChange={(selection) => setForm((previous) => ({ ...previous, ...selection }))} />
 
           <label className="field">
             <span>메모</span>

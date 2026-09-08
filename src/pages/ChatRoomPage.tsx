@@ -3,6 +3,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { ChatMessageContent } from '../components/chat/ChatMessageContent'
+import { ChatReadReceipts } from '../components/chat/ChatReadReceipts'
 import { ChatReportMenu } from '../components/chat/ChatReportMenu'
 import { formatChatDateSeparator, formatChatTime, getTimestampDateKey } from '../lib/date'
 import {
@@ -47,6 +48,7 @@ export function ChatRoomPage() {
   const [sending, setSending] = useState(false)
   const [inviting, setInviting] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
+  const activeChatId = chat?.id
 
   const scrollMessagesToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     const list = listRef.current
@@ -133,17 +135,17 @@ export function ChatRoomPage() {
   }, [chatId, currentUser, firebaseReady])
 
   useEffect(() => {
-    if (!chat) {
+    if (!activeChatId) {
       return undefined
     }
 
     return subscribeToChatMessages(
-      chat.id,
+      activeChatId,
       setMessages,
       (subscribeError) =>
         setError(subscribeError instanceof Error ? subscribeError.message : '메시지를 불러오지 못했습니다.'),
     )
-  }, [chat])
+  }, [activeChatId])
 
   useEffect(() => {
     if (!chat || !currentUser) {
@@ -345,7 +347,7 @@ export function ChatRoomPage() {
               const dateKey = getTimestampDateKey(message.createdAt)
               const previousDateKey = getTimestampDateKey(messages[index - 1]?.createdAt)
               const showDateSeparator = dateKey && dateKey !== previousDateKey
-              const readByOther = chat && currentUser ? isMessageReadByOther(message, chat, currentUser.uid) : false
+              const readByOther = !isGroup && chat && currentUser ? isMessageReadByOther(message, chat, currentUser.uid) : false
 
               return (
                 <Fragment key={message.id}>
@@ -369,7 +371,9 @@ export function ChatRoomPage() {
                       {!isMine && <strong className="message-author">{message.authorNickname}</strong>}
                       <ChatMessageContent message={message} chatId={chat?.id || chatId} canReport={!isMine && Boolean(chat)} />
                       <div className="message-meta">
-                        {isMine && <span>{readByOther ? '읽음' : '보냄'}</span>}
+                        {isGroup && chat ? (
+                          <ChatReadReceipts message={message} chat={chat} currentUid={currentUser?.uid} />
+                        ) : isMine && <span>{readByOther ? '읽음' : '보냄'}</span>}
                         <time>{formatChatTime(message.createdAt)}</time>
                       </div>
                     </div>

@@ -3,6 +3,7 @@ import { BookOpen, Camera, Check, Lock, LogOut, Save, Trash2, UserMinus, X } fro
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
+import { PinThemePicker } from '../components/post/PinThemePicker'
 import { useAuth } from '../hooks/useAuth'
 import { BIO_MAX_LENGTH, USERNAME_MAX_LENGTH, getProfilePhotoError, getUsernameError } from '../lib/userProfile'
 import { deleteAccount, logout } from '../services/authService'
@@ -18,11 +19,9 @@ import {
 import { uploadProfilePhoto } from '../services/storageService'
 import {
   updateUserProfileDetails,
-  updateUserPinGroupNames,
   updateUserPrivacy,
 } from '../services/userService'
 import type { FollowEdge, FollowRequest } from '../types/follow'
-import { POST_PIN_GROUPS, type PostPinGroup } from '../types/post'
 
 type FollowListKind = 'followers' | 'following'
 
@@ -42,9 +41,6 @@ export function ProfilePage() {
   const [username, setUsername] = useState(profile?.username || '')
   const [bio, setBio] = useState(profile?.bio || '')
   const [isPrivate, setIsPrivate] = useState(Boolean(profile?.isPrivate))
-  const [pinGroupNames, setPinGroupNames] = useState<Partial<Record<PostPinGroup, string>>>(
-    profile?.pinGroupNames || {},
-  )
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
   const [followRequests, setFollowRequests] = useState<FollowRequest[]>([])
@@ -77,10 +73,6 @@ export function ProfilePage() {
   useEffect(() => {
     setIsPrivate(Boolean(profile?.isPrivate))
   }, [profile?.isPrivate])
-
-  useEffect(() => {
-    setPinGroupNames(profile?.pinGroupNames || {})
-  }, [profile?.pinGroupNames])
 
   const loadFollowRequests = useCallback(async () => {
     if (!currentUser) {
@@ -148,7 +140,6 @@ export function ProfilePage() {
         ...(uploadedPhotoURL ? { photoURL: uploadedPhotoURL } : {}),
       })
       await updateUserPrivacy(currentUser.uid, isPrivate)
-      await updateUserPinGroupNames(currentUser.uid, pinGroupNames)
       await refreshProfile()
       setPhotoFile(null)
       setPhotoPreview('')
@@ -473,30 +464,7 @@ export function ProfilePage() {
           <small>새 팔로우를 승인제로 받기</small>
         </label>
 
-        <fieldset className="field pin-group-name-settings">
-          <legend>핀 색깔 그룹 이름</legend>
-          <div className="pin-name-grid">
-            {POST_PIN_GROUPS.map((group) => (
-              <label key={group.id} className="pin-name-field">
-                <span>
-                  <i style={{ backgroundColor: group.value }} />
-                  {group.label}
-                </span>
-                <input
-                  maxLength={18}
-                  value={pinGroupNames[group.id] || ''}
-                  onChange={(event) =>
-                    setPinGroupNames((previous) => ({
-                      ...previous,
-                      [group.id]: event.target.value,
-                    }))
-                  }
-                  placeholder={`${group.label} 그룹`}
-                />
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <PinThemePicker />
 
         {message && <p className="form-success">{message}</p>}
         {error && <p className="form-error">{error}</p>}

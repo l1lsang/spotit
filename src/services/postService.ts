@@ -16,11 +16,9 @@ import {
 import { requireDb } from '../lib/firebase'
 import type { LatLng } from '../lib/kakaoMap'
 import {
-  DEFAULT_POST_PIN_GROUP,
-  isPostPinGroup,
+  normalizePinColor,
   type Post,
   type PostFormInput,
-  type PostPinGroup,
 } from '../types/post'
 import { getFollowingIds, isFollowing } from './followService'
 import { uploadPostPhotos } from './storageService'
@@ -81,12 +79,6 @@ function assertOwner(post: Post, uid: string): void {
 
 function normalizeVisibility(visibility: Post['visibility']): Post['visibility'] {
   return visibility === 'public' ? 'public' : visibility
-}
-
-function normalizePinColor(pinColor: unknown): PostPinGroup {
-  return typeof pinColor === 'string' && isPostPinGroup(pinColor)
-    ? pinColor
-    : DEFAULT_POST_PIN_GROUP
 }
 
 function canFollowerSee(post: Post): boolean {

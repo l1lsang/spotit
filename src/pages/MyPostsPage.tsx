@@ -8,7 +8,7 @@ import { deletePost, getUserPosts, updatePost } from '../services/postService'
 import type { Post, PostFormInput } from '../types/post'
 
 export function MyPostsPage() {
-  const { currentUser, firebaseReady, profile } = useAuth()
+  const { currentUser, firebaseReady } = useAuth()
   const [posts, setPosts] = useState<Post[]>([])
   const [editingPost, setEditingPost] = useState<Post | null>(null)
   const [loading, setLoading] = useState(false)
@@ -59,6 +59,7 @@ export function MyPostsPage() {
       dateKey: payload.dateKey,
       visibility: payload.visibility,
       pinColor: payload.pinColor,
+      pinThemeId: payload.pinThemeId || '',
     }
 
     await updatePost(editingPost.id, input, payload.existingPhotoUrls, payload.files, currentUser.uid)
@@ -113,7 +114,6 @@ export function MyPostsPage() {
         isOpen={Boolean(editingPost)}
         mode="edit"
         initialPost={editingPost}
-        pinGroupNames={profile?.pinGroupNames}
         onClose={() => setEditingPost(null)}
         onSubmit={handleUpdate}
       />

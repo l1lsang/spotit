@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:chat-read-receipts": "node --experimental-strip-types --test tests/chatReadReceipts.test.mjs",
+    "test:pin-themes": "node --experimental-strip-types --test tests/pinThemes.test.mjs",
+    "test:pin-themes:integration": "firebase emulators:exec --config firebase.pin-themes.json --only auth,firestore --project demo-spotit-pins \"node --experimental-vm-modules --test tests/pinThemes.integration.test.mjs\"",
     "test:long-press": "node --experimental-strip-types --test tests/longPress.test.mjs",
     "test:moderation": "node --test tests/moderation.test.mjs",
     "test:profiles": "node --experimental-vm-modules --test tests/profiles.test.mjs",

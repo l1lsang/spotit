@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { clusterPosts } from '../../lib/mapClusters'
 import { createMapDriver, prepareMapSdk, type MapDriver } from '../../lib/mapDriver'
 import { getMapProvider, isValidLocation, type LatLng, type MapProvider } from '../../lib/mapLocation'
-import type { Post } from '../../types/post'
+import type { PinTheme, Post } from '../../types/post'
 import { createPostMarkerContent } from './PostMarker'
 
 interface MapViewProps {
@@ -15,6 +15,7 @@ interface MapViewProps {
   onMarkerClick: (post: Post) => void
   onClusterClick?: (posts: Post[]) => void
   currentUserUid?: string
+  pinThemes?: PinTheme[]
   className?: string
 }
 
@@ -25,7 +26,7 @@ export function MapView(props: MapViewProps) {
 
 function ProviderMapView({
   center, posts, provider, selectedLocation = null, selectedPostId,
-  onMapClick, onMarkerClick, onClusterClick, currentUserUid, className = '',
+  onMapClick, onMarkerClick, onClusterClick, currentUserUid, pinThemes, className = '',
 }: MapViewProps & { provider: MapProvider }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const driverRef = useRef<MapDriver | null>(null)
@@ -81,7 +82,7 @@ function ProviderMapView({
           if (cluster.posts.length > 1 && latestRef.current.onClusterClick) {
             latestRef.current.onClusterClick(cluster.posts)
           } else latestRef.current.onMarkerClick(cluster.posts[0])
-        }, driver!.preventMapClick)
+        }, driver!.preventMapClick, pinThemes)
         const selectedPost = cluster.posts.find((post) => post.id === selectedPostId)
         return driver!.addMarker(selectedPost || cluster.location, content, Boolean(selectedPost))
       })
@@ -92,7 +93,7 @@ function ProviderMapView({
       unsubscribe()
       removeMarkers.forEach((remove) => remove())
     }
-  }, [posts, currentUserUid, selectedPostId, status])
+  }, [posts, currentUserUid, selectedPostId, pinThemes, status])
 
   useEffect(() => {
     const driver = driverRef.current

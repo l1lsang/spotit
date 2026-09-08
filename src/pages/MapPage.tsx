@@ -21,9 +21,8 @@ import {
   type LivePlaceStatusUpdate,
 } from '../types/mapFeature'
 import {
-  POST_PIN_GROUPS,
-  getPostPinGroupLabel,
-  getPostPinGroupColor,
+  DEFAULT_POST_PIN_COLOR,
+  FOLLOWING_PIN_COLOR,
   type Post,
   type PostFormInput,
 } from '../types/post'
@@ -371,6 +370,7 @@ export function MapPage() {
       dateKey: payload.dateKey,
       visibility: payload.visibility,
       pinColor: payload.pinColor,
+      pinThemeId: payload.pinThemeId || '',
     }
 
     await createPost(input, payload.files, {
@@ -396,6 +396,7 @@ export function MapPage() {
             onMarkerClick={(post) => { setClusterPosts([]); handleSelectPost(post) }}
             onClusterClick={handleClusterClick}
             currentUserUid={currentUser?.uid}
+            pinThemes={profile?.pinThemes}
           />
         ) : (
           <section className="location-map" aria-label="장소 기록 지도">
@@ -474,15 +475,16 @@ export function MapPage() {
           </span>
           {currentUser && mapMode === 'main' && (
             <span className="map-legend pin-group-legend">
-              {POST_PIN_GROUPS.slice(0, 4).map((group) => (
+              <i style={{ backgroundColor: DEFAULT_POST_PIN_COLOR }} />
+              {profile?.pinThemes?.slice(0, 3).map((theme) => (
                 <i
-                  key={group.id}
-                  title={getPostPinGroupLabel(group.id, profile?.pinGroupNames)}
-                  style={{ backgroundColor: getPostPinGroupColor(group.id) }}
+                  key={theme.id}
+                  title={theme.name}
+                  style={{ backgroundColor: theme.color }}
                 />
               ))}
-              내 그룹
-              <i className="other" />
+              내 핀
+              <i className="other" style={{ backgroundColor: FOLLOWING_PIN_COLOR }} />
               팔로잉
             </span>
           )}
@@ -662,7 +664,6 @@ export function MapPage() {
         mode="create"
         location={selectedLocation}
         placePrefill={selectedPlace}
-        pinGroupNames={profile?.pinGroupNames}
         onClose={() => setIsFormOpen(false)}
         onSubmit={handleCreatePost}
       />

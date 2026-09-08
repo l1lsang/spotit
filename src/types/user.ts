@@ -1,5 +1,5 @@
 import type { Timestamp } from 'firebase/firestore'
-import type { PostPinGroup } from './post'
+import type { PinTheme } from './post'
 
 export interface DaymarkUser {
   uid: string
@@ -9,7 +9,7 @@ export interface DaymarkUser {
   bio?: string
   onboardingComplete?: boolean
   photoURL: string
-  pinGroupNames?: Partial<Record<PostPinGroup, string>>
+  pinThemes?: PinTheme[]
   isPrivate?: boolean
   followerCount?: number
   followingCount?: number

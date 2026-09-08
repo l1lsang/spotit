@@ -168,6 +168,7 @@ export function PostDetailPage() {
       dateKey: payload.dateKey,
       visibility: payload.visibility,
       pinColor: payload.pinColor,
+      pinThemeId: payload.pinThemeId || '',
     }
 
     await updatePost(post.id, input, payload.existingPhotoUrls, payload.files, currentUser.uid)
@@ -328,7 +329,6 @@ export function PostDetailPage() {
         isOpen={isEditOpen}
         mode="edit"
         initialPost={post}
-        pinGroupNames={profile?.pinGroupNames}
         onClose={() => setIsEditOpen(false)}
         onSubmit={handleUpdatePost}
       />

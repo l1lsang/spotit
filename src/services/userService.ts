@@ -19,7 +19,7 @@ import {
 import { requireDb } from '../lib/firebase'
 import { BIO_MAX_LENGTH, NICKNAME_MAX_LENGTH, createRandomUsername, getUsernameError, normalizeUsername } from '../lib/userProfile'
 import type { DaymarkUser } from '../types/user'
-import type { PostPinGroup } from '../types/post'
+import { getPinThemeError, normalizePinColor, type PinTheme } from '../types/post'
 
 type BatchOperation = (batch: WriteBatch) => void
 
@@ -165,13 +165,24 @@ export async function updateUserPrivacy(uid: string, isPrivate: boolean): Promis
   })
 }
 
-export async function updateUserPinGroupNames(
-  uid: string,
-  pinGroupNames: Partial<Record<PostPinGroup, string>>,
-): Promise<void> {
-  await updateDoc(doc(requireDb(), 'users', uid), {
-    pinGroupNames,
-    updatedAt: serverTimestamp(),
+export async function saveUserPinTheme(uid: string, theme: PinTheme): Promise<void> {
+  const error = getPinThemeError(theme)
+  if (error) throw new Error(error)
+  const savedTheme = { id: theme.id, name: theme.name.trim(), color: normalizePinColor(theme.color) }
+  const db = requireDb()
+  const reference = doc(db, 'users', uid)
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(reference)
+    if (!snapshot.exists()) throw new Error('프로필을 찾을 수 없습니다.')
+    const themes = (snapshot.data() as DaymarkUser).pinThemes || []
+    if (themes.some((item) => item.id !== theme.id && item.name.toLocaleLowerCase() === savedTheme.name.toLocaleLowerCase())) {
+      throw new Error('이미 사용 중인 테마 이름입니다.')
+    }
+    const exists = themes.some((item) => item.id === theme.id)
+    transaction.update(reference, {
+      pinThemes: exists ? themes.map((item) => item.id === theme.id ? savedTheme : item) : [...themes, savedTheme],
+      updatedAt: serverTimestamp(),
+    })
   })
 }
 

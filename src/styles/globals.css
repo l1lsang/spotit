@@ -1096,36 +1096,73 @@ img {
   margin-top: 12px;
 }
 
-.pin-group-name-settings {
+.pin-theme-settings {
   padding: 13px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fffaf2;
 }
 
-.pin-name-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+.pin-color-picker {
+  display: inline-flex;
+  align-items: center;
   gap: 10px;
+  width: fit-content;
+  cursor: pointer;
 }
 
-.pin-name-field {
+.pin-color-picker input[type="color"] {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.pin-color-picker span {
   display: grid;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.pin-color-picker small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.color-swatch-button.pin-theme-add {
+  border-style: dashed;
+}
+
+.pin-theme-editor {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.pin-theme-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.pin-following-color {
+  display: flex;
+  align-items: center;
   gap: 6px;
 }
 
-.pin-name-field span {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 900;
-}
-
-.pin-name-field i {
-  width: 12px;
-  height: 12px;
+.pin-following-color i {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
   border-radius: 999px;
 }
 
@@ -1377,7 +1414,7 @@ img {
 }
 
 .daymark-map-pin.other {
-  background: #e03b2f;
+  background: var(--post-pin-color, #e03b2f);
 }
 
 .daymark-map-pin:hover {
@@ -2443,6 +2480,114 @@ img {
 .message-meta span {
   color: var(--accent-strong);
   font-weight: 900;
+}
+
+.message-read-receipts {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 24px;
+  min-height: 24px;
+  margin-block: -3px;
+  padding: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.message-read-receipts:hover {
+  background: rgba(117, 111, 102, 0.1);
+}
+
+.message-read-receipts:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.message-reader-previews {
+  display: inline-flex;
+  align-items: center;
+}
+
+.message-reader-avatar {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  overflow: hidden;
+  border: 1px solid var(--surface);
+  border-radius: 50%;
+  background: #eadfd0;
+  color: var(--ink);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.message-reader-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.message-reader-previews .message-reader-avatar + .message-reader-avatar {
+  margin-left: -4px;
+}
+
+.message-read-receipts .message-reader-overflow {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.message-readers-count {
+  margin-left: 4px;
+  color: var(--accent-strong);
+  font-size: 0.9rem;
+}
+
+.message-readers-list {
+  display: grid;
+  gap: 4px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.message-readers-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 0;
+}
+
+.message-readers-list .message-reader-avatar {
+  width: 32px;
+  height: 32px;
+  flex-basis: 32px;
+  font-size: 0.85rem;
+}
+
+.message-reader-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+.message-reader-self {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #f2ebe0;
+  color: var(--muted);
+  font-size: 0.7rem;
 }
 
 .message-form {

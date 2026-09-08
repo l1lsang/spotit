@@ -2,44 +2,42 @@ import type { Timestamp } from 'firebase/firestore'
 
 export type PostVisibility = 'followers' | 'private' | 'public'
 
-export const POST_PIN_GROUPS = [
-  { id: 'default', label: '기본', value: '#e8674f' },
-  { id: 'cafe', label: '카페', value: '#2b756d' },
-  { id: 'food', label: '맛집', value: '#bc7a1f' },
-  { id: 'study', label: '공부', value: '#297e99' },
-  { id: 'date', label: '데이트', value: '#c44b6a' },
-  { id: 'solo', label: '혼밥', value: '#6d7f42' },
-  { id: 'walk', label: '산책', value: '#4f5f9f' },
-] as const
-
-export type PostPinGroup = (typeof POST_PIN_GROUPS)[number]['id']
-
-export const DEFAULT_POST_PIN_GROUP: PostPinGroup = 'default'
-
-const postPinGroupIds = new Set<string>(POST_PIN_GROUPS.map((group) => group.id))
-
-export function isPostPinGroup(value: string): value is PostPinGroup {
-  return postPinGroupIds.has(value)
+export interface PinTheme {
+  id: string
+  name: string
+  color: string
 }
 
-export function getPostPinGroupColor(pinGroup: PostPinGroup | string | undefined): string {
-  return (
-    POST_PIN_GROUPS.find((group) => group.id === pinGroup)?.value ||
-    POST_PIN_GROUPS.find((group) => group.id === DEFAULT_POST_PIN_GROUP)?.value ||
-    '#e8674f'
-  )
+export const DEFAULT_POST_PIN_COLOR = '#e8674f'
+export const FOLLOWING_PIN_COLOR = '#e03b2f'
+export const PIN_THEME_NAME_MAX_LENGTH = 18
+
+// Preserve colors on records saved before custom themes were introduced.
+const legacyPinColors: Record<string, string> = {
+  default: DEFAULT_POST_PIN_COLOR, cafe: '#2b756d', food: '#bc7a1f',
+  study: '#297e99', date: '#c44b6a', solo: '#6d7f42', walk: '#4f5f9f',
 }
 
-export function getPostPinGroupLabel(
-  pinGroup: PostPinGroup | string | undefined,
-  customNames?: Partial<Record<PostPinGroup, string>>,
-): string {
-  const normalizedPinGroup = typeof pinGroup === 'string' && isPostPinGroup(pinGroup)
-    ? pinGroup
-    : DEFAULT_POST_PIN_GROUP
-  const customName = customNames?.[normalizedPinGroup]?.trim()
+export function normalizePinColor(value: unknown): string {
+  if (typeof value !== 'string') return DEFAULT_POST_PIN_COLOR
+  if (/^#[\da-f]{6}$/i.test(value)) return value.toLowerCase()
+  return Object.hasOwn(legacyPinColors, value) ? legacyPinColors[value] : DEFAULT_POST_PIN_COLOR
+}
 
-  return customName || POST_PIN_GROUPS.find((group) => group.id === normalizedPinGroup)?.label || '기본'
+export function getPinThemeError(theme: PinTheme): string {
+  if (!/^[\w-]{1,80}$/.test(theme.id)) return '핀 테마 정보를 확인해 주세요.'
+  if (!theme.name.trim() || theme.name.trim().length > PIN_THEME_NAME_MAX_LENGTH) return `테마 이름은 1~${PIN_THEME_NAME_MAX_LENGTH}자로 입력해 주세요.`
+  if (!/^#[\da-f]{6}$/i.test(theme.color)) return '핀 색상을 선택해 주세요.'
+  return ''
+}
+
+export function getPostPinColor(post: Pick<Post, 'pinColor' | 'pinThemeId'>, themes: PinTheme[] = []): string {
+  const theme = themes.find((item) => item.id === post.pinThemeId)
+  return normalizePinColor(theme?.color || post.pinColor)
+}
+
+export function getPostMarkerColor(post: Pick<Post, 'uid' | 'pinColor' | 'pinThemeId'>, currentUid?: string, themes: PinTheme[] = []): string {
+  return currentUid && post.uid === currentUid ? getPostPinColor(post, themes) : FOLLOWING_PIN_COLOR
 }
 
 export interface Post {
@@ -54,7 +52,8 @@ export interface Post {
   lng: number
   dateKey: string
   visibility: PostVisibility
-  pinColor: PostPinGroup
+  pinColor: string
+  pinThemeId?: string
   photoUrls: string[]
   likeCount: number
   commentCount: number
@@ -71,5 +70,6 @@ export interface PostFormInput {
   lng: number
   dateKey: string
   visibility: PostVisibility
-  pinColor: PostPinGroup
+  pinColor: string
+  pinThemeId?: string
 }
