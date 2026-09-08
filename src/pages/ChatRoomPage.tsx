@@ -2,7 +2,8 @@ import { ArrowLeft, ImagePlus, SendHorizonal, UserPlus, UsersRound, X } from 'lu
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { ReportButton } from '../components/moderation/ReportButton'
+import { ChatMessageContent } from '../components/chat/ChatMessageContent'
+import { ChatReportMenu } from '../components/chat/ChatReportMenu'
 import { formatChatDateSeparator, formatChatTime, getTimestampDateKey } from '../lib/date'
 import {
   getOtherParticipant,
@@ -319,17 +320,18 @@ export function ChatRoomPage() {
           ) : (
             <span className="profile-avatar small">{other?.nickname.slice(0, 1) || 'D'}</span>
           )}
-          <div>
+          <div className="chat-room-identity">
             <h1>{roomTitle}</h1>
             <p>{isGroup ? `${chat?.participantIds.length || 0}명` : '1:1 대화'}</p>
           </div>
-          {isGroup && (
-            <button className="button-icon subtle chat-header-action" type="button" onClick={() => void handleOpenInvite()} aria-label="초대">
-              <UserPlus size={18} aria-hidden="true" />
-            </button>
-          )}
-          {chat && <ReportButton compact target={{ kind: 'chat', targetId: chat.id, label: roomTitle }} label="채팅 신고" />}
-          {other && !isGroup && <ReportButton compact target={{ kind: 'user', targetId: other.uid, label: other.nickname }} label="유저 신고" />}
+          <div className="chat-room-header-actions">
+            {isGroup && (
+              <button className="button-icon subtle" type="button" onClick={() => void handleOpenInvite()} aria-label="초대">
+                <UserPlus size={18} aria-hidden="true" />
+              </button>
+            )}
+            {chat && <ChatReportMenu chatId={chat.id} roomTitle={roomTitle} user={!isGroup && other ? other : undefined} />}
+          </div>
         </header>
 
         {error && <p className="form-error">{error}</p>}
@@ -365,25 +367,10 @@ export function ChatRoomPage() {
                       ))}
                     <div className="message-stack">
                       {!isMine && <strong className="message-author">{message.authorNickname}</strong>}
-                      {message.photoUrl && (
-                        <a
-                          className="message-photo-link"
-                          href={message.photoUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <img
-                            className="message-photo"
-                            src={message.photoUrl}
-                            alt={message.photoName || '채팅 사진'}
-                          />
-                        </a>
-                      )}
-                      {message.content && <p className="message-bubble">{message.content}</p>}
+                      <ChatMessageContent message={message} chatId={chat?.id || chatId} canReport={!isMine && Boolean(chat)} />
                       <div className="message-meta">
                         {isMine && <span>{readByOther ? '읽음' : '보냄'}</span>}
                         <time>{formatChatTime(message.createdAt)}</time>
-                        {!isMine && chat && <ReportButton compact target={{ kind: 'chat', targetId: chat.id, messageId: message.id, label: `${message.authorNickname}의 메시지` }} />}
                       </div>
                     </div>
                   </article>

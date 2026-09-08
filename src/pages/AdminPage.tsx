@@ -48,11 +48,29 @@ export function AdminPage() {
     sessionStorage.removeItem(storageKey); setVerified(false); setSession(null)
   }
   if (session && verified) return <AdminDashboard token={session.token} onLogout={logout} />
-  return <main className="admin-login-page"><Link className="admin-back" to="/map"><ArrowLeft size={16} /> 스팟잇으로 돌아가기</Link><section className="admin-login-card">
-    <img src="/logo.png" alt="스팟잇" width="64" height="64" /><p className="eyebrow">SPOTIT ADMIN</p><h1>스팟잇 관리실</h1><p>더 안전하고 즐거운 장소 기록을 위해.</p>
-    {session ? <p role="status">관리자 권한을 확인하는 중…</p> : <form className="form" onSubmit={login}><label>관리자 비밀번호<div className="admin-password"><LockKeyhole size={18} /><input autoFocus type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required maxLength={200} disabled={busy} placeholder="비밀번호를 입력하세요" /></div></label>{error && <p className="form-error" role="alert">{error}</p>}<button className="button button-primary" disabled={busy || !password.trim()}>{busy ? '확인 중…' : '관리자 접속'}</button></form>}
-    <small><ShieldCheck size={14} /> 관리자 전용 공간</small>
-  </section></main>
+  return (
+    <main className="admin-login-page">
+      <Link className="admin-back" to="/map"><ArrowLeft size={16} aria-hidden="true" />스팟잇으로 돌아가기</Link>
+      <section className="admin-login-card" aria-labelledby="admin-login-heading">
+        <img src="/logo.png" alt="스팟잇" width="64" height="64" />
+        <p className="eyebrow">SPOTIT ADMIN</p>
+        <h1 id="admin-login-heading">스팟잇 관리실</h1>
+        <p>더 안전하고 즐거운 장소 기록을 위해.</p>
+        {session ? <p role="status">관리자 권한을 확인하는 중…</p> : (
+          <form className="form" onSubmit={login} aria-busy={busy}>
+            <label className="field icon-field">
+              <span>관리자 비밀번호</span>
+              <LockKeyhole size={18} aria-hidden="true" />
+              <input autoFocus type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required maxLength={200} disabled={busy} placeholder="비밀번호를 입력하세요" />
+            </label>
+            {error && <p className="form-error" role="alert">{error}</p>}
+            <button className="button button-primary" type="submit" disabled={busy || !password.trim()}>{busy ? '확인 중…' : '관리자 접속'}</button>
+          </form>
+        )}
+        <small><ShieldCheck size={14} aria-hidden="true" />관리자 전용 공간</small>
+      </section>
+    </main>
+  )
 }
 
 function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => Promise<void> }) {
