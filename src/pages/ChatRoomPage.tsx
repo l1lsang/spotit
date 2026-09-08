@@ -2,6 +2,7 @@ import { ArrowLeft, ImagePlus, SendHorizonal, UserPlus, UsersRound, X } from 'lu
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { ReportButton } from '../components/moderation/ReportButton'
 import { formatChatDateSeparator, formatChatTime, getTimestampDateKey } from '../lib/date'
 import {
   getOtherParticipant,
@@ -327,6 +328,8 @@ export function ChatRoomPage() {
               <UserPlus size={18} aria-hidden="true" />
             </button>
           )}
+          {chat && <ReportButton compact target={{ kind: 'chat', targetId: chat.id, label: roomTitle }} label="채팅 신고" />}
+          {other && !isGroup && <ReportButton compact target={{ kind: 'user', targetId: other.uid, label: other.nickname }} label="유저 신고" />}
         </header>
 
         {error && <p className="form-error">{error}</p>}
@@ -380,6 +383,7 @@ export function ChatRoomPage() {
                       <div className="message-meta">
                         {isMine && <span>{readByOther ? '읽음' : '보냄'}</span>}
                         <time>{formatChatTime(message.createdAt)}</time>
+                        {!isMine && chat && <ReportButton compact target={{ kind: 'chat', targetId: chat.id, messageId: message.id, label: `${message.authorNickname}의 메시지` }} />}
                       </div>
                     </div>
                   </article>

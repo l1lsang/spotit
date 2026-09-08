@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { ChatListPage } from '../pages/ChatListPage'
@@ -13,6 +13,9 @@ import { PeoplePage } from '../pages/PeoplePage'
 import { PostDetailPage } from '../pages/PostDetailPage'
 import { ProfilePage } from '../pages/ProfilePage'
 import { SignupPage } from '../pages/SignupPage'
+import { SupportPage } from '../pages/SupportPage'
+
+const AdminPage = lazy(() => import('../pages/AdminPage').then(module => ({ default: module.AdminPage })))
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const location = useLocation()
@@ -32,7 +35,7 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 function OnboardingGuard({ children }: { children: ReactNode }) {
   const { currentUser, profile, loading, profileError, refreshProfile } = useAuth()
   const location = useLocation()
-  if (location.pathname === '/signup') return children
+  if (location.pathname === '/signup' || location.pathname.replace(/\/$/, '') === '/admin') return children
   if (loading) return <div className="screen-message">로그인 상태를 확인하는 중입니다.</div>
   if (currentUser && profileError) {
     return (
@@ -53,6 +56,8 @@ export function AppRouter() {
     <BrowserRouter>
       <OnboardingGuard>
         <Routes>
+          <Route path="/admin" element={<Suspense fallback={<div className="screen-message">관리자 화면을 불러오는 중…</div>}><AdminPage /></Suspense>} />
+          <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />

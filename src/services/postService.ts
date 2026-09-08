@@ -108,7 +108,9 @@ function distanceKm(from: LatLng, to: LatLng): number {
 
 async function getPostsByAuthor(uid: string, viewerUid: string): Promise<Post[]> {
   const postsRef = collection(requireDb(), 'posts')
-  const postsQuery = query(postsRef, where('uid', '==', uid))
+  const postsQuery = uid === viewerUid
+    ? query(postsRef, where('uid', '==', uid))
+    : query(postsRef, where('uid', '==', uid), where('visibility', 'in', ['followers', 'public']))
   const snapshot = await getDocs(postsQuery)
 
   return snapshot.docs

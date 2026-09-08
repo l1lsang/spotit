@@ -2,6 +2,7 @@ import { Heart, MessageCircle, Pencil, Share2, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
+import { ReportButton } from '../components/moderation/ReportButton'
 import { MapView } from '../components/map/MapView'
 import { getExternalMapUrl } from '../lib/mapLocation'
 import { CommentList } from '../components/post/CommentList'
@@ -247,6 +248,8 @@ export function PostDetailPage() {
                 </button>
               </>
             )}
+            {currentUser && !isOwner && <ReportButton target={{ kind: 'pin', targetId: post.id, label: post.title }} label="핀 신고" />}
+            {currentUser && !isOwner && <ReportButton target={{ kind: 'user', targetId: post.uid, label: post.authorNickname }} label="작성자 신고" />}
           </div>
           {shareMessage && <p className="form-success compact-message">{shareMessage}</p>}
 

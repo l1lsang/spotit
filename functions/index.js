@@ -4,6 +4,8 @@ const admin = require('firebase-admin')
 
 admin.initializeApp()
 
+Object.assign(exports, require('./moderation'))
+
 const db = admin.firestore()
 const messaging = admin.messaging()
 

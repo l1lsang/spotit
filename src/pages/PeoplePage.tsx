@@ -2,6 +2,7 @@ import { Clock, Lock, MessageCircle, RefreshCw, Search, UserPlus, UserRoundCheck
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
+import { ReportButton } from '../components/moderation/ReportButton'
 import { useAuth } from '../hooks/useAuth'
 import { getOrCreateDirectChat } from '../services/chatService'
 import {
@@ -263,6 +264,7 @@ export function PeoplePage() {
                     <MessageCircle size={17} aria-hidden="true" />
                     채팅
                   </button>
+                  <ReportButton target={{ kind: 'user', targetId: user.uid, label: user.nickname }} />
                 </div>
               </article>
             )

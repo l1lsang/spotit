@@ -1,7 +1,7 @@
 import { updateProfile } from 'firebase/auth'
 import { BookOpen, Camera, Check, Lock, LogOut, Save, Trash2, UserMinus, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
 import { BIO_MAX_LENGTH, USERNAME_MAX_LENGTH, getProfilePhotoError, getUsernameError } from '../lib/userProfile'
@@ -333,6 +333,7 @@ export function ProfilePage() {
           <h1>프로필</h1>
           <p>내 계정과 표시 이름을 관리합니다.</p>
         </div>
+        <Link className="button button-secondary" to="/support">문의·신고 내역</Link>
       </section>
 
       <section className="profile-panel">
