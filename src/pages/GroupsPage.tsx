@@ -24,7 +24,17 @@ export function GroupsPage() {
         <button type="button" className="button button-primary" onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" />그룹 만들기</button>
       </section>
       <div className="groups-tools">
-        <div className="segmented" aria-label="그룹 필터"><button type="button" className={tab === 'all' ? 'active' : ''} aria-pressed={tab === 'all'} onClick={() => setTab('all')}>그룹 둘러보기</button><button type="button" className={tab === 'joined' ? 'active' : ''} aria-pressed={tab === 'joined'} onClick={() => setTab('joined')}>내 그룹 {joinedIds.length}</button></div>
+        <div className="groups-filter-toggle" role="group" aria-label="그룹 필터">
+          <button type="button" aria-pressed={tab === 'all'} onClick={() => setTab('all')}>
+            <Compass size={16} aria-hidden="true" />
+            그룹 둘러보기
+          </button>
+          <button type="button" aria-pressed={tab === 'joined'} onClick={() => setTab('joined')}>
+            <UsersRound size={16} aria-hidden="true" />
+            내 그룹
+            {!loading && !error && <span className="groups-filter-count">{joinedIds.length}</span>}
+          </button>
+        </div>
         <label className="groups-search"><Search size={18} aria-hidden="true" /><input type="search" aria-label="그룹 검색" placeholder="이름이나 관심사로 그룹 찾기" value={keyword} onChange={event => setKeyword(event.target.value)} /></label>
       </div>
       {error && <div className="form-error" role="alert">{error} <button className="button button-secondary" type="button" onClick={retry}>다시 시도</button></div>}

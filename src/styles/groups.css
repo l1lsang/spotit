@@ -6,6 +6,12 @@
 .groups-tools { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 26px 0 20px; }
 .groups-tools .segmented { width: auto; flex-shrink: 0; }
 .groups-tools .segmented button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.groups-filter-toggle { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex-shrink: 0; width: 320px; max-width: 100%; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: #f3eee4; }
+.groups-filter-toggle button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 44px; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: .86rem; font-weight: 700; white-space: nowrap; transition: background .15s, color .15s; }
+.groups-filter-toggle button[aria-pressed="true"] { background: var(--teal); color: white; box-shadow: 0 2px 6px #2b756d24; }
+.groups-filter-toggle button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.groups-filter-count { display: inline-grid; place-items: center; min-width: 21px; padding: 2px 5px; border-radius: 999px; background: #2b756d12; color: var(--teal); font-size: .73rem; line-height: 1.2; }
+.groups-filter-toggle button[aria-pressed="true"] .groups-filter-count { background: #ffffff30; color: white; }
 .groups-search { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); }
 .groups-search input { flex: 1; min-width: 0; width: 270px; border: 0; outline: none; background: transparent; color: var(--ink); }
 .groups-search:focus-within { outline: 2px solid var(--teal); outline-offset: 2px; }
@@ -54,6 +60,7 @@
   .groups-intro { align-items: flex-start; flex-direction: column; padding: 24px; gap: 22px; }
   .groups-intro > .button { width: 100%; }
   .groups-tools { flex-wrap: wrap; }
+  .groups-filter-toggle { width: 100%; }
   .groups-tools > .groups-search { width: 100%; }
   .groups-grid { grid-template-columns: minmax(0, 1fr); }
   .group-home-heading { padding: 22px; }
