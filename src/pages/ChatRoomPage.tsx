@@ -1,13 +1,15 @@
-import { ArrowLeft, Crop, ImagePlus, SendHorizonal, UserPlus, UsersRound, X } from 'lucide-react'
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowLeft, ChevronRight, Crop, ImagePlus, Images, Pin, SendHorizonal, UserPlus, UsersRound, X } from 'lucide-react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { ChatMessageContent } from '../components/chat/ChatMessageContent'
 import { ChatReadReceipts } from '../components/chat/ChatReadReceipts'
 import { ChatReportMenu } from '../components/chat/ChatReportMenu'
+import { ChatCollectionDialog } from '../components/chat/ChatCollectionDialog'
 import { ImageEditorModal } from '../components/image/ImageEditorModal'
 import { EDITABLE_IMAGE_TYPES, getEditableImageError } from '../lib/imageEditing'
 import { formatChatDateSeparator, formatChatTime, getTimestampDateKey } from '../lib/date'
+import { getChatMedia, getPinnedChatMessages } from '../lib/chatCollections'
 import {
   getOtherParticipant,
   addParticipantsToChat,
@@ -16,10 +18,12 @@ import {
   sendChatMessage,
   subscribeToChat,
   subscribeToChatMessages,
+  setChatMessagePinned,
 } from '../services/chatService'
 import { uploadChatPhoto } from '../services/storageService'
 import type { ChatMessage, DaymarkChat } from '../types/chat'
 import type { DaymarkUser } from '../types/user'
+import '../styles/chatCollections.css'
 
 function isMessageReadByOther(message: ChatMessage, chat: DaymarkChat, currentUid: string): boolean {
   const other = getOtherParticipant(chat, currentUid)
@@ -34,6 +38,11 @@ function isMessageReadByOther(message: ChatMessage, chat: DaymarkChat, currentUi
 
 export function ChatRoomPage() {
   const { chatId = '' } = useParams()
+  const { currentUser } = useAuth()
+  return <ChatRoom key={`${chatId}:${currentUser?.uid || ''}`} chatId={chatId} />
+}
+
+function ChatRoom({ chatId }: { chatId: string }) {
   const navigate = useNavigate()
   const { currentUser, profile, firebaseReady } = useAuth()
   const [chat, setChat] = useState<DaymarkChat | null>(null)
@@ -50,8 +59,22 @@ export function ChatRoomPage() {
   const [inviteError, setInviteError] = useState('')
   const [sending, setSending] = useState(false)
   const [inviting, setInviting] = useState(false)
+  const [collection, setCollection] = useState<'pins' | 'media' | null>(null)
+  const [messagesLoading, setMessagesLoading] = useState(true)
+  const [messagesError, setMessagesError] = useState('')
+  const [messagesRevision, setMessagesRevision] = useState(0)
+  const [highlightedId, setHighlightedId] = useState<string | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
+  const mediaButtonRef = useRef<HTMLButtonElement>(null)
+  const messageRefs = useRef(new Map<string, HTMLElement>())
+  const stickToBottom = useRef(true)
+  const messageTail = messages.at(-1)
+  const messageTailId = messageTail?.id
+  const messageTailUid = messageTail?.uid
   const activeChatId = chat?.id
+  const pinnedMessages = useMemo(() => getPinnedChatMessages(messages, chat?.pinnedMessageIds), [messages, chat?.pinnedMessageIds])
+  const pinnedIds = useMemo(() => new Set(pinnedMessages.map(message => message.id)), [pinnedMessages])
+  const mediaMessages = useMemo(() => getChatMedia(messages), [messages])
 
   const scrollMessagesToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     const list = listRef.current
@@ -85,7 +108,7 @@ export function ChatRoomPage() {
         root.style.setProperty('--chat-viewport-height', `${height}px`)
         root.style.setProperty('--chat-viewport-offset-top', `${offsetTop}px`)
         body.classList.toggle('chat-keyboard-open', keyboardInset > 80)
-        scrollMessagesToBottom()
+        if (stickToBottom.current) scrollMessagesToBottom()
       })
     }
 
@@ -127,10 +150,15 @@ export function ChatRoomPage() {
         setLoading(false)
 
         if (!nextChat) {
+          setMessages([])
+          setCollection(null)
           setError('참여 중인 채팅방을 찾을 수 없습니다.')
         }
       },
       (subscribeError) => {
+        setChat(null)
+        setMessages([])
+        setCollection(null)
         setError(subscribeError instanceof Error ? subscribeError.message : '채팅방을 불러오지 못했습니다.')
         setLoading(false)
       },
@@ -139,16 +167,22 @@ export function ChatRoomPage() {
 
   useEffect(() => {
     if (!activeChatId) {
+      setMessages([])
+      setMessagesLoading(false)
       return undefined
     }
-
+    setMessagesLoading(true)
+    setMessagesError('')
     return subscribeToChatMessages(
       activeChatId,
-      setMessages,
-      (subscribeError) =>
-        setError(subscribeError instanceof Error ? subscribeError.message : '메시지를 불러오지 못했습니다.'),
+      nextMessages => { setMessages(nextMessages); setMessagesLoading(false) },
+      subscribeError => {
+        setMessages([])
+        setMessagesError(subscribeError instanceof Error ? subscribeError.message : '메시지를 불러오지 못했습니다.')
+        setMessagesLoading(false)
+      },
     )
-  }, [activeChatId])
+  }, [activeChatId, messagesRevision])
 
   useEffect(() => {
     if (!chat || !currentUser) {
@@ -166,8 +200,30 @@ export function ChatRoomPage() {
   }, [chat, currentUser])
 
   useEffect(() => {
-    scrollMessagesToBottom('smooth')
-  }, [messages, scrollMessagesToBottom])
+    if (stickToBottom.current || messageTailUid === currentUser?.uid) scrollMessagesToBottom('auto')
+  }, [messageTailId, messageTailUid, currentUser?.uid, scrollMessagesToBottom])
+
+  useEffect(() => {
+    if (!highlightedId) return
+    const timer = window.setTimeout(() => setHighlightedId(null), 3000)
+    return () => window.clearTimeout(timer)
+  }, [highlightedId])
+
+  function jumpToMessage(messageId: string) {
+    setCollection(null)
+    stickToBottom.current = false
+    setHighlightedId(messageId)
+    requestAnimationFrame(() => {
+      const element = messageRefs.current.get(messageId)
+      element?.scrollIntoView({ behavior: 'auto', block: 'center' })
+      element?.focus({ preventScroll: true })
+    })
+  }
+
+  function closeCollection() {
+    setCollection(null)
+    requestAnimationFrame(() => mediaButtonRef.current?.focus({ preventScroll: true }))
+  }
 
   useEffect(() => {
     scrollMessagesToBottom()
@@ -188,7 +244,7 @@ export function ChatRoomPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!chat || !profile || (!content.trim() && !photoFile)) {
+    if (!chat || !profile || sending || (!content.trim() && !photoFile)) {
       return
     }
 
@@ -272,7 +328,7 @@ export function ChatRoomPage() {
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault()
       event.currentTarget.form?.requestSubmit()
     }
@@ -330,19 +386,28 @@ export function ChatRoomPage() {
             <p>{isGroup ? `${chat?.participantIds.length || 0}명` : '1:1 대화'}</p>
           </div>
           <div className="chat-room-header-actions">
+            {chat && <button ref={mediaButtonRef} className="button-icon subtle" type="button" onClick={() => setCollection('media')} aria-label="미디어 모아보기" aria-haspopup="dialog"><Images size={19} aria-hidden="true" /></button>}
             {isGroup && (
               <button className="button-icon subtle" type="button" onClick={() => void handleOpenInvite()} aria-label="초대">
                 <UserPlus size={18} aria-hidden="true" />
               </button>
             )}
-            {chat && <ChatReportMenu chatId={chat.id} roomTitle={roomTitle} user={!isGroup && other ? other : undefined} />}
+            {chat && <ChatReportMenu chatId={chat.id} roomTitle={roomTitle} user={!isGroup && other ? other : undefined} onOpenPins={() => setCollection('pins')} onOpenMedia={() => setCollection('media')} />}
           </div>
         </header>
 
         {error && <p className="form-error">{error}</p>}
 
-        <div className="message-list" ref={listRef}>
-          {messages.length === 0 ? (
+        {pinnedMessages.length > 0 && <button className="chat-pinned-banner" type="button" onClick={() => setCollection('pins')} aria-haspopup="dialog">
+          <Pin size={17} aria-hidden="true" /><span><strong>고정 메시지 {pinnedMessages.length}</strong><span>{pinnedMessages[0].content || pinnedMessages[0].photoName || '사진 메시지'}</span></span><ChevronRight size={18} aria-hidden="true" />
+        </button>}
+
+        <div className="message-list" ref={listRef} onScroll={event => {
+          const list = event.currentTarget
+          stickToBottom.current = list.scrollHeight - list.scrollTop - list.clientHeight < 80
+        }}>
+          {messagesError && <div className="chat-collection-empty" role="alert"><p>{messagesError}</p><button className="button button-secondary" type="button" onClick={() => setMessagesRevision(value => value + 1)}>다시 시도</button></div>}
+          {messagesLoading ? <p className="empty-text" role="status">메시지를 불러오는 중입니다.</p> : !messagesError && messages.length === 0 ? (
             <p className="empty-text">아직 메시지가 없습니다.</p>
           ) : (
             messages.map((message, index) => {
@@ -359,7 +424,8 @@ export function ChatRoomPage() {
                       <span>{formatChatDateSeparator(dateKey)}</span>
                     </div>
                   )}
-                  <article className={`message-row ${isMine ? 'mine' : 'other'}`}>
+                  <article className={`message-row ${isMine ? 'mine' : 'other'}${highlightedId === message.id ? ' message-highlighted' : ''}`} tabIndex={-1}
+                    ref={element => { if (element) messageRefs.current.set(message.id, element); else messageRefs.current.delete(message.id) }}>
                     {!isMine &&
                       ((isGroup ? chat?.participants[message.uid]?.photoURL : other?.photoURL) ? (
                         <img
@@ -372,7 +438,9 @@ export function ChatRoomPage() {
                       ))}
                     <div className="message-stack">
                       {!isMine && <strong className="message-author">{message.authorNickname}</strong>}
-                      <ChatMessageContent message={message} chatId={chat?.id || chatId} canReport={!isMine && Boolean(chat)} />
+                      <ChatMessageContent message={message} chatId={chat?.id || chatId} canReport={!isMine && Boolean(chat)} pinned={pinnedIds.has(message.id)}
+                        onTogglePin={chat && currentUser && message.createdAt && message.uid !== 'deleted-user'
+                          ? () => setChatMessagePinned(chat.id, message.id, currentUser.uid, !pinnedIds.has(message.id)) : undefined} />
                       <div className="message-meta">
                         {isGroup && chat ? (
                           <ChatReadReceipts message={message} chat={chat} currentUid={currentUser?.uid} />
@@ -439,6 +507,9 @@ export function ChatRoomPage() {
           </button>
         </form>
       </section>
+
+      {chat && collection && <ChatCollectionDialog key={collection} kind={collection} messages={collection === 'pins' ? pinnedMessages : mediaMessages}
+        loading={messagesLoading} error={messagesError} onClose={closeCollection} onJump={jumpToMessage} onRetry={() => setMessagesRevision(value => value + 1)} />}
 
       {isInviteOpen && (
         <div className="modal-backdrop" role="presentation">

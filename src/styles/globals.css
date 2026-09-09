@@ -1935,6 +1935,16 @@ img {
   justify-content: flex-end;
 }
 
+.feed-search-section { margin-bottom: 22px; }
+.people-search.feed-search { gap: 10px; margin-bottom: 8px; padding-right: 5px; }
+.feed-search > svg { flex-shrink: 0; }
+.feed-search input { min-width: 0; min-height: 46px; }
+.feed-search input::-webkit-search-cancel-button { display: none; }
+.feed-search .button-icon { flex: 0 0 42px; }
+.feed-search:focus-within { border-color: var(--teal); box-shadow: 0 0 0 2px #2b756d14; }
+.feed-search-summary { margin: 0; color: var(--muted); font-size: 0.8rem; }
+.feed-search-empty { text-align: center; }
+
 .feed-controls label {
   display: inline-flex;
   align-items: center;

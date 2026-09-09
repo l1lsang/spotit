@@ -17,6 +17,7 @@ export interface DaymarkChat {
   lastMessageUid?: string
   lastMessageAt?: Timestamp
   readAtBy?: Record<string, Timestamp>
+  pinnedMessageIds?: string[]
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }

@@ -1,13 +1,22 @@
-import { Flag, X } from 'lucide-react'
+import { Flag, MoreHorizontal, Pin, PinOff, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { createLongPress } from '../../lib/longPress'
 import type { ChatMessage } from '../../types/chat'
 import { ReportDialog } from '../moderation/ReportButton'
 
-export function ChatMessageContent({ message, chatId, canReport }: { message: ChatMessage; chatId: string; canReport: boolean }) {
+interface ChatMessageContentProps {
+  message: ChatMessage
+  chatId: string
+  canReport: boolean
+  pinned?: boolean
+  onTogglePin?: () => Promise<void>
+}
+
+export function ChatMessageContent({ message, chatId, canReport, pinned = false, onTogglePin }: ChatMessageContentProps) {
   const [view, setView] = useState<'actions' | 'report' | null>(null)
   const trigger = useRef<HTMLDivElement>(null)
   const [press] = useState(() => createLongPress(() => setView('actions')))
+  const canOpenMenu = canReport || Boolean(onTogglePin)
 
   useEffect(() => () => press.cancel(), [press])
 
@@ -20,13 +29,13 @@ export function ChatMessageContent({ message, chatId, canReport }: { message: Ch
     <>
       <div
         ref={trigger}
-        className={`message-content${canReport ? ' reportable' : ''}`}
-        role={canReport ? 'group' : undefined}
-        tabIndex={canReport ? 0 : undefined}
-        aria-label={canReport ? `${message.authorNickname}의 메시지. 길게 누르거나 Enter 키로 메시지 메뉴 열기` : undefined}
-        aria-haspopup={canReport ? 'dialog' : undefined}
+        className={`message-content${canOpenMenu ? ' reportable' : ''}`}
+        role={canOpenMenu ? 'group' : undefined}
+        tabIndex={canOpenMenu ? 0 : undefined}
+        aria-label={canOpenMenu ? `${message.authorNickname}의 메시지. 길게 누르거나 Enter 키로 메시지 메뉴 열기` : undefined}
+        aria-haspopup={canOpenMenu ? 'dialog' : undefined}
         onPointerDown={event => {
-          if (!canReport) return
+          if (!canOpenMenu || (event.target instanceof Element && event.target.closest('button'))) return
           if (!event.isPrimary || event.button !== 0) { press.cancel(); return }
           press.start(event.clientX, event.clientY)
         }}
@@ -36,7 +45,7 @@ export function ChatMessageContent({ message, chatId, canReport }: { message: Ch
         onPointerLeave={press.cancel}
         onWheel={press.cancel}
         onContextMenu={event => {
-          if (!canReport) return
+          if (!canOpenMenu) return
           event.preventDefault()
           press.open()
         }}
@@ -44,13 +53,15 @@ export function ChatMessageContent({ message, chatId, canReport }: { message: Ch
           if (press.consumeClick()) { event.preventDefault(); event.stopPropagation() }
         }}
         onKeyDown={event => {
-          if (!canReport || event.target !== event.currentTarget) return
+          if (!canOpenMenu || event.target !== event.currentTarget) return
           if (event.key === 'Enter' || event.key === ' ' || event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
             event.preventDefault()
             press.open()
           }
         }}
       >
+        {canOpenMenu && <button className="message-options-button" type="button" aria-label="메시지 메뉴 열기" aria-haspopup="dialog" onClick={() => setView('actions')}><MoreHorizontal size={17} aria-hidden="true" /></button>}
+        {pinned && <small className="message-pinned-label"><Pin size={12} aria-hidden="true" />고정됨</small>}
         {message.photoUrl && (
           <a className="message-photo-link" href={message.photoUrl} target="_blank" rel="noreferrer" draggable={false}>
             <img className="message-photo" src={message.photoUrl} alt={message.photoName || '채팅 사진'} draggable={false} />
@@ -58,8 +69,8 @@ export function ChatMessageContent({ message, chatId, canReport }: { message: Ch
         )}
         {message.content && <p className="message-bubble">{message.content}</p>}
       </div>
-      {canReport && view === 'actions' && (
-        <MessageActions message={message} onClose={close} onReport={() => setView('report')} />
+      {canOpenMenu && view === 'actions' && (
+        <MessageActions message={message} onClose={close} onReport={canReport ? () => setView('report') : undefined} pinned={pinned} onTogglePin={onTogglePin} />
       )}
       {canReport && view === 'report' && (
         <ReportDialog target={{ kind: 'chat', targetId: chatId, messageId: message.id, label: `${message.authorNickname}의 메시지` }} onClose={close} />
@@ -68,11 +79,32 @@ export function ChatMessageContent({ message, chatId, canReport }: { message: Ch
   )
 }
 
-function MessageActions({ message, onClose, onReport }: { message: ChatMessage; onClose: () => void; onReport: () => void }) {
+function MessageActions({ message, onClose, onReport, pinned, onTogglePin }: {
+  message: ChatMessage; onClose: () => void; onReport?: () => void; pinned: boolean; onTogglePin?: () => Promise<void>
+}) {
   const dialog = useRef<HTMLDialogElement>(null)
   const pointerStartedHere = useRef(false)
   const titleId = useId()
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const actionLock = useRef(false)
   useEffect(() => { dialog.current?.showModal() }, [])
+
+  async function togglePin() {
+    if (!onTogglePin || actionLock.current) return
+    actionLock.current = true
+    setSaving(true)
+    setError('')
+    try {
+      await onTogglePin()
+      onClose()
+    } catch (pinError) {
+      setError(pinError instanceof Error ? pinError.message : '고정 상태를 변경하지 못했습니다.')
+    } finally {
+      actionLock.current = false
+      setSaving(false)
+    }
+  }
 
   return (
     <dialog
@@ -97,9 +129,16 @@ function MessageActions({ message, onClose, onReport }: { message: ChatMessage; 
         <strong>{message.authorNickname}</strong>
         <p>{message.content || message.photoName || '사진 메시지'}</p>
       </div>
-      <button className="message-report-action" type="button" onClick={onReport}>
+      {onTogglePin && <>
+        <button className="message-pin-action" type="button" disabled={saving} onClick={() => void togglePin()}>
+          {pinned ? <PinOff size={18} aria-hidden="true" /> : <Pin size={18} aria-hidden="true" />}{saving ? '변경 중…' : pinned ? '메시지 고정 해제' : '메시지 고정'}
+        </button>
+        <p className="message-pin-hint">고정한 메시지는 이 방의 모든 참여자에게 보여요.</p>
+      </>}
+      {error && <p className="form-error" role="alert">{error}</p>}
+      {onReport && <button className="message-report-action" type="button" onClick={onReport} disabled={saving}>
         <Flag size={18} aria-hidden="true" />이 메시지 신고
-      </button>
+      </button>}
     </dialog>
   )
 }

@@ -1,10 +1,12 @@
-import { LocateFixed, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { LocateFixed, RefreshCw, Search, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { PostCard } from '../components/post/PostCard'
 import { useAuth } from '../hooks/useAuth'
 import { SEOUL_CITY_HALL, useCurrentLocation } from '../hooks/useCurrentLocation'
 import type { LatLng } from '../lib/kakaoMap'
+import { filterFeedPosts } from '../lib/feedSearch'
 import { getNearbyVisiblePosts } from '../services/postService'
 import type { Post } from '../types/post'
 
@@ -17,33 +19,35 @@ export function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  const loadPosts = useCallback(async () => {
-    if (!initialLocationReady) {
-      setPosts([])
-      return
-    }
-
-    if (!firebaseReady || !currentUser) {
-      setPosts([])
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
-    try {
-      setPosts(await getNearbyVisiblePosts(currentUser.uid, center, radiusKm))
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : '피드를 불러오지 못했습니다.')
-    } finally {
-      setLoading(false)
-    }
-  }, [center, currentUser, firebaseReady, initialLocationReady, radiusKm])
+  const [revision, setRevision] = useState(0)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const keyword = searchParams.get('q') || ''
+  const viewerUid = currentUser?.uid
+  const filteredPosts = useMemo(() => filterFeedPosts(posts, keyword), [posts, keyword])
 
   useEffect(() => {
-    void loadPosts()
-  }, [loadPosts])
+    if (!initialLocationReady || !firebaseReady || !viewerUid) {
+      setPosts([])
+      setLoading(false)
+      return
+    }
+    let active = true
+    setLoading(true)
+    setError('')
+    void getNearbyVisiblePosts(viewerUid, center, radiusKm, Infinity).then(nextPosts => {
+      if (active) setPosts(nextPosts)
+    }).catch(loadError => {
+      if (active) setError(loadError instanceof Error ? loadError.message : '피드를 불러오지 못했습니다.')
+    }).finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [center, viewerUid, firebaseReady, initialLocationReady, radiusKm, revision])
+
+  function updateKeyword(nextKeyword: string) {
+    const next = new URLSearchParams(searchParams)
+    if (nextKeyword) next.set('q', nextKeyword)
+    else next.delete('q')
+    setSearchParams(next, { replace: true })
+  }
 
   useEffect(() => {
     let active = true
@@ -95,24 +99,37 @@ export function FeedPage() {
             <LocateFixed size={17} aria-hidden="true" />
             {locationLoading ? '확인 중' : '현재 위치'}
           </button>
-          <button className="button button-secondary" type="button" onClick={() => void loadPosts()}>
+          <button className="button button-secondary" type="button" disabled={loading} onClick={() => setRevision(value => value + 1)}>
             <RefreshCw size={17} aria-hidden="true" />
             새로고침
           </button>
         </div>
       </section>
 
+      {currentUser && <section className="feed-search-section" aria-label="피드 검색">
+        <div className="people-search feed-search" role="search">
+          <Search size={18} aria-hidden="true" />
+          <input type="search" value={keyword} onChange={event => updateKeyword(event.target.value)}
+            placeholder="제목, 장소, 내용, 작성자 검색" aria-label="피드 검색" />
+          {keyword && <button className="button-icon subtle" type="button" onClick={() => updateKeyword('')} aria-label="검색어 지우기"><X size={18} aria-hidden="true" /></button>}
+        </div>
+        <p className="feed-search-summary" role="status">{waitingForLocation || loading ? '주변 기록을 확인하고 있어요.'
+          : `현재 반경 ${radiusKm}km 안 ${keyword.trim() ? '검색 결과' : '기록'} ${filteredPosts.length}개`}</p>
+      </section>}
+
       {(error || locationError) && <p className="form-error">{error || locationError}</p>}
       {!currentUser && <p className="empty-text">로그인하면 팔로우한 사람들의 인근 기록을 볼 수 있습니다.</p>}
       {waitingForLocation && <p className="empty-text">현재 위치를 확인하는 중입니다.</p>}
       {loading && <p className="empty-text">기록을 불러오는 중입니다.</p>}
 
-      {!waitingForLocation && !loading && (
-        posts.length === 0 ? (
-          <p className="empty-text">아직 볼 수 있는 기록이 없습니다.</p>
+      {currentUser && !waitingForLocation && !loading && !error && (
+        filteredPosts.length === 0 ? (
+          <div className="empty-text feed-search-empty"><p>{keyword.trim() ? '검색어와 일치하는 기록이 없습니다.' : '아직 볼 수 있는 기록이 없습니다.'}</p>
+            {keyword.trim() && <button className="button button-secondary" type="button" onClick={() => updateKeyword('')}>검색 초기화</button>}
+          </div>
         ) : (
           <div className="post-grid">
-            {posts.map((post) => (
+            {filteredPosts.map((post) => (
               <PostCard key={post.id} post={post} showVisibility={post.uid === currentUser?.uid} />
             ))}
           </div>

@@ -170,7 +170,7 @@ export async function getNearbyVisiblePosts(
   radiusKm: number,
   maxCount = 80,
 ): Promise<Post[]> {
-  const posts = await getVisiblePosts(uid, 240)
+  const posts = await getVisiblePosts(uid, Infinity)
 
   return posts
     .filter((post) => distanceKm(center, { lat: post.lat, lng: post.lng }) <= radiusKm)

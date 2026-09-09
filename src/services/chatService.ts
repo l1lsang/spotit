@@ -1,4 +1,6 @@
 import {
+  arrayRemove,
+  arrayUnion,
   collection,
   doc,
   getDoc,
@@ -348,6 +350,20 @@ export async function markChatAsRead(chatId: string, uid: string): Promise<void>
   await updateDoc(doc(requireDb(), 'chats', chatId), {
     [`readAtBy.${uid}`]: serverTimestamp(),
     updatedAt: serverTimestamp(),
+  })
+}
+
+export async function setChatMessagePinned(chatId: string, messageId: string, viewerUid: string, pinned: boolean): Promise<void> {
+  const chat = await getChatById(chatId, viewerUid)
+  if (!chat) throw new Error('참여 중인 채팅방에서만 메시지를 고정할 수 있습니다.')
+  const db = requireDb()
+  if (pinned) {
+    const message = await getDoc(doc(db, 'chats', chatId, 'messages', messageId))
+    if (!message.exists() || message.data().uid === 'deleted-user') throw new Error('고정할 수 없는 메시지입니다.')
+  }
+  // Atomic array operations preserve pins added or removed by other participants.
+  await updateDoc(doc(db, 'chats', chatId), {
+    pinnedMessageIds: pinned ? arrayUnion(messageId) : arrayRemove(messageId),
   })
 }
 

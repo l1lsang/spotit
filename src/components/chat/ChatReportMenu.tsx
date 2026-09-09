@@ -1,4 +1,4 @@
-import { Flag, MoreHorizontal, ShieldAlert, X } from 'lucide-react'
+import { Flag, Images, MoreHorizontal, Pin, ShieldAlert, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ReportTarget } from '../../types/moderation'
 import { ReportDialog } from '../moderation/ReportButton'
@@ -7,9 +7,11 @@ interface ChatReportMenuProps {
   chatId: string
   roomTitle: string
   user?: { uid: string; nickname: string }
+  onOpenPins: () => void
+  onOpenMedia: () => void
 }
 
-export function ChatReportMenu({ chatId, roomTitle, user }: ChatReportMenuProps) {
+export function ChatReportMenu({ chatId, roomTitle, user, onOpenPins, onOpenMedia }: ChatReportMenuProps) {
   const trigger = useRef<HTMLButtonElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null)
@@ -31,19 +33,23 @@ export function ChatReportMenu({ chatId, roomTitle, user }: ChatReportMenuProps)
         <MoreHorizontal size={21} aria-hidden="true" />
       </button>
       {menuOpen && (
-        <RoomMenu roomTitle={roomTitle} user={user} onClose={close} onReportChat={() => report({ kind: 'chat', targetId: chatId, label: roomTitle })} onReportUser={() => { if (user) report({ kind: 'user', targetId: user.uid, label: user.nickname }) }} />
+        <RoomMenu roomTitle={roomTitle} user={user} onClose={close}
+          onOpenPins={() => { setMenuOpen(false); onOpenPins() }} onOpenMedia={() => { setMenuOpen(false); onOpenMedia() }}
+          onReportChat={() => report({ kind: 'chat', targetId: chatId, label: roomTitle })} onReportUser={() => { if (user) report({ kind: 'user', targetId: user.uid, label: user.nickname }) }} />
       )}
       {reportTarget && <ReportDialog target={reportTarget} onClose={close} />}
     </>
   )
 }
 
-function RoomMenu({ roomTitle, user, onClose, onReportChat, onReportUser }: {
+function RoomMenu({ roomTitle, user, onClose, onReportChat, onReportUser, onOpenPins, onOpenMedia }: {
   roomTitle: string
   user?: ChatReportMenuProps['user']
   onClose: () => void
   onReportChat: () => void
   onReportUser: () => void
+  onOpenPins: () => void
+  onOpenMedia: () => void
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -57,6 +63,12 @@ function RoomMenu({ roomTitle, user, onClose, onReportChat, onReportUser }: {
       </div>
       <p className="chat-room-menu-title">{roomTitle}</p>
       <div className="chat-room-menu-actions">
+        <button className="chat-room-menu-item chat-room-tool" type="button" onClick={onOpenPins}>
+          <Pin size={20} aria-hidden="true" /><span><strong>고정 메시지</strong><small>중요한 대화를 다시 확인해요</small></span>
+        </button>
+        <button className="chat-room-menu-item chat-room-tool" type="button" onClick={onOpenMedia}>
+          <Images size={20} aria-hidden="true" /><span><strong>미디어 모아보기</strong><small>주고받은 사진을 한눈에 봐요</small></span>
+        </button>
         <button className="chat-room-menu-item" type="button" onClick={onReportChat}>
           <Flag size={20} aria-hidden="true" />
           <span><strong>채팅 신고</strong><small>이 대화의 내용을 신고해요</small></span>
