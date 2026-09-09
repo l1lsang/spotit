@@ -1,8 +1,9 @@
 import { updateProfile } from 'firebase/auth'
-import { BookOpen, Camera, Check, ChevronRight, Lock, LogOut, Save, Trash2, UserMinus, X } from 'lucide-react'
+import { BookOpen, Camera, Check, ChevronRight, Crop, Lock, LogOut, Save, Trash2, UserMinus, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
+import { ImageEditorModal } from '../components/image/ImageEditorModal'
 import { PinThemePicker } from '../components/post/PinThemePicker'
 import { useAuth } from '../hooks/useAuth'
 import { BIO_MAX_LENGTH, USERNAME_MAX_LENGTH, getProfilePhotoError, getUsernameError } from '../lib/userProfile'
@@ -42,6 +43,7 @@ export function ProfilePage() {
   const [bio, setBio] = useState(profile?.bio || '')
   const [isPrivate, setIsPrivate] = useState(Boolean(profile?.isPrivate))
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [editingPhoto, setEditingPhoto] = useState<File | string | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
   const [followRequests, setFollowRequests] = useState<FollowRequest[]>([])
   const [followRequestLoading, setFollowRequestLoading] = useState(false)
@@ -153,6 +155,7 @@ export function ProfilePage() {
 
   function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
+    event.target.value = ''
 
     if (!file) {
       return
@@ -164,13 +167,8 @@ export function ProfilePage() {
       return
     }
 
-    if (photoPreview) {
-      URL.revokeObjectURL(photoPreview)
-    }
-
     setError('')
-    setPhotoFile(file)
-    setPhotoPreview(URL.createObjectURL(file))
+    setEditingPhoto(file)
   }
 
   async function handleLogout() {
@@ -340,6 +338,16 @@ export function ProfilePage() {
         <div className="profile-identity">
           <p>{profile?.nickname || '스팟잇 사용자'}</p>
           {profile?.username && <p className="profile-username">@{profile.username}</p>}
+          <div className="profile-stats">
+            <button type="button" onClick={() => void handleOpenFollowList('followers')}>
+              <span>팔로워</span>
+              <strong>{profile?.followerCount || 0}</strong>
+            </button>
+            <button type="button" onClick={() => void handleOpenFollowList('following')}>
+              <span>팔로잉</span>
+              <strong>{profile?.followingCount || 0}</strong>
+            </button>
+          </div>
           {profile?.bio && <p className="profile-bio">{profile.bio}</p>}
           {profile?.isPrivate && (
             <span className="private-account-badge">
@@ -348,23 +356,11 @@ export function ProfilePage() {
             </span>
           )}
         </div>
-        <div className="profile-activity">
-          <div className="profile-stats">
-            <button type="button" onClick={() => void handleOpenFollowList('followers')}>
-              <strong>{profile?.followerCount || 0}</strong>
-              <span>팔로워</span>
-            </button>
-            <button type="button" onClick={() => void handleOpenFollowList('following')}>
-              <strong>{profile?.followingCount || 0}</strong>
-              <span>팔로잉</span>
-            </button>
-          </div>
-          <Link className="profile-records-link" to="/my">
-            <BookOpen size={17} aria-hidden="true" />
-            내 기록
-            <ChevronRight size={16} aria-hidden="true" />
-          </Link>
-        </div>
+        <Link className="profile-records-link" to="/my">
+          <BookOpen size={17} aria-hidden="true" />
+          내 기록
+          <ChevronRight size={16} aria-hidden="true" />
+        </Link>
       </section>
 
       {(profile?.isPrivate || followRequests.length > 0 || followRequestLoading) && (
@@ -424,11 +420,15 @@ export function ProfilePage() {
       )}
 
       <form className="form profile-form" onSubmit={handleSubmit}>
-        <label className="profile-photo-picker">
-          <Camera size={18} aria-hidden="true" />
-          <span>{photoFile ? photoFile.name : '프로필 사진 변경'}</span>
-          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhotoChange} />
-        </label>
+        <div className="profile-photo-actions">
+          <label className="profile-photo-picker">
+            <Camera size={18} aria-hidden="true" />
+            <span>{photoFile ? photoFile.name : '프로필 사진 변경'}</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhotoChange} disabled={submitting} />
+          </label>
+          {(photoFile || profile?.photoURL) && <button className="button button-secondary" type="button" disabled={submitting}
+            onClick={() => setEditingPhoto(photoFile || profile?.photoURL || null)}><Crop size={17} aria-hidden="true" />사진 편집</button>}
+        </div>
 
         <label className="field">
           <span>사용자 이름</span>
@@ -494,6 +494,14 @@ export function ProfilePage() {
           계정 탈퇴
         </button>
       </section>
+
+      {editingPhoto && <ImageEditorModal source={editingPhoto} square onClose={() => setEditingPhoto(null)} onApply={file => {
+        setPhotoFile(file)
+        setPhotoPreview(URL.createObjectURL(file))
+        setEditingPhoto(null)
+        setMessage('')
+        setError('')
+      }} />}
 
       {followListKind && (
         <div className="modal-backdrop" role="presentation">

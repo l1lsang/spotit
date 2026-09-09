@@ -1,8 +1,9 @@
 import { updateProfile } from 'firebase/auth'
-import { ArrowLeft, ArrowRight, AtSign, Camera, Check, KeyRound, Mail, UserRound, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, AtSign, Camera, Check, Crop, KeyRound, Mail, UserRound, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { FirebaseNotice } from '../components/layout/FirebaseNotice'
+import { ImageEditorModal } from '../components/image/ImageEditorModal'
 import { useAuth } from '../hooks/useAuth'
 import { requireAuth } from '../lib/firebase'
 import { BIO_MAX_LENGTH, NICKNAME_MAX_LENGTH, USERNAME_MAX_LENGTH, getProfilePhotoError, getUsernameError, normalizeUsername } from '../lib/userProfile'
@@ -20,6 +21,7 @@ export function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [editingPhoto, setEditingPhoto] = useState<File | string | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
   const [error, setError] = useState('')
   const [usernameError, setUsernameError] = useState('')
@@ -119,7 +121,7 @@ export function SignupPage() {
     if (!file) return
     const validationError = getProfilePhotoError(file)
     setError(validationError)
-    if (!validationError) setPhotoFile(file)
+    if (!validationError) setEditingPhoto(file)
   }
 
   if (loading && !submitting) return <main className="screen-message">가입 정보를 확인하는 중입니다.</main>
@@ -199,6 +201,8 @@ export function SignupPage() {
                 </label>
                 <strong>@{normalizedUsername}</strong>
                 <span className="field-hint">사진을 눌러 추가해 보세요 · 선택 사항 · 최대 5MB</span>
+                {(photoFile || currentUser?.photoURL) && <button className="auth-text-button" type="button"
+                  onClick={() => setEditingPhoto(photoFile || currentUser?.photoURL || null)}><Crop size={14} aria-hidden="true" /> 사진 편집</button>}
                 {photoFile && <button className="auth-text-button" type="button" onClick={() => setPhotoFile(null)}>
                   <X size={13} aria-hidden="true" /> 선택한 사진 지우기
                 </button>}
@@ -227,6 +231,11 @@ export function SignupPage() {
         )}
         {!currentUser && <p className="auth-switch">이미 계정이 있다면 <Link to="/login">로그인</Link></p>}
       </section>
+      {editingPhoto && <ImageEditorModal source={editingPhoto} square onClose={() => setEditingPhoto(null)} onApply={file => {
+        setPhotoFile(file)
+        setEditingPhoto(null)
+        setError('')
+      }} />}
     </main>
   )
 }

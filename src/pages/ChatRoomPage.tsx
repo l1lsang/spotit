@@ -1,10 +1,12 @@
-import { ArrowLeft, ImagePlus, SendHorizonal, UserPlus, UsersRound, X } from 'lucide-react'
+import { ArrowLeft, Crop, ImagePlus, SendHorizonal, UserPlus, UsersRound, X } from 'lucide-react'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { ChatMessageContent } from '../components/chat/ChatMessageContent'
 import { ChatReadReceipts } from '../components/chat/ChatReadReceipts'
 import { ChatReportMenu } from '../components/chat/ChatReportMenu'
+import { ImageEditorModal } from '../components/image/ImageEditorModal'
+import { EDITABLE_IMAGE_TYPES, getEditableImageError } from '../lib/imageEditing'
 import { formatChatDateSeparator, formatChatTime, getTimestampDateKey } from '../lib/date'
 import {
   getOtherParticipant,
@@ -38,6 +40,7 @@ export function ChatRoomPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [content, setContent] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [editingPhoto, setEditingPhoto] = useState<File | null>(null)
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('')
   const [inviteCandidates, setInviteCandidates] = useState<DaymarkUser[]>([])
   const [selectedInviteIds, setSelectedInviteIds] = useState<Set<string>>(new Set())
@@ -388,6 +391,9 @@ export function ChatRoomPage() {
           {photoPreviewUrl && (
             <div className="message-attachment-preview">
               <img src={photoPreviewUrl} alt={photoFile?.name || '선택한 사진'} />
+              <button className="button-icon subtle" type="button" onClick={() => setEditingPhoto(photoFile)} aria-label="선택한 사진 편집" disabled={sending}>
+                <Crop size={17} aria-hidden="true" />
+              </button>
               <button
                 className="button-icon subtle"
                 type="button"
@@ -403,12 +409,15 @@ export function ChatRoomPage() {
             <ImagePlus size={19} aria-hidden="true" />
             <input
               type="file"
-              accept="image/*"
+              accept={EDITABLE_IMAGE_TYPES}
               disabled={sending}
               onChange={(event) => {
                 const selectedFile = event.target.files?.[0] || null
-                setPhotoFile(selectedFile)
                 event.target.value = ''
+                if (!selectedFile) return
+                const validationError = getEditableImageError(selectedFile)
+                setError(validationError)
+                if (!validationError) setEditingPhoto(selectedFile)
               }}
             />
           </label>
@@ -482,6 +491,11 @@ export function ChatRoomPage() {
           </section>
         </div>
       )}
+      {editingPhoto && <ImageEditorModal source={editingPhoto} allowOriginal onClose={() => setEditingPhoto(null)} onApply={file => {
+        setPhotoFile(file)
+        setEditingPhoto(null)
+        setError('')
+      }} />}
     </main>
   )
 }

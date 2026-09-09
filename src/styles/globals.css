@@ -3147,7 +3147,8 @@ body.chat-room-active .message-form:focus-within {
 }
 
 .profile-panel {
-  display: flex;
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
   padding: 18px;
@@ -3196,13 +3197,6 @@ body.chat-room-active .message-form:focus-within {
   overflow-wrap: anywhere;
 }
 
-.profile-activity {
-  display: grid;
-  flex-shrink: 0;
-  gap: 4px;
-  margin-left: auto;
-}
-
 .profile-records-link {
   display: flex;
   align-items: center;
@@ -3221,30 +3215,33 @@ body.chat-room-active .message-form:focus-within {
 
 .profile-stats {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 0 18px;
 }
 
 .profile-stats button {
-  display: grid;
-  justify-items: center;
-  min-width: 72px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
   color: var(--muted);
-  background: #fffaf2;
-  font-size: 0.82rem;
-  font-weight: 800;
+  background: transparent;
+  font-size: 0.85rem;
+  font-weight: 400;
 }
 
-.profile-stats button:hover {
-  border-color: #f0c5b8;
-  background: #fff2ea;
+.profile-stats button:hover span {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .profile-stats strong {
   color: var(--ink);
-  font-size: 1.15rem;
+  font-size: inherit;
+  font-weight: 800;
 }
 
 .private-account-badge {
@@ -3342,6 +3339,7 @@ body.chat-room-active .message-form:focus-within {
 }
 
 .profile-records-link:focus-visible,
+.profile-stats button:focus-visible,
 .profile-save-actions .button:focus-visible,
 .profile-account-section button:focus-visible {
   outline: 2px solid var(--teal);
@@ -3699,12 +3697,13 @@ body.chat-room-active .message-form:focus-within {
   }
 
   .profile-panel {
-    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 8px 14px;
   }
 
-  .profile-activity {
+  .profile-records-link {
+    grid-column: 2;
     justify-self: start;
-    margin-left: 0;
   }
 
   .follow-row {

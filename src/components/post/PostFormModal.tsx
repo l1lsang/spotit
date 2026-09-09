@@ -200,6 +200,7 @@ export function PostFormModal({
           </label>
 
           <PhotoUploader
+            disabled={submitting}
             files={files}
             onFilesChange={setFiles}
             existingPhotoUrls={existingPhotoUrls}
