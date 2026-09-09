@@ -1,12 +1,15 @@
-import { LocateFixed, MapPin, Plus, Search, SendHorizonal, X } from 'lucide-react'
+import { Compass, LocateFixed, MapPin, Plus, Search, SendHorizonal, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { GroupJoinButton } from '../components/group/GroupJoinButton'
 import { PageContainer } from '../components/layout/PageContainer'
 import { MapView } from '../components/map/MapView'
 import { MapPinList } from '../components/map/MapPinList'
 import { MapPostPreview } from '../components/map/MapPostPreview'
 import { PostFormModal, type PostFormSubmitPayload } from '../components/post/PostFormModal'
 import { useAuth } from '../hooks/useAuth'
+import { useGroups } from '../hooks/useGroups'
+import { getGroupMapUrl } from '../lib/groupNavigation'
 import { SEOUL_CITY_HALL, useCurrentLocation } from '../hooks/useCurrentLocation'
 import { getMapProvider, type LatLng, type MapProvider, type PlaceSearchResult } from '../lib/mapLocation'
 import { searchPlaces } from '../lib/placeSearch'
@@ -14,7 +17,7 @@ import {
   createLivePlaceStatus,
   subscribePlaceStatusUpdates,
 } from '../services/mapFeatureService'
-import { createPost, getVisiblePosts } from '../services/postService'
+import { createPost, getVisiblePosts, subscribeGroupPosts } from '../services/postService'
 import {
   LIVE_PLACE_STATUS_OPTIONS,
   type LivePlaceStatusKey,
@@ -26,6 +29,7 @@ import {
   type Post,
   type PostFormInput,
 } from '../types/post'
+import '../styles/mapGroups.css'
 
 type MapMode = 'main' | 'live'
 type PanelMessageType = 'success' | 'error'
@@ -89,8 +93,22 @@ function getErrorMessage(error: unknown, fallback: string): string {
 }
 
 export function MapPage() {
+  const [searchParams] = useSearchParams()
+  const { currentUser } = useAuth()
+  const groupId = searchParams.get('group') || ''
+  return <ScopedMapPage key={`${currentUser?.uid || 'guest'}:${groupId}`} groupId={groupId} />
+}
+
+function ScopedMapPage({ groupId }: { groupId: string }) {
   const navigate = useNavigate()
   const { currentUser, profile, firebaseReady } = useAuth()
+  const groupState = useGroups()
+  const selectedGroup = groupState.groups.find(group => group.id === groupId)
+  const selectedGroupId = selectedGroup?.id
+  const joined = groupState.joinedIds.includes(groupId)
+  const canCreatePin = !groupId || Boolean(selectedGroup && joined && !groupState.loading && !groupState.error)
+  const toolbarRef = useRef<HTMLDivElement>(null)
+  const mapShellRef = useRef<HTMLDivElement>(null)
   const { loading: locationLoading, error: locationError, requestLocation } = useCurrentLocation()
   const [center, setCenter] = useState<LatLng>(SEOUL_CITY_HALL)
   const [initialLocationReady, setInitialLocationReady] = useState(false)
@@ -104,6 +122,7 @@ export function MapPage() {
   const searchRequestRef = useRef(0)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [loadingPosts, setLoadingPosts] = useState(false)
+  const [postsRevision, setPostsRevision] = useState(0)
   const [placeQuery, setPlaceQuery] = useState('')
   const [placeResults, setPlaceResults] = useState<PlaceSearchResult[]>([])
   const [searchingPlaces, setSearchingPlaces] = useState(false)
@@ -119,7 +138,7 @@ export function MapPage() {
   const [statusPanelMessageType, setStatusPanelMessageType] =
     useState<PanelMessageType>('success')
 
-  const visiblePosts = mapMode === 'main' ? posts : []
+  const visiblePosts = mapMode === 'main' && (!groupId || selectedGroup) ? posts : []
   const statusCounts = useMemo(
     () =>
       LIVE_PLACE_STATUS_OPTIONS.map((option) => ({
@@ -130,6 +149,7 @@ export function MapPage() {
   )
 
   const loadPosts = useCallback(async () => {
+    if (groupId) return
     if (!firebaseReady) {
       setPosts([])
       return
@@ -146,14 +166,43 @@ export function MapPage() {
     } finally {
       setLoadingPosts(false)
     }
-  }, [currentUser?.uid, firebaseReady])
+  }, [currentUser?.uid, firebaseReady, groupId])
 
   useEffect(() => {
     void loadPosts()
   }, [loadPosts])
 
   useEffect(() => {
+    if (!groupId || !selectedGroupId || !currentUser || !firebaseReady) return
+    let first = true
+    setLoadingPosts(true)
+    setError('')
+    return subscribeGroupPosts(selectedGroupId, next => {
+      setPosts(next)
+      setLoadingPosts(false)
+      setSelectedPost(previous => next.find(post => post.id === previous?.id) || null)
+      setClusterPosts(previous => next.filter(post => previous.some(item => item.id === post.id)))
+      if (first && next[0]) setCenter({ lat: next[0].lat, lng: next[0].lng })
+      first = false
+    }, () => { setError('그룹 핀을 불러오지 못했습니다.'); setLoadingPosts(false) })
+  }, [currentUser, firebaseReady, groupId, selectedGroupId, postsRevision])
+
+  useEffect(() => {
+    const toolbar = toolbarRef.current
+    const shell = mapShellRef.current
+    if (!toolbar || !shell) return
+    const measure = () => shell.style.setProperty('--map-toolbar-height', `${toolbar.getBoundingClientRect().height}px`)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(toolbar)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
     let active = true
+
+    // A group opens at its first pin; a pending device location must not move it away again.
+    if (groupId) { setInitialLocationReady(true); return }
 
     async function centerOnCurrentLocation() {
       const nextLocation = await requestLocation(false)
@@ -171,12 +220,12 @@ export function MapPage() {
     return () => {
       active = false
     }
-  }, [requestLocation])
+  }, [requestLocation, groupId])
 
   useEffect(() => {
     setStatusPanelMessage('')
 
-    if (!firebaseReady || !selectedPlace) {
+    if (!firebaseReady || !currentUser || !selectedPlace || mapMode !== 'live') {
       setStatusUpdates([])
       setLoadingStatusUpdates(false)
       return undefined
@@ -196,7 +245,7 @@ export function MapPage() {
         setLoadingStatusUpdates(false)
       },
     )
-  }, [firebaseReady, selectedPlace])
+  }, [firebaseReady, selectedPlace, currentUser, mapMode])
 
   async function handleUseCurrentLocation() {
     const nextLocation = await requestLocation()
@@ -360,6 +409,8 @@ export function MapPage() {
       return
     }
 
+    if (!canCreatePin) throw new Error('그룹에 가입한 뒤 핀을 남겨 주세요.')
+
     const input: PostFormInput = {
       title: payload.title,
       content: payload.content,
@@ -368,10 +419,10 @@ export function MapPage() {
       lat: payload.lat,
       lng: payload.lng,
       dateKey: payload.dateKey,
-      visibility: payload.visibility,
+      visibility: groupId ? 'public' : payload.visibility,
       pinColor: payload.pinColor,
       pinThemeId: payload.pinThemeId || '',
-      groupId: payload.groupId || '',
+      groupId: groupId || payload.groupId || '',
     }
 
     await createPost(input, payload.files, {
@@ -380,12 +431,16 @@ export function MapPage() {
     })
     setIsFormOpen(false)
     setSelectedLocation(null)
+    if (input.groupId && input.groupId !== groupId) {
+      navigate(getGroupMapUrl(input.groupId))
+      return
+    }
     await loadPosts()
   }
 
   return (
     <PageContainer fullBleed className="map-page">
-      <div className="map-shell">
+      <div ref={mapShellRef} className="map-shell map-with-groups">
         {initialLocationReady ? (
           <MapView
             center={center}
@@ -408,7 +463,8 @@ export function MapPage() {
           </section>
         )}
 
-        <div className="map-toolbar">
+        <div ref={toolbarRef} className="map-toolbar">
+          <div className="map-search-row">
           <form className="map-search-form" onSubmit={handlePlaceSearch}>
             <Search size={18} aria-hidden="true" />
             <input
@@ -431,6 +487,24 @@ export function MapPage() {
               <Search size={17} aria-hidden="true" />
             </button>
           </form>
+            <Link className="map-groups-link" to="/groups" aria-label="그룹 페이지 열기" title="그룹 둘러보기 · 내 그룹">
+              <Compass size={22} aria-hidden="true" />
+              <span>그룹</span>
+            </Link>
+          </div>
+
+          {mapMode === 'main' && currentUser && <div className="map-scope-controls">
+            <select aria-label="지도에 표시할 그룹" value={groupId} disabled={groupState.loading || Boolean(groupState.error)} onChange={event => navigate(getGroupMapUrl(event.target.value))}>
+              <option value="">내 지도 · 나와 팔로잉</option>
+              {groupState.groups.filter(group => groupState.joinedIds.includes(group.id) || group.id === groupId).map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
+              {groupId && !selectedGroup && <option value={groupId}>{groupState.loading ? '그룹 불러오는 중…' : '그룹을 찾을 수 없습니다'}</option>}
+            </select>
+            {selectedGroup && <Link className="button button-secondary" to={`/groups/${selectedGroup.id}`}>그룹 홈</Link>}
+            {selectedGroup && !joined && !groupState.loading && !groupState.error && <GroupJoinButton groupId={groupId} joined={false} />}
+          </div>}
+
+          {groupState.error && <p className="map-group-notice" role="alert">{groupState.error} <button type="button" onClick={groupState.retry}>다시 시도</button>{groupId && <Link to="/map">내 지도로</Link>}</p>}
+          {groupId && currentUser && !groupState.loading && !groupState.error && !selectedGroup && <p className="map-group-notice" role="alert">그룹을 찾을 수 없습니다. <Link to="/groups">그룹 둘러보기</Link></p>}
 
           <select className="map-provider-select" aria-label="지도 제공자" value={providerOverride} onChange={(event) => {
             setProviderOverride(event.target.value as MapProvider | 'auto')
@@ -450,7 +524,7 @@ export function MapPage() {
               type="button"
               onClick={() => handleModeChange('main')}
             >
-              기본 지도
+              {groupId ? '그룹 지도' : '기본 지도'}
             </button>
             <button
               className={mapMode === 'live' ? 'active' : ''}
@@ -470,9 +544,9 @@ export function MapPage() {
               ? selectedPlace
                 ? `공유 리뷰 ${statusUpdates.length}개`
                 : '전체 사용자 공유 리뷰'
-              : loadingPosts
+              : loadingPosts || (groupId && groupState.loading)
                 ? '기록 불러오는 중'
-                : `팔로우 기반 ${posts.length}개의 기록`}
+                : groupId ? `그룹 핀 ${posts.length}개` : `팔로우 기반 ${posts.length}개의 기록`}
           </span>
           {currentUser && mapMode === 'main' && (
             <span className="map-legend pin-group-legend">
@@ -486,7 +560,7 @@ export function MapPage() {
               ))}
               내 핀
               <i className="other" style={{ backgroundColor: FOLLOWING_PIN_COLOR }} />
-              팔로잉
+              {groupId ? '그룹 멤버' : '팔로잉'}
             </span>
           )}
         </div>
@@ -616,21 +690,21 @@ export function MapPage() {
           </aside>
         )}
 
-        {(locationError || error) && <p className="map-error">{locationError || error}</p>}
+        {(locationError || error) && <p className="map-error" role="alert">{locationError || error}{error && groupId && <button type="button" onClick={() => setPostsRevision(value => value + 1)}>다시 시도</button>}</p>}
         {!currentUser && (
           <div className="map-floating map-login-prompt">
             <p>
               {mapMode === 'main'
-                ? '로그인하면 팔로우한 사람들의 핀 위치가 지도에 표시됩니다.'
+                ? groupId ? '로그인하면 이 그룹의 핀을 보고 함께 참여할 수 있습니다.' : '로그인하면 팔로우한 사람들의 핀 위치가 지도에 표시됩니다.'
                 : '로그인하면 모두가 보는 실시간 리뷰를 남길 수 있습니다.'}
             </p>
-            <button className="button button-primary" type="button" onClick={() => navigate('/login')}>
+            <button className="button button-primary" type="button" onClick={() => navigate('/login', { state: { from: getGroupMapUrl(groupId) } })}>
               로그인
             </button>
           </div>
         )}
 
-        {selectedLocation && mapMode === 'main' && !isFormOpen && currentUser && (
+        {selectedLocation && mapMode === 'main' && !isFormOpen && currentUser && canCreatePin && (
           <div className="map-floating map-record-floating">
             {selectedPlace ? (
               <p>
@@ -648,7 +722,7 @@ export function MapPage() {
               onClick={() => (currentUser ? setIsFormOpen(true) : navigate('/login'))}
             >
               <Plus size={18} aria-hidden="true" />
-              {selectedPlace ? '이 장소 기록하기' : '이곳에 기록하기'}
+              {groupId ? '이곳에 그룹 핀 남기기' : selectedPlace ? '이 장소 기록하기' : '이곳에 기록하기'}
             </button>
           </div>
         )}
@@ -661,10 +735,12 @@ export function MapPage() {
       </div>
 
       <PostFormModal
-        isOpen={isFormOpen}
+        isOpen={isFormOpen && canCreatePin}
         mode="create"
         location={selectedLocation}
         placePrefill={selectedPlace}
+        initialGroupId={groupId}
+        lockGroup={Boolean(groupId)}
         onClose={() => setIsFormOpen(false)}
         onSubmit={handleCreatePost}
       />

@@ -1,9 +1,11 @@
 import { Bell, LogIn } from 'lucide-react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
+import { isMapSection } from '../../lib/groupNavigation'
 import { useAuth } from '../../hooks/useAuth'
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications'
 
 export function Header() {
+  const { pathname } = useLocation()
   const { currentUser, profile } = useAuth()
   const unreadCount = useUnreadNotifications(currentUser?.uid)
 
@@ -14,9 +16,8 @@ export function Header() {
       </Link>
 
       <nav className="header-nav" aria-label="주요 메뉴">
-        <NavLink to="/map">지도</NavLink>
+        <Link to="/map" className={isMapSection(pathname) ? 'active' : undefined} aria-current={isMapSection(pathname) ? 'page' : undefined}>지도</Link>
         <NavLink to="/feed">피드</NavLink>
-        {currentUser && <NavLink to="/groups">그룹</NavLink>}
         {currentUser && <NavLink to="/people">사람</NavLink>}
         {currentUser && <NavLink to="/chats">채팅</NavLink>}
         {currentUser ? (

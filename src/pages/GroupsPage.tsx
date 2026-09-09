@@ -1,4 +1,4 @@
-import { ArrowUpRight, Compass, Plus, Search, UsersRound } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Compass, Plus, Search, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CreateGroupDialog } from '../components/group/CreateGroupDialog'
@@ -19,6 +19,7 @@ export function GroupsPage() {
 
   return (
     <PageContainer className="content-page groups-page">
+      <Link className="group-back" to="/map"><ArrowLeft size={17} aria-hidden="true" />지도로 돌아가기</Link>
       <section className="groups-intro">
         <div><p className="eyebrow">GROUPS · 함께 찾는 즐거움</p><h1>취향이 닿는 곳,<br />함께 핀을 모아요.</h1><p>동네 맛집부터 나만 아는 산책길까지.<br />마음에 드는 그룹에 가입하고 나의 장소를 나눠보세요.</p></div>
         <button type="button" className="button button-primary" onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" />그룹 만들기</button>

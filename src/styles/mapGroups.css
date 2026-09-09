@@ -1,0 +1,34 @@
+.map-with-groups { --map-toolbar-top: 18px; --map-toolbar-height: 150px; }
+.map-with-groups .map-toolbar { top: var(--map-toolbar-top); right: 18px; }
+.map-search-row { display: flex; align-items: stretch; gap: 8px; width: min(450px, 100%); min-width: 0; }
+.map-search-row .map-search-form { flex: 1; min-width: 0; width: auto; grid-template-columns: auto minmax(0, 1fr) auto auto; }
+.map-groups-link { display: flex; align-items: center; justify-content: center; gap: 7px; flex-shrink: 0; padding: 0 13px; min-height: 44px; border: 1px solid #bbd3c9; border-radius: 14px; color: var(--teal); background: #eef5ea; box-shadow: var(--shadow); }
+.map-toolbar .map-groups-link > span { padding: 0; border: 0; background: none; box-shadow: none; backdrop-filter: none; color: inherit; font-size: .85rem; }
+.map-groups-link:hover { background: #dfeedd; }
+.map-groups-link:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.map-scope-controls { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.map-scope-controls select { width: 230px; min-width: 0; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-size: .85rem; text-overflow: ellipsis; box-shadow: var(--shadow); }
+.map-scope-controls .button { flex-shrink: 0; width: auto; min-height: 44px; padding: 8px 10px; font-size: .82rem; }
+.map-scope-controls .group-join-action { flex-shrink: 0; }
+.map-scope-controls .form-error { max-width: 180px; margin: 5px 0 0; font-size: .8rem; }
+.map-group-notice { flex-basis: 100%; margin: 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); font-size: .85rem; }
+.map-group-notice a, .map-group-notice button, .map-with-groups .map-error button { margin-left: 8px; padding: 0; border: 0; background: transparent; color: var(--teal); font: inherit; text-decoration: underline; }
+.map-with-groups .map-place-results, .map-with-groups .map-side-panel { top: calc(var(--map-toolbar-top) + var(--map-toolbar-height) + 10px); }
+.map-with-groups .map-login-prompt { display: flex; right: 18px; }
+@media (max-width: 900px) { .map-search-row { width: 100%; } }
+@media (max-width: 620px) {
+  .map-with-groups { --map-toolbar-top: 12px; }
+  .map-with-groups .map-toolbar { right: 12px; }
+  .map-search-row { grid-column: 1 / -1; order: 0; }
+  .map-groups-link { flex-direction: column; gap: 1px; min-width: 48px; padding: 3px 8px; }
+  .map-toolbar .map-groups-link > span { font-size: .65rem; }
+  .map-scope-controls { grid-column: 1 / -1; order: 1; }
+  .map-scope-controls select { flex: 1; width: 100%; }
+  .map-scope-controls .button { padding-inline: 8px; }
+  .map-with-groups .map-mode-tabs { order: 2; }
+  .map-with-groups .map-provider-select { order: 3; }
+  .map-with-groups .map-toolbar > .button { order: 4; }
+  .map-with-groups .map-toolbar > span { order: 5; }
+  .map-group-notice { grid-column: 1 / -1; order: 6; }
+  .map-with-groups .map-login-prompt { right: 12px; left: 12px; }
+}

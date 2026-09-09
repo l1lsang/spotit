@@ -41,20 +41,9 @@
 .group-participation { margin-top: 18px; padding: 16px 20px; border-radius: 12px; color: var(--teal); background: #eaf1e5; line-height: 1.6; }
 .group-participation p { margin: 0; }
 .group-participation small { display: block; margin-top: 5px; color: var(--muted); }
+.group-map-invite { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.group-map-invite > .button { flex-shrink: 0; }
 .group-pins-heading { margin: 0; font-size: 1.2rem; }
-.group-place-search { margin-bottom: 14px; }
-.group-place-search .button { padding: 8px 16px; min-height: 36px; }
-.group-place-results { list-style: none; padding: 0; max-height: 250px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-.group-place-results button { display: grid; gap: 5px; width: 100%; border: 0; border-bottom: 1px solid var(--line); padding: 14px 18px; text-align: left; background: transparent; color: var(--ink); }
-.group-place-results button:hover { background: #eef3e7; }
-.group-place-results span { color: var(--muted); font-size: .85rem; }
-.group-map-shell { position: relative; height: 520px; min-height: 360px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; isolation: isolate; }
-.group-map-shell .location-map { height: 100%; min-height: 0; }
-.group-map-shell .map-preview { max-height: calc(100% - 32px); overflow: auto; }
-.group-map-selection { position: absolute; z-index: 5; bottom: 16px; left: 16px; right: 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
-.group-map-selection p { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-.group-map-selection p span { display: block; margin-top: 5px; font-size: .8rem; color: var(--muted); }
-.group-map-selection > .button { flex-shrink: 0; }
 @media (max-width: 1000px) { .groups-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) {
   .groups-intro { align-items: flex-start; flex-direction: column; padding: 24px; gap: 22px; }
@@ -67,7 +56,5 @@
   .group-home-title { gap: 12px; }
   .group-home-title .group-symbol { width: 46px; height: 46px; }
   .group-home-footer { align-items: flex-start; flex-direction: column; }
-  .group-map-shell { height: 460px; }
-  .group-map-selection { flex-direction: column; align-items: stretch; }
-  .group-map-selection .button { width: 100%; }
+  .group-map-invite { flex-direction: column; align-items: stretch; }
 }
