@@ -10,6 +10,7 @@ import { MapPage } from '../pages/MapPage'
 import { MyPostsPage } from '../pages/MyPostsPage'
 import { NotificationsPage } from '../pages/NotificationsPage'
 import { PeoplePage } from '../pages/PeoplePage'
+import { PersonProfilePage } from '../pages/PersonProfilePage'
 import { PostDetailPage } from '../pages/PostDetailPage'
 import { ProfilePage } from '../pages/ProfilePage'
 import { SignupPage } from '../pages/SignupPage'
@@ -77,6 +78,14 @@ export function AppRouter() {
             element={
               <ProtectedRoute>
                 <PeoplePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/people/:userId"
+            element={
+              <ProtectedRoute>
+                <PersonProfilePage />
               </ProtectedRoute>
             }
           />

@@ -1,0 +1,45 @@
+.people-page, .person-profile-page { max-width: 760px; }
+.people-list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.people-list > li + li { border-top: 1px solid var(--line); }
+.user-summary-link { display: flex; align-items: center; gap: 14px; min-height: 82px; min-width: 0; padding: 14px 18px; border-radius: 8px; transition: background 150ms ease; }
+.user-summary-link:hover { background: #f2eee5; }
+.user-summary-link > :first-child { flex: 0 0 48px; }
+.user-summary-identity { display: grid; gap: 5px; min-width: 0; }
+.user-summary-identity strong { font-size: 1rem; overflow-wrap: anywhere; }
+.user-summary-identity > span { color: var(--muted); font-size: 0.85rem; overflow-wrap: anywhere; }
+.person-profile-back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 16px; color: var(--muted); font-size: 0.9rem; }
+.person-profile-back:hover { color: var(--ink); }
+.person-profile-card { padding: clamp(18px, 4vw, 30px); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.person-profile-heading { display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: center; gap: 18px; }
+.person-profile-photo { width: 80px; height: 80px; border-radius: 12px; object-fit: cover; }
+.person-profile-identity { min-width: 0; overflow-wrap: anywhere; }
+.person-profile-identity h1 { margin: 0; font-size: clamp(1.3rem, 4vw, 1.75rem); }
+.person-profile-username { margin: 7px 0 0; color: var(--teal); font-size: 0.9rem; }
+.person-profile-about { margin: 24px 0; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.person-profile-about h2 { margin: 0 0 12px; color: var(--muted); font-size: 0.85rem; }
+.person-profile-about > p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.person-profile-privacy { display: flex; align-items: flex-start; gap: 6px; margin-top: 18px; color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
+.person-profile-privacy svg { flex-shrink: 0; margin-top: 2px; }
+.person-profile-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.person-profile-actions .button { min-height: 46px; }
+.person-profile-report { display: flex; justify-content: flex-end; margin-top: 18px; }
+.person-profile-report .report-compact { min-height: 44px; padding: 8px; }
+.person-profile-error { margin-bottom: 18px; color: var(--danger); }
+.person-follow-dialog { width: min(520px, calc(100% - 32px)); max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: var(--surface); }
+.person-follow-dialog[open] { display: flex; flex-direction: column; }
+.person-follow-dialog::backdrop { background: rgba(46, 42, 36, 0.45); }
+.person-follow-header { display: flex; flex-shrink: 0; justify-content: space-between; align-items: flex-start; gap: 14px; padding: 18px; border-bottom: 1px solid var(--line); }
+.person-follow-header > div { min-width: 0; overflow-wrap: anywhere; }
+.person-follow-header p { margin: 0 0 5px; color: var(--muted); font-size: 0.85rem; }
+.person-follow-header h2 { margin: 0; font-size: 1.25rem; }
+.person-follow-header button { flex-shrink: 0; }
+.person-follow-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px; }
+.person-follow-body .people-list { border: 0; }
+.user-summary-link:focus-visible, .person-profile-page :is(a, button):focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+
+@media (max-width: 480px) {
+  .user-summary-link { padding: 12px 14px; }
+  .person-profile-heading { grid-template-columns: 62px minmax(0, 1fr); gap: 12px; }
+  .person-profile-photo { width: 62px; height: 62px; }
+  .person-profile-actions .button { padding-inline: 10px; }
+}

@@ -32,9 +32,24 @@ export function ImageEditorModal({ source, square = false, onApply, onClose, all
   useEffect(() => {
     const dialog = dialogRef.current
     const previousOverflow = document.body.style.overflow
+    const viewport = window.visualViewport
+    function updateViewport() {
+      if (!dialog) return
+      dialog.style.setProperty('--image-editor-viewport-height', `${viewport?.height ?? window.innerHeight}px`)
+      dialog.style.setProperty('--image-editor-viewport-width', `${viewport?.width ?? window.innerWidth}px`)
+      dialog.style.setProperty('--image-editor-viewport-top', `${viewport?.offsetTop ?? 0}px`)
+      dialog.style.setProperty('--image-editor-viewport-left', `${viewport?.offsetLeft ?? 0}px`)
+    }
+    updateViewport()
     dialog?.showModal()
     document.body.style.overflow = 'hidden'
+    viewport?.addEventListener('resize', updateViewport)
+    viewport?.addEventListener('scroll', updateViewport)
+    window.addEventListener('resize', updateViewport)
     return () => {
+      viewport?.removeEventListener('resize', updateViewport)
+      viewport?.removeEventListener('scroll', updateViewport)
+      window.removeEventListener('resize', updateViewport)
       dialog?.close()
       document.body.style.overflow = previousOverflow
     }
@@ -121,41 +136,46 @@ export function ImageEditorModal({ source, square = false, onApply, onClose, all
           <p id={hintId}>사진을 드래그하거나 방향키로 움직여 영역을 맞춰 주세요.</p></div>
         <button className="button-icon" type="button" onClick={onClose} disabled={saving} aria-label="사진 편집 닫기"><X size={20} aria-hidden="true" /></button>
       </div>
-      <div className="image-editor-preview">
-        {image ? <div className="image-editor-crop" style={{ width: previewWidth, maxWidth: '100%', aspectRatio: `${previewWidth} / ${previewHeight}` }}>
-          <canvas ref={canvasRef} width={previewWidth} height={previewHeight} tabIndex={0}
-            aria-label="자르기 미리보기. 드래그 또는 방향키로 사진 이동" onKeyDown={handleArrowKey}
-            onPointerDown={event => {
-              if (saving || dragRef.current || event.button !== 0) return
-              event.currentTarget.focus()
-              event.currentTarget.setPointerCapture(event.pointerId)
-              dragRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY }
-            }} onPointerMove={movePhoto} onPointerUp={() => { dragRef.current = null }}
-            onPointerCancel={() => { dragRef.current = null }} onLostPointerCapture={() => { dragRef.current = null }} />
-          <div className="image-editor-grid" aria-hidden="true" />
-        </div> : <p role="status">{error ? '사진을 열 수 없습니다.' : '사진을 불러오는 중…'}</p>}
-      </div>
-      <fieldset className="image-editor-controls" disabled={!image || saving}>
-        <legend className="image-editor-control-title">사진 조절</legend>
-        {!square && <label className="image-editor-ratio">자르기 비율
-          <select value={aspect} onChange={event => { setAspect(event.target.value); setEdit(previous => ({ ...previous, zoom: 1, panX: 0, panY: 0 })) }}>
-            <option value="original">원본 비율</option><option value="1">정사각형 1:1</option>
-            <option value={4 / 3}>가로 4:3</option><option value={3 / 4}>세로 3:4</option><option value={16 / 9}>가로 16:9</option>
-          </select>
-        </label>}
-        <label className="image-editor-zoom"><span>확대 <output>{Math.round(edit.zoom * 100)}%</output></span>
-          <input type="range" min="1" max="4" step="0.01" value={edit.zoom}
-            onChange={event => setEdit(previous => ({ ...previous, zoom: Number(event.target.value) }))} />
-        </label>
-        <div className="image-editor-tools">
-          <button type="button" onClick={() => setEdit(previous => ({ ...previous, rotation: (previous.rotation + 270) % 360, panX: 0, panY: 0 }))}><RotateCcw size={17} aria-hidden="true" />왼쪽 회전</button>
-          <button type="button" onClick={() => setEdit(previous => ({ ...previous, rotation: (previous.rotation + 90) % 360, panX: 0, panY: 0 }))}><RotateCw size={17} aria-hidden="true" />오른쪽 회전</button>
-          <button type="button" aria-pressed={edit.flip} onClick={() => setEdit(previous => ({ ...previous, flip: !previous.flip }))}><FlipHorizontal2 size={17} aria-hidden="true" />좌우 반전</button>
-          <button type="button" onClick={() => { setEdit({ ...INITIAL_IMAGE_EDIT }); setAspect(square ? '1' : 'original') }}><Undo2 size={17} aria-hidden="true" />초기화</button>
+      <div className="image-editor-body">
+        <div className="image-editor-preview">
+          {image ? <div className="image-editor-crop" style={{
+            width: `min(100%, ${previewWidth}px, calc(var(--image-editor-preview-height) * ${previewWidth / previewHeight}))`,
+            aspectRatio: `${previewWidth} / ${previewHeight}`,
+          }}>
+            <canvas ref={canvasRef} width={previewWidth} height={previewHeight} tabIndex={0}
+              aria-label="자르기 미리보기. 드래그 또는 방향키로 사진 이동" onKeyDown={handleArrowKey}
+              onPointerDown={event => {
+                if (saving || dragRef.current || event.button !== 0) return
+                event.currentTarget.focus()
+                event.currentTarget.setPointerCapture(event.pointerId)
+                dragRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY }
+              }} onPointerMove={movePhoto} onPointerUp={() => { dragRef.current = null }}
+              onPointerCancel={() => { dragRef.current = null }} onLostPointerCapture={() => { dragRef.current = null }} />
+            <div className="image-editor-grid" aria-hidden="true" />
+          </div> : <p role="status">{error ? '사진을 열 수 없습니다.' : '사진을 불러오는 중…'}</p>}
         </div>
-      </fieldset>
-      {typeof source !== 'string' && source.type === 'image/gif' && <p className="image-editor-note">GIF를 편집하면 움직임이 없는 사진으로 저장됩니다.</p>}
-      {error && <p className="form-error" role="alert">{error}</p>}
+        <fieldset className="image-editor-controls" disabled={!image || saving}>
+          <legend className="image-editor-control-title">사진 조절</legend>
+          {!square && <label className="image-editor-ratio">자르기 비율
+            <select value={aspect} onChange={event => { setAspect(event.target.value); setEdit(previous => ({ ...previous, zoom: 1, panX: 0, panY: 0 })) }}>
+              <option value="original">원본 비율</option><option value="1">정사각형 1:1</option>
+              <option value={4 / 3}>가로 4:3</option><option value={3 / 4}>세로 3:4</option><option value={16 / 9}>가로 16:9</option>
+            </select>
+          </label>}
+          <label className="image-editor-zoom"><span>확대 <output>{Math.round(edit.zoom * 100)}%</output></span>
+            <input type="range" min="1" max="4" step="0.01" value={edit.zoom}
+              onChange={event => setEdit(previous => ({ ...previous, zoom: Number(event.target.value) }))} />
+          </label>
+          <div className="image-editor-tools">
+            <button type="button" onClick={() => setEdit(previous => ({ ...previous, rotation: (previous.rotation + 270) % 360, panX: 0, panY: 0 }))}><RotateCcw size={17} aria-hidden="true" />왼쪽 회전</button>
+            <button type="button" onClick={() => setEdit(previous => ({ ...previous, rotation: (previous.rotation + 90) % 360, panX: 0, panY: 0 }))}><RotateCw size={17} aria-hidden="true" />오른쪽 회전</button>
+            <button type="button" aria-pressed={edit.flip} onClick={() => setEdit(previous => ({ ...previous, flip: !previous.flip }))}><FlipHorizontal2 size={17} aria-hidden="true" />좌우 반전</button>
+            <button type="button" onClick={() => { setEdit({ ...INITIAL_IMAGE_EDIT }); setAspect(square ? '1' : 'original') }}><Undo2 size={17} aria-hidden="true" />초기화</button>
+          </div>
+        </fieldset>
+        {typeof source !== 'string' && source.type === 'image/gif' && <p className="image-editor-note">GIF를 편집하면 움직임이 없는 사진으로 저장됩니다.</p>}
+        {error && <p className="form-error" role="alert">{error}</p>}
+      </div>
       <div className="image-editor-footer">
         {allowOriginal && typeof source !== 'string' && <button className="image-editor-original" type="button" disabled={!image || saving} onClick={() => onApply(source)}>원본 사용</button>}
         <button className="button button-secondary" type="button" disabled={saving} onClick={onClose}>취소</button>
