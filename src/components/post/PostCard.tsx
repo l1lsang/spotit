@@ -40,7 +40,7 @@ export function PostCard({ post, showVisibility = false, actions }: PostCardProp
                   ? 'private'
                   : post.visibility === 'public'
                     ? 'public'
-                    : 'followers'}
+                    : post.visibility === 'group' ? '그룹 멤버' : 'followers'}
               </span>
             )}
           </div>

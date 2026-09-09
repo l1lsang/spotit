@@ -1,8 +1,9 @@
-import { ArrowLeft, ArrowUpRight, Compass, Plus, Search, UsersRound } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Compass, KeyRound, Lock, Plus, Search, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CreateGroupDialog } from '../components/group/CreateGroupDialog'
 import { GroupJoinButton } from '../components/group/GroupJoinButton'
+import { JoinGroupDialog } from '../components/group/JoinGroupDialog'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useGroups } from '../hooks/useGroups'
 import '../styles/groups.css'
@@ -13,8 +14,9 @@ export function GroupsPage() {
   const [tab, setTab] = useState<'all' | 'joined'>('all')
   const [keyword, setKeyword] = useState('')
   const [creating, setCreating] = useState(false)
+  const [joining, setJoining] = useState(false)
   const term = keyword.trim().toLocaleLowerCase()
-  const filtered = groups.filter(group => (tab === 'all' || joinedIds.includes(group.id))
+  const filtered = groups.filter(group => (tab === 'all' ? group.visibility !== 'private' : joinedIds.includes(group.id))
     && `${group.name} ${group.description}`.toLocaleLowerCase().includes(term))
 
   return (
@@ -22,7 +24,7 @@ export function GroupsPage() {
       <Link className="group-back" to="/map"><ArrowLeft size={17} aria-hidden="true" />지도로 돌아가기</Link>
       <section className="groups-intro">
         <div><p className="eyebrow">GROUPS · 함께 찾는 즐거움</p><h1>취향이 닿는 곳,<br />함께 핀을 모아요.</h1><p>동네 맛집부터 나만 아는 산책길까지.<br />마음에 드는 그룹에 가입하고 나의 장소를 나눠보세요.</p></div>
-        <button type="button" className="button button-primary" onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" />그룹 만들기</button>
+        <div className="groups-intro-actions"><button type="button" className="button button-secondary" onClick={() => setJoining(true)}><KeyRound size={18} aria-hidden="true" />초대코드로 가입</button><button type="button" className="button button-primary" onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" />그룹 만들기</button></div>
       </section>
       <div className="groups-tools">
         <div className="groups-filter-toggle" role="group" aria-label="그룹 필터">
@@ -44,13 +46,14 @@ export function GroupsPage() {
       {!loading && !error && filtered.length > 0 && <ul className="groups-grid" aria-label="그룹 목록">
         {filtered.map(group => <li key={group.id} className="group-card">
           <Link className="group-card-main" to={`/groups/${group.id}`}>
-            <div className="group-card-top"><span className="group-symbol"><Compass size={27} aria-hidden="true" /></span><span className="group-public">공개 그룹 <ArrowUpRight size={15} aria-hidden="true" /></span></div>
+            <div className="group-card-top"><span className="group-symbol">{group.visibility === 'private' ? <Lock size={27} aria-hidden="true" /> : <Compass size={27} aria-hidden="true" />}</span><span className="group-public">{group.visibility === 'private' ? '비공개 그룹' : '공개 그룹'} <ArrowUpRight size={15} aria-hidden="true" /></span></div>
             <h2>{group.name}</h2><p>{group.description || '함께 발견한 좋은 장소들을 이곳에 모아요.'}</p>
           </Link>
           <div className="group-card-bottom"><span><UsersRound size={16} aria-hidden="true" />멤버 {group.memberCount}명</span><GroupJoinButton groupId={group.id} joined={joinedIds.includes(group.id)} /></div>
         </li>)}
       </ul>}
       {creating && <CreateGroupDialog onClose={() => setCreating(false)} onCreated={id => { setCreating(false); navigate(`/groups/${id}`) }} />}
+      {joining && <JoinGroupDialog onClose={() => setJoining(false)} onJoined={id => { setJoining(false); navigate(`/groups/${id}`) }} />}
     </PageContainer>
   )
 }

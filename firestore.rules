@@ -39,23 +39,30 @@ service cloud.firestore {
     }
     function canReadPost(data) {
       return active() && (data.uid == request.auth.uid || data.visibility == 'public'
-        || (data.visibility == 'followers' && exists(/databases/$(database)/documents/users/$(data.uid)/followers/$(request.auth.uid))));
+        || (data.visibility == 'followers' && exists(/databases/$(database)/documents/users/$(data.uid)/followers/$(request.auth.uid)))
+        || (data.visibility == 'group' && groupMember(data.groupId)));
+    }
+    function groupMember(groupId) {
+      return exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
     }
     function post(postId) { return get(/databases/$(database)/documents/posts/$(postId)).data; }
     function validPostGroup(data, previousGroupId) {
       let groupId = data.get('groupId', '');
       return groupId is string && groupId.size() <= 128
-        && (groupId == '' || (groupId.matches('^[^/]+$') && data.visibility == 'public'
+        && ((groupId == '' && data.visibility != 'group') || (groupId.matches('^[^/]+$')
           && exists(/databases/$(database)/documents/groups/$(groupId))
+          && data.visibility == (get(/databases/$(database)/documents/groups/$(groupId)).data.get('visibility', 'public') == 'private' ? 'group' : 'public')
           && (groupId == previousGroupId || exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)))));
     }
     function validGroupMember(groupId, uid) {
       let data = request.resource.data;
-      return isOwner(uid) && data.keys().hasOnly(['uid', 'groupId', 'joinedAt'])
+      return isOwner(uid) && data.keys().hasOnly(['uid', 'groupId', 'joinedAt', 'inviteCode'])
         && data.uid == uid && data.groupId == groupId && data.joinedAt == request.time
         && getAfter(/databases/$(database)/documents/users/$(uid)/groupMemberships/$(groupId)).data == data
         && (exists(/databases/$(database)/documents/groups/$(groupId))
-          ? getAfter(/databases/$(database)/documents/groups/$(groupId)).data.memberCount == get(/databases/$(database)/documents/groups/$(groupId)).data.memberCount + 1
+          ? (data.inviteCode is string && data.inviteCode.matches('^[A-HJ-NP-Z2-9]{12}$')
+            && get(/databases/$(database)/documents/groupInvites/$(data.inviteCode)).data.groupId == groupId
+            && getAfter(/databases/$(database)/documents/groups/$(groupId)).data.memberCount == get(/databases/$(database)/documents/groups/$(groupId)).data.memberCount + 1)
           : getAfter(/databases/$(database)/documents/groups/$(groupId)).data.ownerUid == uid);
     }
     function chatMember(chatId) {
@@ -155,14 +162,17 @@ service cloud.firestore {
       }
     }
     match /groups/{groupId} {
-      allow read: if active();
+      allow get: if active() && (resource.data.get('visibility', 'public') == 'public' || groupMember(groupId));
+      allow list: if active() && resource.data.visibility == 'public';
       allow create: if active()
-        && request.resource.data.keys().hasOnly(['name', 'description', 'ownerUid', 'memberCount', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['name', 'description', 'ownerUid', 'memberCount', 'createdAt', 'visibility'])
+        && request.resource.data.visibility in ['public', 'private']
         && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 40
         && request.resource.data.description is string && request.resource.data.description.size() <= 240
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.createdAt == request.time && request.resource.data.memberCount == 1
-        && existsAfter(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+        && existsAfter(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid))
+        && existsAfter(/databases/$(database)/documents/groups/$(groupId)/private/invite);
       allow update: if active() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount'])
         && request.resource.data.memberCount is int && request.resource.data.memberCount >= 0
         && ((!exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid))
@@ -178,6 +188,22 @@ service cloud.firestore {
           && !existsAfter(/databases/$(database)/documents/users/$(uid)/groupMemberships/$(groupId))
           && getAfter(/databases/$(database)/documents/groups/$(groupId)).data.memberCount == get(/databases/$(database)/documents/groups/$(groupId)).data.memberCount - 1;
       }
+      match /private/invite {
+        allow get: if active() && groupMember(groupId);
+        allow create: if active()
+          && existsAfter(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid))
+          && request.resource.data.keys().hasOnly(['code'])
+          && request.resource.data.code is string && request.resource.data.code.matches('^[A-HJ-NP-Z2-9]{12}$')
+          && getAfter(/databases/$(database)/documents/groupInvites/$(request.resource.data.code)).data.groupId == groupId;
+      }
+    }
+    // Knowing a code grants access to its group ID, never to the invitation directory or group contents.
+    match /groupInvites/{code} {
+      allow get: if active();
+      allow create: if active() && code.matches('^[A-HJ-NP-Z2-9]{12}$')
+        && request.resource.data.keys().hasOnly(['groupId']) && request.resource.data.groupId is string
+        && existsAfter(/databases/$(database)/documents/groups/$(request.resource.data.groupId)/members/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/groups/$(request.resource.data.groupId)/private/invite).data.code == code;
     }
     match /posts/{postId} {
       allow get: if active() && (!exists(/databases/$(database)/documents/posts/$(postId)) || canReadPost(resource.data));
@@ -186,11 +212,11 @@ service cloud.firestore {
         && locationConsented()
         && validPostGroup(request.resource.data, '')
         && !exists(/databases/$(database)/documents/moderationPosts/$(postId))
-        && request.resource.data.visibility in ['followers', 'private', 'public'];
+        && request.resource.data.visibility in ['followers', 'private', 'public', 'group'];
       allow update: if (isOwner(resource.data.uid) && request.resource.data.uid == resource.data.uid
           && validPostGroup(request.resource.data, resource.data.get('groupId', ''))
           && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lat', 'lng', 'placeName', 'address', 'visibility', 'groupId']) || locationConsented())
-          && request.resource.data.visibility in ['followers', 'private', 'public'])
+          && request.resource.data.visibility in ['followers', 'private', 'public', 'group'])
         || (canReadPost(resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'commentCount', 'updatedAt']));
       allow delete: if isOwner(resource.data.uid);
       match /comments/{commentId} {

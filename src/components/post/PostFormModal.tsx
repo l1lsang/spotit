@@ -156,7 +156,7 @@ export function PostFormModal({
               ))}
               {form.groupId && !groupOptions.groups.some(group => group.id === form.groupId) && <option value={form.groupId}>선택한 그룹</option>}
             </select>
-            <small>{form.groupId ? '그룹 핀은 모든 로그인 사용자에게 공개돼요.' : '가입한 그룹을 선택하면 멤버들과 핀을 함께 모을 수 있어요.'}</small>
+            <small>{form.groupId ? (groupOptions.groups.find(group => group.id === form.groupId)?.visibility === 'private' || (initialPost?.groupId === form.groupId && initialPost.visibility === 'group') ? '비공개 그룹의 핀은 그룹 멤버만 볼 수 있어요.' : '공개 그룹의 핀은 모든 로그인 사용자에게 공개돼요.') : '가입한 그룹을 선택하면 멤버들과 핀을 함께 모을 수 있어요.'}</small>
           </label>
           {groupOptions.error && <p className="form-error" role="alert">{groupOptions.error} <button type="button" className="text-button" onClick={groupOptions.retry}>다시 시도</button></p>}
           <label className="field">

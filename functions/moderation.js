@@ -95,7 +95,8 @@ exports.submitModerationCase = onCall(options, async request => {
     const post = (await db.doc(`posts/${targetId}`).get()).data()
     if (!post) throw new HttpsError('not-found', '핀을 찾을 수 없습니다.')
     const follows = post.visibility === 'followers' && (await db.doc(`users/${post.uid}/followers/${reporterUid}`).get()).exists
-    if (post.uid !== reporterUid && post.visibility !== 'public' && !follows) throw new HttpsError('permission-denied', '볼 수 있는 핀만 신고할 수 있습니다.')
+    const groupMember = post.visibility === 'group' && post.groupId && (await db.doc(`groups/${post.groupId}/members/${reporterUid}`).get()).exists
+    if (post.uid !== reporterUid && post.visibility !== 'public' && !follows && !groupMember) throw new HttpsError('permission-denied', '볼 수 있는 핀만 신고할 수 있습니다.')
     targetUid = post.uid
     title = post.title || post.placeName || '핀 신고'
     evidence = { title, content: post.content || '', placeName: post.placeName || '', address: post.address || '', photoUrls: post.photoUrls || [], authorNickname: post.authorNickname || '', uid: post.uid }

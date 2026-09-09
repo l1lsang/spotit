@@ -105,6 +105,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   const groupState = useGroups()
   const selectedGroup = groupState.groups.find(group => group.id === groupId)
   const selectedGroupId = selectedGroup?.id
+  const selectedGroupVisibility = selectedGroup?.visibility
   const joined = groupState.joinedIds.includes(groupId)
   const canCreatePin = !groupId || Boolean(selectedGroup && joined && !groupState.loading && !groupState.error)
   const toolbarRef = useRef<HTMLDivElement>(null)
@@ -138,7 +139,9 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   const [statusPanelMessageType, setStatusPanelMessageType] =
     useState<PanelMessageType>('success')
 
-  const visiblePosts = mapMode === 'main' && (!groupId || selectedGroup) ? posts : []
+  const visiblePosts = mapMode === 'main' && (!groupId || (selectedGroup && (selectedGroupVisibility !== 'private' || joined))) ? posts : []
+  const visibleSelectedPost = visiblePosts.find(post => post.id === selectedPost?.id)
+  const visibleClusterPosts = clusterPosts.filter(post => visiblePosts.some(item => item.id === post.id))
   const statusCounts = useMemo(
     () =>
       LIVE_PLACE_STATUS_OPTIONS.map((option) => ({
@@ -174,6 +177,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
 
   useEffect(() => {
     if (!groupId || !selectedGroupId || !currentUser || !firebaseReady) return
+    setPosts([])
     let first = true
     setLoadingPosts(true)
     setError('')
@@ -184,8 +188,8 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
       setClusterPosts(previous => next.filter(post => previous.some(item => item.id === post.id)))
       if (first && next[0]) setCenter({ lat: next[0].lat, lng: next[0].lng })
       first = false
-    }, () => { setError('그룹 핀을 불러오지 못했습니다.'); setLoadingPosts(false) })
-  }, [currentUser, firebaseReady, groupId, selectedGroupId, postsRevision])
+    }, () => { setPosts([]); setError('그룹 핀을 불러오지 못했습니다.'); setLoadingPosts(false) }, selectedGroupVisibility)
+  }, [currentUser, firebaseReady, groupId, selectedGroupId, selectedGroupVisibility, postsRevision])
 
   useEffect(() => {
     const toolbar = toolbarRef.current
@@ -447,7 +451,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
             provider={provider}
             posts={visiblePosts}
             selectedLocation={selectedLocation}
-            selectedPostId={selectedPost?.id}
+            selectedPostId={visibleSelectedPost?.id}
             onMapClick={handleMapClick}
             onMarkerClick={(post) => { setClusterPosts([]); handleSelectPost(post) }}
             onClusterClick={handleClusterClick}
@@ -702,10 +706,10 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
           </div>
         )}
 
-        {clusterPosts.length > 1 && !selectedPost && <MapPinList posts={clusterPosts} onSelect={handleSelectPost} onClose={() => setClusterPosts([])} />}
-        {selectedPost && <MapPostPreview key={selectedPost.id} post={selectedPost}
+        {visibleClusterPosts.length > 1 && !visibleSelectedPost && <MapPinList posts={visibleClusterPosts} onSelect={handleSelectPost} onClose={() => setClusterPosts([])} />}
+        {visibleSelectedPost && <MapPostPreview key={visibleSelectedPost.id} post={visibleSelectedPost}
           onClose={() => { setSelectedPost(null); setClusterPosts([]) }}
-          onBack={clusterPosts.length > 1 ? () => setSelectedPost(null) : undefined}
+          onBack={visibleClusterPosts.length > 1 ? () => setSelectedPost(null) : undefined}
         />}
 
         <div className="map-bottom-controls" role="group" aria-label="지도 도구">

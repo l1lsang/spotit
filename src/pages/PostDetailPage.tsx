@@ -327,7 +327,7 @@ export function PostDetailPage() {
                 ? '비공개 기록'
                 : post.visibility === 'public'
                   ? '전체 공개 기록'
-                  : '팔로워 공개 기록'}
+                  : post.visibility === 'group' ? '그룹 멤버 공개 기록' : '팔로워 공개 기록'}
             </p>
             <small>작성 {formatTimestamp(post.createdAt)}</small>
           </div>

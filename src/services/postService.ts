@@ -17,6 +17,7 @@ import {
 import { requireDb } from '../lib/firebase'
 import { getProfilePinAccess, type ProfilePinAccess } from '../lib/profilePinAccess'
 import type { LatLng } from '../lib/kakaoMap'
+import type { GroupVisibility } from '../types/group'
 import {
   normalizePinColor,
   type Post,
@@ -121,7 +122,7 @@ export async function createPost(
 ): Promise<string> {
   const db = requireDb()
   const groupId = input.groupId || ''
-  await assertGroupPostingAccess(groupId, input.visibility, author.uid)
+  const visibility = await getGroupPostVisibility(groupId, input.visibility, author.uid)
   const postRef = doc(collection(db, 'posts'))
   const photoUrls = files.length > 0 ? await uploadPostPhotos(author.uid, postRef.id, files) : []
 
@@ -131,7 +132,7 @@ export async function createPost(
     authorNickname: author.nickname,
     ...input,
     groupId,
-    visibility: normalizeVisibility(input.visibility),
+    visibility,
     pinColor: normalizePinColor(input.pinColor),
     photoUrls,
     likeCount: 0,
@@ -143,17 +144,24 @@ export async function createPost(
   return postRef.id
 }
 
-async function assertGroupPostingAccess(groupId: string, visibility: Post['visibility'], uid: string, previousGroupId = '') {
-  if (!groupId) return
+async function getGroupPostVisibility(groupId: string, visibility: Post['visibility'], uid: string, previousPost?: Post): Promise<Post['visibility']> {
+  if (!groupId) {
+    if (visibility === 'group') throw new Error('핀의 공개 범위를 선택해 주세요.')
+    return visibility
+  }
   if (groupId.includes('/') || groupId.length > 128) throw new Error('그룹 정보를 확인해 주세요.')
-  if (visibility !== 'public') throw new Error('그룹 핀의 공개 범위는 전체 공개입니다.')
-  if (groupId !== previousGroupId && !(await getDoc(doc(requireDb(), 'groups', groupId, 'members', uid))).exists()) {
+  // A former member can still edit their own pin; the group's visibility is immutable.
+  if (previousPost?.groupId === groupId) return previousPost.visibility
+  if (!(await getDoc(doc(requireDb(), 'groups', groupId, 'members', uid))).exists()) {
     throw new Error('그룹에 가입한 뒤 핀을 올려 주세요.')
   }
+  const group = await getDoc(doc(requireDb(), 'groups', groupId))
+  if (!group.exists()) throw new Error('그룹을 찾을 수 없습니다.')
+  return group.data().visibility === 'private' ? 'group' : 'public'
 }
 
-export function subscribeGroupPosts(groupId: string, onChange: (posts: Post[]) => void, onError: (error: Error) => void) {
-  return onSnapshot(query(collection(requireDb(), 'posts'), where('groupId', '==', groupId), where('visibility', '==', 'public')), snapshot => {
+export function subscribeGroupPosts(groupId: string, onChange: (posts: Post[]) => void, onError: (error: Error) => void, visibility: GroupVisibility = 'public') {
+  return onSnapshot(query(collection(requireDb(), 'posts'), where('groupId', '==', groupId), where('visibility', '==', visibility === 'private' ? 'group' : 'public')), snapshot => {
     onChange(sortPostsByCreatedAtDesc(snapshot.docs.map(toPost).filter((post): post is Post => Boolean(post))))
   }, onError)
 }
@@ -246,7 +254,8 @@ export async function getPostById(postId: string, viewerUid?: string): Promise<P
     return null
   }
 
-  if (normalizedPost.visibility === 'public') {
+  // Firestore authorizes group pins against the viewer's current membership.
+  if (normalizedPost.visibility === 'public' || normalizedPost.visibility === 'group') {
     return normalizedPost
   }
 
@@ -273,13 +282,14 @@ export async function updatePost(
   assertOwner(post, uid)
 
   const groupId = input.groupId ?? post.groupId ?? ''
-  await assertGroupPostingAccess(groupId, input.visibility, uid, post.groupId)
+  const visibility = await getGroupPostVisibility(groupId, input.visibility, uid, post)
   const uploadedPhotoUrls =
     files.length > 0 ? await uploadPostPhotos(uid, postId, files) : []
 
   await updateDoc(doc(requireDb(), 'posts', postId), {
     ...input,
     groupId,
+    visibility,
     pinColor: normalizePinColor(input.pinColor),
     photoUrls: [...existingPhotoUrls, ...uploadedPhotoUrls],
     updatedAt: serverTimestamp(),

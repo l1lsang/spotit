@@ -1,6 +1,6 @@
 import type { Timestamp } from 'firebase/firestore'
 
-export type PostVisibility = 'followers' | 'private' | 'public'
+export type PostVisibility = 'followers' | 'private' | 'public' | 'group'
 
 export interface PinTheme {
   id: string

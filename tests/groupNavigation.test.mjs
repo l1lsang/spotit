@@ -41,7 +41,8 @@ const shared = {
   '../hooks/useAuth': { useAuth: () => authState },
   '../hooks/useGroups': { useGroups: () => groupState },
   '../lib/groupNavigation': navigation,
-  '../components/group/GroupJoinButton': { GroupJoinButton: ({ joined }) => react.createElement('button', null, joined ? '그룹 탈퇴' : '바로 가입') },
+  '../components/group/GroupJoinButton': { GroupJoinButton: ({ joined }) => react.createElement('button', null, joined ? '그룹 탈퇴' : '코드로 가입') },
+  '../components/group/GroupInvitePanel': { GroupInvitePanel: () => react.createElement('div', null, '그룹 초대코드') },
   '../components/layout/PageContainer': { PageContainer: ({ children }) => react.createElement('main', null, children) },
 }
 const { BottomNav } = await loadModule('../src/components/layout/BottomNav.tsx', { '../../lib/groupNavigation': navigation })
@@ -49,6 +50,11 @@ const { GroupDetailPage } = await loadModule('../src/pages/GroupDetailPage.tsx',
   ...shared,
   '../components/post/PostCard': { PostCard: () => null },
   '../services/postService': { subscribeGroupPosts: unexpected },
+})
+const { GroupsPage } = await loadModule('../src/pages/GroupsPage.tsx', {
+  ...shared,
+  '../components/group/CreateGroupDialog': { CreateGroupDialog: () => null },
+  '../components/group/JoinGroupDialog': { JoinGroupDialog: () => null },
 })
 let formProps
 const createdPosts = []
@@ -124,7 +130,7 @@ test('map entry icon, group selector, and pin destination follow the selected ro
 
   html = render(MapPage, '/map?group=public-group')
   assert.match(html, /value="public-group" selected=""/)
-  assert.match(html, /바로 가입/)
+  assert.match(html, /코드로 가입/)
   assert.equal(formProps.initialGroupId, 'public-group')
   assert.equal(formProps.isOpen, false)
 
@@ -148,4 +154,28 @@ test('submitting on a group map saves into that group and rejects visitors befor
   render(MapPage, '/map?group=missing')
   await assert.rejects(formProps.onSubmit(payload), /그룹에 가입한 뒤/)
   assert.equal(createdPosts.length, 1)
+})
+
+test('private groups stay out of discovery and lose their home and invitation panel immediately after leaving', () => {
+  const privateGroup = { id: 'private-group', name: '숨겨진 이름', description: '숨겨진 소개', visibility: 'private', memberCount: 2, ownerUid: 'other' }
+  groupState.groups.push(privateGroup)
+  groupState.joinedIds.push(privateGroup.id)
+  try {
+    const discovery = render(GroupsPage, '/groups')
+    assert.doesNotMatch(discovery, /숨겨진 이름|숨겨진 소개/)
+    assert.match(discovery, /초대코드로 가입/)
+    const member = render(GroupDetailPage, '/groups/private-group', '/groups/:groupId')
+    assert.match(member, /숨겨진 이름/)
+    assert.match(member, /그룹 초대코드/)
+    groupState.joinedIds.pop()
+    // Simulate the group snapshot arriving later than the membership removal.
+    const formerMember = render(GroupDetailPage, '/groups/private-group', '/groups/:groupId')
+    assert.doesNotMatch(formerMember, /숨겨진 이름|숨겨진 소개|그룹 초대코드/)
+    assert.match(formerMember, /코드로 가입/)
+    const publicVisitor = render(GroupDetailPage, '/groups/public-group', '/groups/:groupId')
+    assert.doesNotMatch(publicVisitor, /그룹 초대코드/)
+  } finally {
+    groupState.groups.pop()
+    groupState.joinedIds = groupState.joinedIds.filter(id => id !== privateGroup.id)
+  }
 })

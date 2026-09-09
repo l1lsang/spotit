@@ -1,13 +1,23 @@
 import {
-  collection, doc, getDoc, increment, onSnapshot, orderBy, query, runTransaction, serverTimestamp, writeBatch,
+  collection, doc, getDoc, increment, onSnapshot, query, runTransaction, serverTimestamp, where, writeBatch,
+  type DocumentSnapshot,
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
-import { getGroupInputError, type GroupInput, type PinGroup } from '../types/group'
+import { getGroupInputError, isGroupInviteCode, normalizeGroupInviteCode, type GroupInput, type PinGroup } from '../types/group'
+
+function toGroup(item: DocumentSnapshot): PinGroup | null {
+  if (!item.exists()) return null
+  return { ...item.data(), id: item.id, visibility: item.data().visibility || 'public' } as PinGroup
+}
 
 export function subscribeGroups(onChange: (groups: PinGroup[]) => void, onError: (error: Error) => void) {
-  return onSnapshot(query(collection(requireDb(), 'groups'), orderBy('createdAt', 'desc')), snapshot => {
-    onChange(snapshot.docs.map(item => ({ ...item.data(), id: item.id }) as PinGroup))
+  return onSnapshot(query(collection(requireDb(), 'groups'), where('visibility', '==', 'public')), snapshot => {
+    onChange(snapshot.docs.map(item => toGroup(item)!))
   }, onError)
+}
+
+export function subscribeGroup(groupId: string, onChange: (group: PinGroup | null) => void, onError: (error: Error) => void) {
+  return onSnapshot(doc(requireDb(), 'groups', groupId), snapshot => onChange(toGroup(snapshot)), onError)
 }
 
 export function subscribeMyGroupIds(uid: string, onChange: (ids: string[]) => void, onError: (error: Error) => void) {
@@ -21,31 +31,63 @@ export async function createGroup(input: GroupInput, uid: string): Promise<strin
   if (error) throw new Error(error)
   const db = requireDb()
   const group = doc(collection(db, 'groups'))
+  const code = createInviteCode()
   const membership = { uid, groupId: group.id, joinedAt: serverTimestamp() }
   const batch = writeBatch(db)
   batch.set(group, {
     name: input.name.trim(), description: input.description.trim(), ownerUid: uid,
-    memberCount: 1, createdAt: serverTimestamp(),
+    visibility: input.visibility || 'public', memberCount: 1, createdAt: serverTimestamp(),
   })
   batch.set(doc(group, 'members', uid), membership)
   batch.set(doc(db, 'users', uid, 'groupMemberships', group.id), membership)
+  batch.set(doc(group, 'private', 'invite'), { code })
+  batch.set(doc(db, 'groupInvites', code), { groupId: group.id })
   await batch.commit()
   return group.id
 }
 
-// The membership, personal index, and count change together, including when two tabs join at once.
-export async function setGroupMembership(groupId: string, uid: string, joined: boolean): Promise<void> {
+function createInviteCode(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  return Array.from(crypto.getRandomValues(new Uint8Array(12)), value => alphabet[value & 31]).join('')
+}
+
+// Existing groups receive a code the first time a member opens the invitation panel.
+export async function getGroupInviteCode(groupId: string): Promise<string> {
+  const db = requireDb()
+  const inviteRef = doc(db, 'groups', groupId, 'private', 'invite')
+  return runTransaction(db, async transaction => {
+    const invite = await transaction.get(inviteRef)
+    if (invite.exists()) return invite.data().code as string
+    const code = createInviteCode()
+    transaction.set(inviteRef, { code })
+    transaction.set(doc(db, 'groupInvites', code), { groupId })
+    return code
+  })
+}
+
+export async function joinGroupWithCode(codeInput: string, uid: string, expectedGroupId?: string): Promise<string> {
+  const code = normalizeGroupInviteCode(codeInput)
+  if (!isGroupInviteCode(code)) throw new Error('초대코드 12자리를 확인해 주세요.')
+  const invite = await getDoc(doc(requireDb(), 'groupInvites', code))
+  const groupId = invite.data()?.groupId as string | undefined
+  if (!groupId || (expectedGroupId && groupId !== expectedGroupId)) throw new Error('초대코드가 올바르지 않습니다. 코드를 다시 확인해 주세요.')
+  await setGroupMembership(groupId, uid, true, code)
+  return groupId
+}
+
+// Read only the caller's membership so private groups can be joined without disclosing their contents first.
+// Membership, personal index, and count change atomically, including when two tabs join at once.
+export async function setGroupMembership(groupId: string, uid: string, joined: boolean, inviteCode?: string): Promise<void> {
+  if (joined && (!inviteCode || !isGroupInviteCode(normalizeGroupInviteCode(inviteCode)))) throw new Error('그룹에 가입하려면 초대코드가 필요합니다.')
   const db = requireDb()
   const groupRef = doc(db, 'groups', groupId)
   const memberRef = doc(groupRef, 'members', uid)
   const indexRef = doc(db, 'users', uid, 'groupMemberships', groupId)
   try { await runTransaction(db, async transaction => {
-    const group = await transaction.get(groupRef)
     const member = await transaction.get(memberRef)
-    if (!group.exists()) throw new Error('그룹을 찾을 수 없습니다.')
     if (member.exists() === joined) return
     if (joined) {
-      const membership = { uid, groupId, joinedAt: serverTimestamp() }
+      const membership = { uid, groupId, joinedAt: serverTimestamp(), inviteCode: normalizeGroupInviteCode(inviteCode!) }
       transaction.set(memberRef, membership)
       transaction.set(indexRef, membership)
     } else {
