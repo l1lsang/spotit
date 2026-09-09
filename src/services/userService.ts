@@ -21,6 +21,7 @@ import { getSignupRequirementsError, SIGNUP_POLICY_VERSION, type SignupRequireme
 import { BIO_MAX_LENGTH, NICKNAME_MAX_LENGTH, createRandomUsername, getUsernameError, normalizeUsername } from '../lib/userProfile'
 import type { DaymarkUser } from '../types/user'
 import { getPinThemeError, normalizePinColor, type PinTheme } from '../types/post'
+import { setGroupMembership } from './groupService'
 
 type BatchOperation = (batch: WriteBatch) => void
 
@@ -237,6 +238,8 @@ function addDeleteOperation(
 
 export async function deleteUserAccountData(uid: string): Promise<void> {
   const db = requireDb()
+  const memberships = await getDocs(collection(db, 'users', uid, 'groupMemberships'))
+  for (const membership of memberships.docs) await setGroupMembership(membership.id, uid, false)
   const operations: BatchOperation[] = []
   const deletedPaths = new Set<string>()
   const userRef = doc(db, 'users', uid)

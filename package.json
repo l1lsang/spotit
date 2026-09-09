@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:groups:integration": "firebase emulators:exec --config firebase.pin-themes.json --only auth,firestore --project demo-spotit-pins \"node --experimental-vm-modules --test --test-concurrency=1 tests/groups.integration.test.mjs tests/pinThemes.integration.test.mjs\"",
     "test:signup": "node --experimental-strip-types --test tests/signupRequirements.test.mjs",
     "test:signup:integration": "firebase emulators:exec --config firebase.signup.json --only auth,firestore --project demo-spotit-signup \"node --experimental-strip-types --experimental-vm-modules --test tests/signup.integration.test.mjs\"",
     "test:install-guide": "node --experimental-strip-types --test tests/installGuide.test.mjs",

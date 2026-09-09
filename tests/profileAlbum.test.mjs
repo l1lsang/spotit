@@ -52,7 +52,7 @@ async function service({ owner = { uid: 'owner', isPrivate: false }, following =
           operator === 'in' ? value.includes(post[field]) : post[field] === value,
         )).map(post => ({ id: post.id, data: () => post })) }
       },
-      deleteDoc: unexpected, doc: unexpected, getDoc: unexpected, serverTimestamp: unexpected, setDoc: unexpected, updateDoc: unexpected,
+      deleteDoc: unexpected, doc: unexpected, getDoc: unexpected, serverTimestamp: unexpected, setDoc: unexpected, updateDoc: unexpected, onSnapshot: unexpected,
     },
     '../lib/firebase': { requireDb: () => ({}) },
     '../lib/profilePinAccess': access,

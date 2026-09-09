@@ -169,6 +169,7 @@ export function PostDetailPage() {
       visibility: payload.visibility,
       pinColor: payload.pinColor,
       pinThemeId: payload.pinThemeId || '',
+      groupId: payload.groupId || '',
     }
 
     await updatePost(post.id, input, payload.existingPhotoUrls, payload.files, currentUser.uid)
@@ -203,6 +204,7 @@ export function PostDetailPage() {
       <article className="detail-layout">
         <section className="detail-main">
           <div className="detail-heading">
+            {post.groupId && <Link className="pill" to={`/groups/${post.groupId}`}>이 핀의 그룹 둘러보기 →</Link>}
             <p className="eyebrow">{formatDateKey(post.dateKey)}</p>
             <h1>{post.title}</h1>
             <p>

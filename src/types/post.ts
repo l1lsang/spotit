@@ -78,6 +78,7 @@ export interface Post {
   pinColor: string
   pinThemeId?: string
   photoUrls: string[]
+  groupId?: string
   likeCount: number
   commentCount: number
   createdAt: Timestamp
@@ -85,6 +86,7 @@ export interface Post {
 }
 
 export interface PostFormInput {
+  groupId?: string
   title: string
   content: string
   placeName: string

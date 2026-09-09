@@ -61,6 +61,7 @@ export function PostCard({ post, showVisibility = false, actions }: PostCardProp
           </div>
         </div>
       </Link>
+      {post.groupId && <Link className="post-group-link" to={`/groups/${post.groupId}`}><UsersRound size={14} aria-hidden="true" />그룹 핀 모아보기</Link>}
       {actions && <div className="card-actions">{actions}</div>}
     </article>
   )

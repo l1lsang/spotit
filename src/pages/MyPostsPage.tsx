@@ -60,6 +60,7 @@ export function MyPostsPage() {
       visibility: payload.visibility,
       pinColor: payload.pinColor,
       pinThemeId: payload.pinThemeId || '',
+      groupId: payload.groupId || '',
     }
 
     await updatePost(editingPost.id, input, payload.existingPhotoUrls, payload.files, currentUser.uid)

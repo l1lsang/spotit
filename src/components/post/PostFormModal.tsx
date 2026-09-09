@@ -4,6 +4,7 @@ import { getTodayDateKey } from '../../lib/date'
 import type { LatLng } from '../../lib/kakaoMap'
 import { isValidLocation } from '../../lib/mapLocation'
 import { useAuth } from '../../hooks/useAuth'
+import { useGroups } from '../../hooks/useGroups'
 import { useLocationConsent } from '../../contexts/locationConsentCore'
 import {
   normalizePinColor,
@@ -31,6 +32,8 @@ interface PostFormModalProps {
     location: LatLng
   } | null
   initialPost?: Post | null
+  initialGroupId?: string
+  lockGroup?: boolean
   onClose: () => void
   onSubmit: (payload: PostFormSubmitPayload) => Promise<void>
 }
@@ -39,6 +42,7 @@ function createInitialForm(
   initialPost?: Post | null,
   location?: LatLng | null,
   placePrefill?: PostFormModalProps['placePrefill'],
+  initialGroupId = '',
 ): PostFormInput {
   const fallbackLocation = placePrefill?.location || location
 
@@ -50,7 +54,8 @@ function createInitialForm(
     lat: initialPost?.lat ?? fallbackLocation?.lat ?? 0,
     lng: initialPost?.lng ?? fallbackLocation?.lng ?? 0,
     dateKey: initialPost?.dateKey || getTodayDateKey(),
-    visibility: initialPost?.visibility === 'public' ? 'followers' : initialPost?.visibility || 'followers',
+    visibility: initialPost?.groupId || initialGroupId ? 'public' : initialPost?.visibility || 'followers',
+    groupId: initialPost?.groupId || initialGroupId,
     pinColor: normalizePinColor(initialPost?.pinColor),
     pinThemeId: initialPost?.pinThemeId || '',
   }
@@ -62,12 +67,15 @@ export function PostFormModal({
   location,
   placePrefill = null,
   initialPost = null,
+  initialGroupId = '',
+  lockGroup = false,
   onClose,
   onSubmit,
 }: PostFormModalProps) {
   const { profile } = useAuth()
+  const groupOptions = useGroups(isOpen)
   const ensureLocationConsent = useLocationConsent()
-  const [form, setForm] = useState<PostFormInput>(() => createInitialForm(initialPost, location, placePrefill))
+  const [form, setForm] = useState<PostFormInput>(() => createInitialForm(initialPost, location, placePrefill, initialGroupId))
   const [files, setFiles] = useState<File[]>([])
   const [existingPhotoUrls, setExistingPhotoUrls] = useState<string[]>([])
   const [error, setError] = useState('')
@@ -78,11 +86,11 @@ export function PostFormModal({
       return
     }
 
-    setForm(createInitialForm(initialPost, location, placePrefill))
+    setForm(createInitialForm(initialPost, location, placePrefill, initialGroupId))
     setFiles([])
     setExistingPhotoUrls(initialPost?.photoUrls || [])
     setError('')
-  }, [initialPost, isOpen, location, placePrefill])
+  }, [initialPost, isOpen, location, placePrefill, initialGroupId])
 
   if (!isOpen) {
     return null
@@ -137,6 +145,21 @@ export function PostFormModal({
 
         <form className="form" onSubmit={handleSubmit}>
           <label className="field">
+            <span>핀을 모을 곳</span>
+            <select value={form.groupId || ''} disabled={lockGroup || groupOptions.loading || submitting} onChange={event => {
+              const groupId = event.target.value
+              setForm(previous => ({ ...previous, groupId, visibility: groupId ? 'public' : 'followers' }))
+            }}>
+              <option value="">개인 기록</option>
+              {groupOptions.groups.filter(group => groupOptions.joinedIds.includes(group.id) || group.id === form.groupId).map(group => (
+                <option key={group.id} value={group.id}>{group.name}</option>
+              ))}
+              {form.groupId && !groupOptions.groups.some(group => group.id === form.groupId) && <option value={form.groupId}>선택한 그룹</option>}
+            </select>
+            <small>{form.groupId ? '그룹 핀은 모든 로그인 사용자에게 공개돼요.' : '가입한 그룹을 선택하면 멤버들과 핀을 함께 모을 수 있어요.'}</small>
+          </label>
+          {groupOptions.error && <p className="form-error" role="alert">{groupOptions.error} <button type="button" className="text-button" onClick={groupOptions.retry}>다시 시도</button></p>}
+          <label className="field">
             <span>제목</span>
             <input
               required
@@ -186,6 +209,7 @@ export function PostFormModal({
                     key={visibility}
                     type="button"
                     className={form.visibility === visibility ? 'active' : ''}
+                    disabled={Boolean(form.groupId) || submitting}
                     onClick={() => updateField('visibility', visibility)}
                   >
                     {visibility === 'followers'

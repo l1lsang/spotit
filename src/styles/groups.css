@@ -1,0 +1,66 @@
+.groups-page { max-width: 1180px; }
+.groups-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; padding: 38px; border: 1px solid #d6e5d9; border-radius: 20px; background: linear-gradient(120deg, #eef3e7, #fdfbf3 80%); }
+.groups-intro h1 { margin: 14px 0; font-size: clamp(1.8rem, 3.6vw, 2.65rem); line-height: 1.3; letter-spacing: -.045em; }
+.groups-intro p:not(.eyebrow) { margin-bottom: 0; color: var(--muted); line-height: 1.8; }
+.groups-intro > .button { flex-shrink: 0; }
+.groups-tools { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 26px 0 20px; }
+.groups-tools .segmented { width: auto; flex-shrink: 0; }
+.groups-tools .segmented button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.groups-search { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); }
+.groups-search input { flex: 1; min-width: 0; width: 270px; border: 0; outline: none; background: transparent; color: var(--ink); }
+.groups-search:focus-within { outline: 2px solid var(--teal); outline-offset: 2px; }
+.groups-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding: 0; list-style: none; }
+.group-card { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+.group-card:hover { border-color: #97b7ab; box-shadow: 0 8px 22px #2b756d0c; }
+.group-card-main { flex: 1; padding: 22px 22px 16px; }
+.group-card-main h2 { margin: 20px 0 10px; font-size: 1.18rem; overflow-wrap: anywhere; }
+.group-card-main > p { margin: 0; color: var(--muted); font-size: .91rem; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.group-card-top, .group-card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.group-symbol { display: inline-grid; place-items: center; flex-shrink: 0; width: 56px; height: 56px; border-radius: 16px; background: #e8eee1; color: var(--teal); }
+.group-public, .group-card-bottom > span, .group-stats > span { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: .82rem; }
+.group-card-bottom { margin: 0 22px; padding: 18px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.group-card-bottom .button { min-height: 36px; padding: 8px 11px; font-size: .82rem; }
+.group-join-action .form-error { max-width: 240px; margin: 8px 0 0; }
+.create-group-dialog { width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); margin: auto; border: 1px solid var(--line); color: var(--ink); }
+.create-group-dialog::backdrop { background: #2e2a2470; backdrop-filter: blur(3px); }
+.group-note { color: var(--muted); font-size: .87rem; line-height: 1.7; }
+.group-back { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 22px; color: var(--muted); font-size: .9rem; }
+.group-home-heading { padding: 30px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; }
+.group-home-title { display: flex; align-items: center; gap: 18px; }
+.group-home-title h1 { margin: 7px 0 0; font-size: clamp(1.55rem, 3vw, 2.2rem); overflow-wrap: anywhere; }
+.group-description { margin: 22px 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); line-height: 1.8; }
+.group-home-footer, .group-home-actions, .group-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.group-home-footer { justify-content: space-between; padding-top: 18px; border-top: 1px solid var(--line); }
+.group-home-actions { gap: 8px; }
+.group-participation { margin-top: 18px; padding: 16px 20px; border-radius: 12px; color: var(--teal); background: #eaf1e5; line-height: 1.6; }
+.group-participation p { margin: 0; }
+.group-participation small { display: block; margin-top: 5px; color: var(--muted); }
+.group-pins-heading { margin: 0; font-size: 1.2rem; }
+.group-place-search { margin-bottom: 14px; }
+.group-place-search .button { padding: 8px 16px; min-height: 36px; }
+.group-place-results { list-style: none; padding: 0; max-height: 250px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.group-place-results button { display: grid; gap: 5px; width: 100%; border: 0; border-bottom: 1px solid var(--line); padding: 14px 18px; text-align: left; background: transparent; color: var(--ink); }
+.group-place-results button:hover { background: #eef3e7; }
+.group-place-results span { color: var(--muted); font-size: .85rem; }
+.group-map-shell { position: relative; height: 520px; min-height: 360px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; isolation: isolate; }
+.group-map-shell .location-map { height: 100%; min-height: 0; }
+.group-map-shell .map-preview { max-height: calc(100% - 32px); overflow: auto; }
+.group-map-selection { position: absolute; z-index: 5; bottom: 16px; left: 16px; right: 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+.group-map-selection p { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.group-map-selection p span { display: block; margin-top: 5px; font-size: .8rem; color: var(--muted); }
+.group-map-selection > .button { flex-shrink: 0; }
+@media (max-width: 1000px) { .groups-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .groups-intro { align-items: flex-start; flex-direction: column; padding: 24px; gap: 22px; }
+  .groups-intro > .button { width: 100%; }
+  .groups-tools { flex-wrap: wrap; }
+  .groups-tools > .groups-search { width: 100%; }
+  .groups-grid { grid-template-columns: minmax(0, 1fr); }
+  .group-home-heading { padding: 22px; }
+  .group-home-title { gap: 12px; }
+  .group-home-title .group-symbol { width: 46px; height: 46px; }
+  .group-home-footer { align-items: flex-start; flex-direction: column; }
+  .group-map-shell { height: 460px; }
+  .group-map-selection { flex-direction: column; align-items: stretch; }
+  .group-map-selection .button { width: 100%; }
+}

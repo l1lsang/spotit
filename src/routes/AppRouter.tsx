@@ -20,6 +20,8 @@ import { SignupPage } from '../pages/SignupPage'
 import { SupportPage } from '../pages/SupportPage'
 
 const AdminPage = lazy(() => import('../pages/AdminPage').then(module => ({ default: module.AdminPage })))
+const GroupsPage = lazy(() => import('../pages/GroupsPage').then(module => ({ default: module.GroupsPage })))
+const GroupDetailPage = lazy(() => import('../pages/GroupDetailPage').then(module => ({ default: module.GroupDetailPage })))
 const OpenSourceLicensesPage = lazy(() => import('../pages/OpenSourceLicensesPage').then(module => ({ default: module.OpenSourceLicensesPage })))
 const PoliciesPage = lazy(() => import('../pages/PoliciesPage').then(module => ({ default: module.PoliciesPage })))
 
@@ -71,6 +73,8 @@ export function AppRouter() {
           <Route path="/policies/:policyId?" element={<Suspense fallback={<div className="screen-message">약관 및 정책을 불러오는 중입니다.</div>}><PoliciesPage /></Suspense>} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/feed" element={<FeedPage />} />
+          <Route path="/groups" element={<ProtectedRoute><Suspense fallback={<div className="screen-message">그룹을 불러오는 중…</div>}><GroupsPage /></Suspense></ProtectedRoute>} />
+          <Route path="/groups/:groupId" element={<ProtectedRoute><Suspense fallback={<div className="screen-message">그룹을 불러오는 중…</div>}><GroupDetailPage /></Suspense></ProtectedRoute>} />
           <Route path="/posts/:postId" element={<PostDetailPage />} />
           <Route
             path="/notifications"

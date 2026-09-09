@@ -16,6 +16,7 @@ export function Header() {
       <nav className="header-nav" aria-label="주요 메뉴">
         <NavLink to="/map">지도</NavLink>
         <NavLink to="/feed">피드</NavLink>
+        {currentUser && <NavLink to="/groups">그룹</NavLink>}
         {currentUser && <NavLink to="/people">사람</NavLink>}
         {currentUser && <NavLink to="/chats">채팅</NavLink>}
         {currentUser ? (

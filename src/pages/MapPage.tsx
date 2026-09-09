@@ -371,6 +371,7 @@ export function MapPage() {
       visibility: payload.visibility,
       pinColor: payload.pinColor,
       pinThemeId: payload.pinThemeId || '',
+      groupId: payload.groupId || '',
     }
 
     await createPost(input, payload.files, {
