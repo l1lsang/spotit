@@ -1,4 +1,4 @@
-import { Compass, LocateFixed, MapPin, Plus, Search, SendHorizonal, X } from 'lucide-react'
+import { Compass, Layers, LocateFixed, MapPin, Plus, Search, SendHorizonal, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { GroupJoinButton } from '../components/group/GroupJoinButton'
@@ -440,7 +440,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
 
   return (
     <PageContainer fullBleed className="map-page">
-      <div ref={mapShellRef} className="map-shell map-with-groups">
+      <div ref={mapShellRef} className="map-shell map-with-groups" aria-busy={loadingPosts || Boolean(groupId && groupState.loading)}>
         {initialLocationReady ? (
           <MapView
             center={center}
@@ -506,18 +506,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
           {groupState.error && <p className="map-group-notice" role="alert">{groupState.error} <button type="button" onClick={groupState.retry}>다시 시도</button>{groupId && <Link to="/map">내 지도로</Link>}</p>}
           {groupId && currentUser && !groupState.loading && !groupState.error && !selectedGroup && <p className="map-group-notice" role="alert">그룹을 찾을 수 없습니다. <Link to="/groups">그룹 둘러보기</Link></p>}
 
-          <select className="map-provider-select" aria-label="지도 제공자" value={providerOverride} onChange={(event) => {
-            setProviderOverride(event.target.value as MapProvider | 'auto')
-            searchRequestRef.current += 1
-            setSearchingPlaces(false)
-            setPlaceResults([])
-            setPlaceSearchMessage('')
-          }}>
-            <option value="auto">자동 · {getMapProvider(center) === 'kakao' ? '카카오맵' : 'Google Maps'}</option>
-            <option value="kakao">카카오맵</option>
-            <option value="google">Google Maps</option>
-          </select>
-
           <div className="map-mode-tabs" role="tablist" aria-label="지도 모드">
             <button
               className={mapMode === 'main' ? 'active' : ''}
@@ -535,19 +523,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
             </button>
           </div>
 
-          <button className="button button-secondary" type="button" onClick={handleUseCurrentLocation}>
-            <LocateFixed size={18} aria-hidden="true" />
-            {locationLoading ? '확인 중' : '현재 위치'}
-          </button>
-          <span>
-            {mapMode === 'live'
-              ? selectedPlace
-                ? `공유 리뷰 ${statusUpdates.length}개`
-                : '전체 사용자 공유 리뷰'
-              : loadingPosts || (groupId && groupState.loading)
-                ? '기록 불러오는 중'
-                : groupId ? `그룹 핀 ${posts.length}개` : `팔로우 기반 ${posts.length}개의 기록`}
-          </span>
           {currentUser && mapMode === 'main' && (
             <span className="map-legend pin-group-legend">
               <i style={{ backgroundColor: DEFAULT_POST_PIN_COLOR }} />
@@ -732,6 +707,27 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
           onClose={() => { setSelectedPost(null); setClusterPosts([]) }}
           onBack={clusterPosts.length > 1 ? () => setSelectedPost(null) : undefined}
         />}
+
+        <div className="map-bottom-controls" role="group" aria-label="지도 도구">
+          <label className="map-control-icon map-provider-control" title={`지도 선택 · ${providerOverride === 'auto' ? '자동 · ' : ''}${provider === 'kakao' ? '카카오맵' : 'Google Maps'}`}>
+            <Layers size={21} aria-hidden="true" />
+            <select className="map-provider-icon-select" aria-label="지도 제공자 선택" value={providerOverride} onChange={(event) => {
+              setProviderOverride(event.target.value as MapProvider | 'auto')
+              searchRequestRef.current += 1
+              setSearchingPlaces(false)
+              setPlaceResults([])
+              setPlaceSearchMessage('')
+            }}>
+              <option value="auto">자동 · {getMapProvider(center) === 'kakao' ? '카카오맵' : 'Google Maps'}</option>
+              <option value="kakao">카카오맵</option>
+              <option value="google">Google Maps</option>
+            </select>
+          </label>
+          <button className={`map-control-icon${locationLoading ? ' is-locating' : ''}`} type="button" onClick={handleUseCurrentLocation} disabled={locationLoading}
+            aria-label={locationLoading ? '현재 위치 확인 중' : '현재 위치로 이동'} aria-busy={locationLoading} title="현재 위치로 이동">
+            <LocateFixed size={21} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       <PostFormModal

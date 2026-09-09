@@ -1506,18 +1506,6 @@ img {
   box-shadow: 0 0 0 5px #297e9940;
 }
 
-.map-provider-select {
-  min-height: 42px;
-  max-width: 190px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  color: var(--ink);
-  background: #fffdf8;
-  font: inherit;
-  font-size: 0.86rem;
-}
-
 .map-error {
   position: absolute;
   top: 78px;
@@ -3744,14 +3732,6 @@ body.chat-room-active .message-form:focus-within {
   .map-toolbar .map-mode-tabs {
     grid-column: 1 / -1;
     order: 1;
-  }
-
-  .map-provider-select {
-    order: 2;
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-    padding-inline: 8px;
   }
 
   .map-toolbar > .button {
