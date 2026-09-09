@@ -1,10 +1,10 @@
 import { LocateFixed, RefreshCw, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { PostCard } from '../components/post/PostCard'
 import { useAuth } from '../hooks/useAuth'
 import { SEOUL_CITY_HALL, useCurrentLocation } from '../hooks/useCurrentLocation'
+import { useSearchKeyword } from '../hooks/useSearchKeyword'
 import type { LatLng } from '../lib/kakaoMap'
 import { filterFeedPosts } from '../lib/feedSearch'
 import { getNearbyVisiblePosts } from '../services/postService'
@@ -20,8 +20,7 @@ export function FeedPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [revision, setRevision] = useState(0)
-  const [searchParams, setSearchParams] = useSearchParams()
-  const keyword = searchParams.get('q') || ''
+  const { keyword, inputValue, inputProps, clearKeyword } = useSearchKeyword()
   const viewerUid = currentUser?.uid
   const filteredPosts = useMemo(() => filterFeedPosts(posts, keyword), [posts, keyword])
 
@@ -41,13 +40,6 @@ export function FeedPage() {
     }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [center, viewerUid, firebaseReady, initialLocationReady, radiusKm, revision])
-
-  function updateKeyword(nextKeyword: string) {
-    const next = new URLSearchParams(searchParams)
-    if (nextKeyword) next.set('q', nextKeyword)
-    else next.delete('q')
-    setSearchParams(next, { replace: true })
-  }
 
   useEffect(() => {
     let active = true
@@ -109,9 +101,9 @@ export function FeedPage() {
       {currentUser && <section className="feed-search-section" aria-label="피드 검색">
         <div className="people-search feed-search" role="search">
           <Search size={18} aria-hidden="true" />
-          <input type="search" value={keyword} onChange={event => updateKeyword(event.target.value)}
+          <input type="search" {...inputProps}
             placeholder="제목, 장소, 내용, 작성자 검색" aria-label="피드 검색" />
-          {keyword && <button className="button-icon subtle" type="button" onClick={() => updateKeyword('')} aria-label="검색어 지우기"><X size={18} aria-hidden="true" /></button>}
+          {inputValue && <button className="button-icon subtle" type="button" onClick={clearKeyword} aria-label="검색어 지우기"><X size={18} aria-hidden="true" /></button>}
         </div>
         <p className="feed-search-summary" role="status">{waitingForLocation || loading ? '주변 기록을 확인하고 있어요.'
           : `현재 반경 ${radiusKm}km 안 ${keyword.trim() ? '검색 결과' : '기록'} ${filteredPosts.length}개`}</p>
@@ -125,7 +117,7 @@ export function FeedPage() {
       {currentUser && !waitingForLocation && !loading && !error && (
         filteredPosts.length === 0 ? (
           <div className="empty-text feed-search-empty"><p>{keyword.trim() ? '검색어와 일치하는 기록이 없습니다.' : '아직 볼 수 있는 기록이 없습니다.'}</p>
-            {keyword.trim() && <button className="button button-secondary" type="button" onClick={() => updateKeyword('')}>검색 초기화</button>}
+            {keyword.trim() && <button className="button button-secondary" type="button" onClick={clearKeyword}>검색 초기화</button>}
           </div>
         ) : (
           <div className="post-grid">

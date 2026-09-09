@@ -1,9 +1,9 @@
 import { RefreshCw, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { UserSummaryLink } from '../components/profile/UserSummaryLink'
 import { useAuth } from '../hooks/useAuth'
+import { useSearchKeyword } from '../hooks/useSearchKeyword'
 import { listUsers } from '../services/userService'
 import type { DaymarkUser } from '../types/user'
 import '../styles/people.css'
@@ -11,11 +11,10 @@ import '../styles/people.css'
 export function PeoplePage() {
   const { currentUser, firebaseReady } = useAuth()
   const [users, setUsers] = useState<DaymarkUser[]>([])
-  const [searchParams, setSearchParams] = useSearchParams()
+  const { keyword, inputProps, searchParams } = useSearchKeyword()
   const [revision, setRevision] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const keyword = searchParams.get('q') || ''
   const viewerUid = currentUser?.uid
   const returnTo = `/people${searchParams.size ? `?${searchParams.toString()}` : ''}`
 
@@ -52,12 +51,7 @@ export function PeoplePage() {
       </section>
       <label className="people-search">
         <Search size={18} aria-hidden="true" />
-        <input value={keyword} onChange={event => {
-          const next = new URLSearchParams(searchParams)
-          if (event.target.value) next.set('q', event.target.value)
-          else next.delete('q')
-          setSearchParams(next, { replace: true })
-        }} placeholder="사용자 이름 또는 닉네임 검색" aria-label="사용자 검색" />
+        <input {...inputProps} placeholder="사용자 이름 또는 닉네임 검색" aria-label="사용자 검색" />
       </label>
       {error && <p className="form-error" role="alert">{error}</p>}
       {loading && <p className="empty-text" role="status">사람들을 불러오는 중입니다.</p>}

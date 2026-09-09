@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { InstallPrompt } from '../components/layout/InstallPrompt'
 import { ChatListPage } from '../pages/ChatListPage'
 import { ChatRoomPage } from '../pages/ChatRoomPage'
 import { FeedPage } from '../pages/FeedPage'
@@ -126,6 +127,7 @@ export function AppRouter() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </OnboardingGuard>
+      <InstallPrompt />
     </BrowserRouter>
   )
 }

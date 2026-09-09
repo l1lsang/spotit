@@ -84,7 +84,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => Pr
   }, [token])
   useEffect(() => { void refresh() }, [refresh])
   const metrics = stats ? [
-    { label: '전체 유저', value: stats.users, detail: `최근 7일 가입 ${stats.newUsers}명`, icon: Users },
+    { label: '총 사용자', value: stats.users, detail: `최근 7일 가입 ${stats.newUsers}명`, icon: Users },
     { label: '게시 중인 핀', value: stats.posts, detail: `최근 7일 등록 ${stats.newPosts}개`, icon: MapPin },
     { label: '전체 채팅방', value: stats.chats, detail: '1:1 · 단체 채팅방', icon: MessageCircle },
     { label: '미처리 접수', value: stats.openCases, detail: '신고 · 문의 · 자동 검토', icon: Flag },
@@ -94,7 +94,14 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => Pr
     <button className={tab === 'cases' ? 'active' : ''} onClick={() => setTab('cases')}><Flag size={18} />신고·문의{stats ? <span>{stats.openCases}</span> : null}</button>
     <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}><Users size={18} />유저 관리</button>
   </nav><div className="admin-sidebar-footer"><Link to="/map"><ArrowLeft size={16} />서비스로 이동</Link><button onClick={() => { setBusy(true); void onLogout().catch(e => { setError(errorText(e)); setBusy(false) }) }} disabled={busy}><LogOut size={16} />로그아웃</button></div></aside>
-  <main className="admin-main"><header className="admin-heading"><div><p className="eyebrow">SPOTIT ADMIN</p><h1>{tab === 'overview' ? '한눈에 보는 스팟잇' : tab === 'cases' ? '신고·문의 관리' : '유저 관리'}</h1><p>{tab === 'overview' ? '서비스 현황과 지금 확인할 일을 살펴보세요.' : tab === 'cases' ? '접수된 내용을 확인하고 처리 결과를 남겨 주세요.' : '유저를 검색하고 계정 이용 상태를 관리하세요.'}</p></div><button className="button button-secondary" onClick={() => void refresh()} disabled={busy}><RefreshCw size={16} />통계 새로고침</button></header>
+  <main className="admin-main"><header className="admin-heading"><div><p className="eyebrow">SPOTIT ADMIN</p><h1>{tab === 'overview' ? '한눈에 보는 스팟잇' : tab === 'cases' ? '신고·문의 관리' : '유저 관리'}</h1><p>{tab === 'overview' ? '서비스 현황과 지금 확인할 일을 살펴보세요.' : tab === 'cases' ? '접수된 내용을 확인하고 처리 결과를 남겨 주세요.' : '유저를 검색하고 계정 이용 상태를 관리하세요.'}</p></div>
+    <div className="admin-heading-actions">
+      <div className="admin-total-users" role="status" aria-busy={busy}>
+        <Users size={18} aria-hidden="true" /><span>총 사용자</span><strong>{stats ? stats.users.toLocaleString('ko-KR') : '—'}</strong><span>명</span>
+      </div>
+      <button className="button button-secondary" onClick={() => void refresh()} disabled={busy}><RefreshCw size={16} />통계 새로고침</button>
+    </div>
+  </header>
     {error && <p className="form-error" role="alert">{error}</p>}
     {tab === 'overview' && <>
       <div className="admin-metrics">{metrics.length ? metrics.map(metric => <article key={metric.label}><div><span>{metric.label}</span><metric.icon size={20} /></div><strong>{metric.value.toLocaleString()}</strong><small>{metric.detail}</small></article>) : <p role="status">통계를 불러오는 중…</p>}</div>

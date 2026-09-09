@@ -230,18 +230,20 @@ img {
 .install-prompt {
   position: fixed;
   right: 14px;
-  bottom: 96px;
+  bottom: calc(96px + env(safe-area-inset-bottom));
   left: 14px;
   z-index: 80;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
   gap: 12px;
-  max-width: 520px;
+  max-width: 440px;
+  max-height: calc(100dvh - 120px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
   margin: 0 auto;
-  padding: 13px 44px 13px 13px;
+  padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 16px;
   background: rgba(255, 253, 248, 0.98);
   box-shadow: var(--shadow);
   backdrop-filter: blur(14px);
@@ -257,31 +259,40 @@ img {
 .install-prompt strong {
   display: block;
   font-size: 0.94rem;
+  padding-right: 22px;
+  line-height: 1.5;
 }
 
 .install-prompt p {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
+  display: block;
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.82rem;
-  line-height: 1.35;
+  line-height: 1.65;
 }
 
 .install-close {
   position: absolute;
   top: 7px;
   right: 7px;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
 }
 
 .install-action {
   min-height: 38px;
   padding: 0 13px;
 }
+
+.install-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 2px; }
+.install-actions .install-action { flex: 1; width: auto; min-height: 42px; font-size: 0.82rem; }
+.install-dismiss { flex: 1; min-height: 42px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
+.install-dismiss:hover { background: #f1ede4; }
+.install-guide { grid-column: 1 / -1; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #f5f4ed; }
+.install-guide ol { display: grid; gap: 8px; margin: 0; padding-left: 19px; font-size: 0.8rem; line-height: 1.7; }
+.install-guide > p { margin-top: 12px; font-size: 0.73rem; }
+.install-guide .form-error { color: var(--danger); margin: 0 0 12px; }
+.install-prompt button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
 .permission-backdrop {
   position: fixed;
