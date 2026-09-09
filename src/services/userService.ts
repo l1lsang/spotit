@@ -23,8 +23,8 @@ import { getPinThemeError, normalizePinColor, type PinTheme } from '../types/pos
 
 type BatchOperation = (batch: WriteBatch) => void
 
-export function getFallbackNickname(user: Pick<FirebaseUser, 'displayName' | 'email'>): string {
-  return user.displayName || user.email?.split('@')[0] || 'daymarker'
+export function getFallbackNickname(user: Pick<FirebaseUser, 'displayName'>): string {
+  return user.displayName?.trim() || '스팟잇 사용자'
 }
 
 export async function getUserProfile(uid: string): Promise<DaymarkUser | null> {

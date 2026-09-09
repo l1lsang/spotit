@@ -83,8 +83,7 @@ export function PeoplePage() {
     return users.filter(
       (user) =>
         user.nickname.toLowerCase().includes(trimmed) ||
-        (user.username || '').includes(trimmed.replace(/^@/, '')) ||
-        user.email.toLowerCase().includes(trimmed),
+        (user.username || '').includes(trimmed.replace(/^@/, '')),
     )
   }, [keyword, users])
 
@@ -191,7 +190,7 @@ export function PeoplePage() {
         <input
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
-          placeholder="사용자 이름, 닉네임 또는 이메일 검색"
+          placeholder="사용자 이름 또는 닉네임 검색"
           aria-label="사용자 검색"
         />
       </label>
@@ -231,7 +230,7 @@ export function PeoplePage() {
                       </span>
                     )}
                   </div>
-                  <p>{user.username ? `@${user.username}` : user.email || '스팟잇 사용자'}</p>
+                  <p>{user.username ? `@${user.username}` : '스팟잇 사용자'}</p>
                   {user.bio && <p className="profile-bio">{user.bio}</p>}
                   <div className="person-stats">
                     <button type="button" onClick={() => void handleOpenFollowList(user, 'followers')}>

@@ -1,5 +1,5 @@
 import { updateProfile } from 'firebase/auth'
-import { BookOpen, Camera, Check, Lock, LogOut, Save, Trash2, UserMinus, X } from 'lucide-react'
+import { BookOpen, Camera, Check, ChevronRight, Lock, LogOut, Save, Trash2, UserMinus, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -337,10 +337,9 @@ export function ProfilePage() {
         ) : (
           <div className="profile-avatar">{nickname.slice(0, 1) || 'D'}</div>
         )}
-        <div>
+        <div className="profile-identity">
+          <p>{profile?.nickname || '스팟잇 사용자'}</p>
           {profile?.username && <p className="profile-username">@{profile.username}</p>}
-          <span className="muted-label">이메일</span>
-          <p>{currentUser?.email || '카카오 계정'}</p>
           {profile?.bio && <p className="profile-bio">{profile.bio}</p>}
           {profile?.isPrivate && (
             <span className="private-account-badge">
@@ -349,15 +348,22 @@ export function ProfilePage() {
             </span>
           )}
         </div>
-        <div className="profile-stats">
-          <button type="button" onClick={() => void handleOpenFollowList('followers')}>
-            <strong>{profile?.followerCount || 0}</strong>
-            <span>팔로워</span>
-          </button>
-          <button type="button" onClick={() => void handleOpenFollowList('following')}>
-            <strong>{profile?.followingCount || 0}</strong>
-            <span>팔로잉</span>
-          </button>
+        <div className="profile-activity">
+          <div className="profile-stats">
+            <button type="button" onClick={() => void handleOpenFollowList('followers')}>
+              <strong>{profile?.followerCount || 0}</strong>
+              <span>팔로워</span>
+            </button>
+            <button type="button" onClick={() => void handleOpenFollowList('following')}>
+              <strong>{profile?.followingCount || 0}</strong>
+              <span>팔로잉</span>
+            </button>
+          </div>
+          <Link className="profile-records-link" to="/my">
+            <BookOpen size={17} aria-hidden="true" />
+            내 기록
+            <ChevronRight size={16} aria-hidden="true" />
+          </Link>
         </div>
       </section>
 
@@ -469,25 +475,25 @@ export function ProfilePage() {
         {message && <p className="form-success">{message}</p>}
         {error && <p className="form-error">{error}</p>}
 
-        <div className="profile-actions">
-          <button className="button button-secondary" type="button" onClick={() => navigate('/my')}>
-            <BookOpen size={17} aria-hidden="true" />
-            내 기록
-          </button>
+        <div className="profile-save-actions">
           <button className="button button-primary" type="submit" disabled={submitting}>
             <Save size={17} aria-hidden="true" />
-            {submitting ? '저장 중' : '저장'}
-          </button>
-          <button className="button button-secondary" type="button" onClick={handleLogout}>
-            <LogOut size={17} aria-hidden="true" />
-            로그아웃
-          </button>
-          <button className="button button-danger" type="button" onClick={() => setIsDeleteOpen(true)}>
-            <Trash2 size={17} aria-hidden="true" />
-            계정 탈퇴
+            {submitting ? '저장 중' : '변경사항 저장'}
           </button>
         </div>
       </form>
+
+      <section className="profile-account-section" aria-labelledby="profile-account-title">
+        <h2 id="profile-account-title">계정 관리</h2>
+        <button className="profile-logout-button" type="button" onClick={handleLogout}>
+          <LogOut size={18} aria-hidden="true" />
+          <span>로그아웃</span>
+          <ChevronRight size={17} aria-hidden="true" />
+        </button>
+        <button className="profile-delete-link" type="button" onClick={() => setIsDeleteOpen(true)}>
+          계정 탈퇴
+        </button>
+      </section>
 
       {followListKind && (
         <div className="modal-backdrop" role="presentation">
