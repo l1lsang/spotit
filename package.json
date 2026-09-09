@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:profile-album": "node --experimental-vm-modules --test tests/profileAlbum.test.mjs",
     "test:people-profiles": "node --experimental-vm-modules --test tests/peopleProfiles.test.mjs",
     "test:image-editing": "node --experimental-strip-types --test tests/imageEditing.test.mjs",
     "test:chat-read-receipts": "node --experimental-strip-types --test tests/chatReadReceipts.test.mjs",

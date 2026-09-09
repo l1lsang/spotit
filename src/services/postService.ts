@@ -14,6 +14,7 @@ import {
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
+import { getProfilePinAccess, type ProfilePinAccess } from '../lib/profilePinAccess'
 import type { LatLng } from '../lib/kakaoMap'
 import {
   normalizePinColor,
@@ -22,6 +23,7 @@ import {
 } from '../types/post'
 import { getFollowingIds, isFollowing } from './followService'
 import { uploadPostPhotos } from './storageService'
+import { getUserProfile } from './userService'
 
 interface AuthorInfo {
   uid: string
@@ -180,6 +182,24 @@ export async function getUserPosts(uid: string): Promise<Post[]> {
   const posts = snapshot.docs.map(toPost).filter((post): post is Post => Boolean(post))
 
   return sortPostsByCreatedAtDesc(posts)
+}
+
+export async function getProfilePosts(ownerUid: string, viewerUid?: string): Promise<{ posts: Post[]; access: ProfilePinAccess }> {
+  if (!viewerUid) return { posts: [], access: 'locked' }
+  if (ownerUid === viewerUid) return { posts: await getUserPosts(ownerUid), access: 'owner' }
+
+  const [owner, followsOwner] = await Promise.all([getUserProfile(ownerUid), isFollowing(viewerUid, ownerUid)])
+  if (!owner || owner.onboardingComplete === false) return { posts: [], access: 'locked' }
+  const access = getProfilePinAccess(ownerUid, viewerUid, Boolean(owner.isPrivate), followsOwner)
+  if (access === 'locked') return { posts: [], access }
+
+  // Scope the Firestore query itself: never fetch another user's private pins.
+  const visibility = access === 'following'
+    ? where('visibility', 'in', ['public', 'followers'])
+    : where('visibility', '==', 'public')
+  const snapshot = await getDocs(query(collection(requireDb(), 'posts'), where('uid', '==', ownerUid), visibility))
+  const posts = snapshot.docs.map(toPost).filter((post): post is Post => Boolean(post))
+  return { posts: sortPostsByCreatedAtDesc(posts), access }
 }
 
 export async function getPostById(postId: string, viewerUid?: string): Promise<Post | null> {

@@ -119,7 +119,7 @@ export async function followUser(currentUser: FollowPerson, targetUser: FollowPe
         type: 'follow_request',
         title: '팔로우 요청',
         message: `${currentUser.nickname}님이 팔로우를 요청했습니다.`,
-        href: '/profile',
+        href: '/profile/settings',
       })
     }
 

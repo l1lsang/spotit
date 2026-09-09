@@ -73,7 +73,7 @@ export function NotificationsPage() {
       await markNotificationAsRead(currentUser.uid, notification.id)
     }
 
-    navigate(notification.href)
+    navigate(notification.type === 'follow_request' ? '/profile/settings' : notification.href)
   }
 
   async function handleReadAll() {

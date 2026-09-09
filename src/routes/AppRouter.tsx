@@ -13,6 +13,7 @@ import { PeoplePage } from '../pages/PeoplePage'
 import { PersonProfilePage } from '../pages/PersonProfilePage'
 import { PostDetailPage } from '../pages/PostDetailPage'
 import { ProfilePage } from '../pages/ProfilePage'
+import { ProfileSettingsPage } from '../pages/ProfileSettingsPage'
 import { SignupPage } from '../pages/SignupPage'
 import { SupportPage } from '../pages/SupportPage'
 
@@ -121,6 +122,7 @@ export function AppRouter() {
               </ProtectedRoute>
             }
           />
+          <Route path="/profile/settings" element={<ProtectedRoute><ProfileSettingsPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </OnboardingGuard>

@@ -1,9 +1,10 @@
-import { ArrowLeft, Clock, Lock, MessageCircle, UserPlus, UserRoundCheck, X } from 'lucide-react'
+import { ArrowLeft, Clock, Lock, MessageCircle, Settings, UserPlus, UserRoundCheck, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { ReportButton } from '../components/moderation/ReportButton'
 import { UserSummaryLink } from '../components/profile/UserSummaryLink'
+import { ProfilePinAlbum } from '../components/profile/ProfilePinAlbum'
 import { useAuth } from '../hooks/useAuth'
 import { getOrCreateDirectChat } from '../services/chatService'
 import { cancelFollowRequest, followUser, getFollowers, getFollowing, hasPendingFollowRequest, isFollowing, unfollowUser } from '../services/followService'
@@ -20,7 +21,7 @@ export function PersonProfilePage() {
   return <PersonProfile key={userId} userId={userId} />
 }
 
-function PersonProfile({ userId }: { userId: string }) {
+export function PersonProfile({ userId }: { userId: string }) {
   const { currentUser, profile, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -105,7 +106,10 @@ function PersonProfile({ userId }: { userId: string }) {
 
   return (
     <PageContainer className="content-page person-profile-page">
-      <Link className="person-profile-back" to={returnTo}><ArrowLeft size={18} aria-hidden="true" />사람 목록</Link>
+      <div className="person-profile-toolbar">
+        {ownProfile ? <span>내 프로필</span> : <Link className="person-profile-back" to={returnTo}><ArrowLeft size={18} aria-hidden="true" />사람 목록</Link>}
+        {ownProfile && <Link className="button-icon subtle profile-settings-link" to="/profile/settings" aria-label="프로필 설정" title="프로필 설정"><Settings size={22} aria-hidden="true" /></Link>}
+      </div>
       {loading && !details && <p className="empty-text" role="status">프로필을 불러오는 중입니다.</p>}
       {loadError && <div className="person-profile-error" role="alert"><p>{loadError}</p>
         <button className="button button-secondary" type="button" disabled={loading} onClick={() => setRevision(value => value + 1)}>다시 시도</button>
@@ -127,9 +131,9 @@ function PersonProfile({ userId }: { userId: string }) {
         <section className="person-profile-about" aria-label="소개">
           <h2>소개</h2>
           <p>{user.bio || '아직 소개글이 없습니다.'}</p>
-          {user.isPrivate && <div className="person-profile-privacy"><Lock size={15} aria-hidden="true" /><span>비공개 계정 · 팔로우 요청을 승인받아야 합니다.</span></div>}
+          {user.isPrivate && <div className="person-profile-privacy"><Lock size={15} aria-hidden="true" /><span>{ownProfile ? '비공개 계정 · 새 팔로우 요청은 설정에서 승인할 수 있습니다.' : '비공개 계정 · 팔로우 요청을 승인받아야 합니다.'}</span></div>}
         </section>
-        {ownProfile ? <Link className="button button-secondary" to="/profile">내 프로필 편집</Link> : <>
+        {!ownProfile && <>
           <div className="person-profile-actions">
             <button className={`button ${details.followed || details.requested ? 'button-secondary' : 'button-primary'}`} type="button"
               onClick={() => void handleFollow()} disabled={Boolean(action) || loading || Boolean(loadError) || !profile}>
@@ -144,6 +148,7 @@ function PersonProfile({ userId }: { userId: string }) {
         </>}
         {actionError && <p className="form-error" role="alert">{actionError}</p>}
       </article>}
+      {user && <ProfilePinAlbum ownerUid={user.uid} refreshKey={revision} />}
       {user && followListKind && <PersonFollowList user={user} kind={followListKind} returnTo={returnTo} onClose={() => setFollowListKind(null)} />}
     </PageContainer>
   )
