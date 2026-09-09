@@ -1928,11 +1928,33 @@ img {
 }
 
 .feed-controls {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  gap: 6px;
+  width: fit-content;
+}
+
+.feed-controls .feed-control-button {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.feed-control-button:disabled {
+  opacity: 0.45;
+  cursor: wait;
+  transform: none;
+}
+
+.feed-controls label:focus-within,
+.feed-control-button:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
 }
 
 .feed-search-section { margin-bottom: 22px; }
@@ -1948,21 +1970,23 @@ img {
 .feed-controls label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 42px;
-  padding: 0 12px;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface-strong);
   color: var(--muted);
-  font-weight: 800;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .feed-controls select {
   border: 0;
   color: var(--ink);
   background: transparent;
-  font-weight: 900;
+  font: inherit;
+  font-weight: 700;
   outline: none;
 }
 
@@ -3609,7 +3633,6 @@ body.chat-room-active .message-form:focus-within {
   .card-actions,
   .modal-actions,
   .detail-actions,
-  .feed-controls,
   .person-actions {
     display: grid;
     grid-template-columns: 1fr;

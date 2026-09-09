@@ -86,7 +86,7 @@ export function FeedPage() {
           <h1>피드</h1>
           <p>내 위치 근처의 내 기록과 팔로우한 사람들의 기록만 모아봅니다.</p>
         </div>
-        <div className="feed-controls">
+        <div className="feed-controls" role="group" aria-label="피드 위치와 반경 설정">
           <label>
             <span>반경</span>
             <select value={radiusKm} onChange={(event) => setRadiusKm(Number(event.target.value))}>
@@ -95,13 +95,13 @@ export function FeedPage() {
               <option value={30}>30km</option>
             </select>
           </label>
-          <button className="button button-secondary" type="button" onClick={handleUseCurrentLocation}>
-            <LocateFixed size={17} aria-hidden="true" />
-            {locationLoading ? '확인 중' : '현재 위치'}
+          <button className="button-icon feed-control-button" type="button" onClick={handleUseCurrentLocation}
+            disabled={locationLoading} aria-label={locationLoading ? '현재 위치 확인 중' : '현재 위치로 이동'} aria-busy={locationLoading} title="현재 위치">
+            <LocateFixed size={16} aria-hidden="true" />
           </button>
-          <button className="button button-secondary" type="button" disabled={loading} onClick={() => setRevision(value => value + 1)}>
-            <RefreshCw size={17} aria-hidden="true" />
-            새로고침
+          <button className="button-icon feed-control-button" type="button" disabled={loading} onClick={() => setRevision(value => value + 1)}
+            aria-label={loading ? '피드 새로고침 중' : '피드 새로고침'} aria-busy={loading} title="새로고침">
+            <RefreshCw size={16} aria-hidden="true" />
           </button>
         </div>
       </section>
