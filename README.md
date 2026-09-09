@@ -25,6 +25,8 @@ npm run build
 
 의존성을 변경하면 아래 명령으로 목록을 갱신하고 생성 파일을 함께 커밋합니다. 갱신에는 네트워크가 필요할 수 있고, 기존 버전의 고지는 재사용합니다. `npm run build`는 네트워크 없이 양쪽 잠금 파일과 목록이 일치하는지 검사하여 누락된 상태로 빌드되지 않게 합니다.
 
+검사는 실제 패키지 이름·버전·무결성·라이선스 선언·사용 범위와 원문을 비교합니다. npm 버전에 따라 바뀔 수 있는 `peer` 플래그나 JSON 키 순서는 빌드 실패 사유가 아닙니다. 생성 파일의 `sources` 해시는 생성 당시 잠금 파일을 기록하는 참고 정보입니다. 실제 의존성이 바뀌면 오류에 누락·불필요한 패키지를 표시하며, 잠금 파일과 라이선스 JSON을 함께 갱신해야 합니다. `npm run test:licenses`로 이 동작을 검증합니다.
+
 ```bash
 npm run licenses:generate
 npm run licenses:check
@@ -230,7 +232,7 @@ Vercel 기준:
 1. GitHub 저장소를 Vercel 프로젝트로 import합니다.
 2. Framework Preset은 Vite로 설정합니다.
 3. Environment Variables에 `.env.example`의 값을 등록합니다.
-4. Build Command는 `npm run build`, Output Directory는 `dist`를 사용합니다.
+4. Install Command는 `vercel.json`의 `npm ci`를 사용해 커밋된 잠금 파일대로 설치합니다. Build Command는 `npm run build`, Output Directory는 `dist`를 사용합니다. `npm ci`가 잠금 파일 불일치를 보고하면 로컬에서 `npm install` 후 `npm run licenses:generate`로 갱신하고 두 파일을 함께 커밋합니다. 배포 중 잠금 파일을 다시 쓰지 않는 동작은 [npm ci 문서](https://docs.npmjs.com/cli/v11/commands/npm-ci/)를 참고합니다.
 5. Vercel 프로젝트에 운영 도메인 `spotitmap.kr`를 연결하고, [운영 도메인 설정](docs/domain-setup.md)에 따라 카카오 JavaScript SDK 도메인과 Firebase Authentication 승인된 도메인을 등록합니다.
 6. `vercel.json`의 SPA rewrite 설정으로 `/feed`, `/profile`, `/chats/:id` 같은 경로에서 새로고침해도 `index.html`이 로드됩니다.
 

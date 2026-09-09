@@ -21,6 +21,7 @@
     "dev": "vite",
     "licenses:generate": "node scripts/generate-open-source-licenses.mjs",
     "licenses:check": "node scripts/generate-open-source-licenses.mjs --check",
+    "test:licenses": "node --test tests/licenseManifest.test.mjs",
     "build": "npm run licenses:check && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

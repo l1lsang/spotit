@@ -40,16 +40,27 @@ for (const project of projects) {
 }
 
 function validate(data) {
-  if (!data || JSON.stringify(data.sources) !== JSON.stringify(sources)) {
-    throw new Error('라이선스 목록이 의존성과 다릅니다. npm run licenses:generate를 실행해 주세요.')
+  const regenerate = 'npm run licenses:generate를 실행하고 src/data/openSourceLicenses.json을 잠금 파일과 함께 커밋해 주세요.'
+  if (!data || !Array.isArray(data.packages) || !data.texts) {
+    throw new Error(`라이선스 목록이 없거나 올바르지 않습니다. ${regenerate}`)
   }
-  if (data.packages.length !== dependencies.size) throw new Error('라이선스 목록에 누락 또는 중복이 있습니다.')
+  // sources records the lockfiles used during generation. npm can rewrite peer
+  // flags and other metadata without changing any packages, so validate the
+  // actual inventory and notices instead of requiring whole-file hashes to match.
+  const indexed = new Map(data.packages.map(entry => [`${entry.name}@${entry.version}`, entry]))
+  if (indexed.size !== data.packages.length) throw new Error(`라이선스 목록에 중복이 있습니다. ${regenerate}`)
+  const missing = [...dependencies.keys()].filter(key => !indexed.has(key))
+  const extra = [...indexed.keys()].filter(key => !dependencies.has(key))
+  if (missing.length || extra.length) {
+    throw new Error(`라이선스 목록이 의존성과 다릅니다. 누락: ${missing.join(', ') || '없음'}. 불필요: ${extra.join(', ') || '없음'}. ${regenerate}`)
+  }
   for (const [key, dependency] of dependencies) {
-    const entry = data.packages.find(item => `${item.name}@${item.version}` === key)
+    const entry = indexed.get(key)
     if (!entry?.license || entry.integrity !== dependency.integrity
+      || (dependency.license && entry.license !== dependency.license)
       || JSON.stringify(entry.scopes) !== JSON.stringify([...dependency.scopes].sort(compare))
-      || entry.direct !== dependency.direct || !entry.documents.length) {
-      throw new Error(`${key}: 라이선스 정보가 누락되었거나 오래되었습니다.`)
+      || entry.direct !== dependency.direct || !Array.isArray(entry.documents) || !entry.documents.length) {
+      throw new Error(`${key}: 라이선스 정보가 누락되었거나 오래되었습니다. ${regenerate}`)
     }
     for (const document of entry.documents) {
       const text = data.texts[document.textId]
@@ -156,7 +167,8 @@ async function upstreamDocuments(metadata, registry) {
 
 async function collect(dependency) {
   const key = `${dependency.name}@${dependency.version}`
-  const cached = previous?.packages.find(item => `${item.name}@${item.version}` === key && item.integrity === dependency.integrity)
+  const cached = previous?.packages.find(item => `${item.name}@${item.version}` === key && item.integrity === dependency.integrity
+    && (!dependency.license || item.license === dependency.license))
   if (cached) {
     for (const document of cached.documents) texts[document.textId] = previous.texts[document.textId]
     packages.push({ ...cached, scopes: [...dependency.scopes].sort(compare), direct: dependency.direct })
