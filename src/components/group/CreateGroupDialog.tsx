@@ -33,10 +33,10 @@ export function CreateGroupDialog({ onClose, onCreated }: { onClose: () => void;
         <label className="field"><span>그룹 소개 <small>선택</small></span><textarea rows={4} maxLength={240} value={description} disabled={busy} onChange={event => setDescription(event.target.value)} placeholder="어떤 장소를 함께 모으고 싶나요?" /></label>
         <fieldset className="group-visibility" disabled={busy}>
           <legend>그룹 공개 범위</legend>
-          <label className={visibility === 'public' ? 'selected' : ''}><input type="radio" name="group-visibility" value="public" checked={visibility === 'public'} onChange={() => setVisibility('public')} /><Globe2 size={20} aria-hidden="true" /><span><strong>공개 그룹</strong><small>누구나 그룹과 핀을 둘러볼 수 있어요.</small></span></label>
+          <label className={visibility === 'public' ? 'selected' : ''}><input type="radio" name="group-visibility" value="public" checked={visibility === 'public'} onChange={() => setVisibility('public')} /><Globe2 size={20} aria-hidden="true" /><span><strong>공개 그룹</strong><small>누구나 그룹과 핀을 둘러보고 코드 없이 바로 가입할 수 있어요.</small></span></label>
           <label className={visibility === 'private' ? 'selected' : ''}><input type="radio" name="group-visibility" value="private" checked={visibility === 'private'} onChange={() => setVisibility('private')} /><Lock size={20} aria-hidden="true" /><span><strong>비공개 그룹</strong><small>검색에 표시되지 않고, 멤버만 그룹과 핀을 볼 수 있어요.</small></span></label>
         </fieldset>
-        <p className="group-note">공개·비공개 모두 초대코드가 있어야 가입할 수 있어요. 그룹을 만들면 자동으로 가입되고, 공유할 초대코드가 발급돼요.</p>
+        <p className="group-note">공개 그룹은 초대코드 없이 바로 가입할 수 있고, 비공개 그룹은 초대코드가 있어야 가입할 수 있어요. 그룹을 만들면 자동으로 가입돼요.</p>
         {error && <p className="form-error" role="alert">{error}</p>}
         <div className="modal-actions"><button className="button button-secondary" type="button" disabled={busy} onClick={onClose}>취소</button><button className="button button-primary" disabled={busy || name.trim().length < 2}>{busy ? '만드는 중…' : '그룹 만들기'}</button></div>
       </form>

@@ -504,7 +504,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
               {groupId && !selectedGroup && <option value={groupId}>{groupState.loading ? '그룹 불러오는 중…' : '그룹을 찾을 수 없습니다'}</option>}
             </select>
             {selectedGroup && <Link className="button button-secondary" to={`/groups/${selectedGroup.id}`}>그룹 홈</Link>}
-            {selectedGroup && !joined && !groupState.loading && !groupState.error && <GroupJoinButton groupId={groupId} joined={false} />}
+            {selectedGroup && !joined && !groupState.loading && !groupState.error && <GroupJoinButton groupId={groupId} visibility={selectedGroup.visibility} joined={false} />}
           </div>}
 
           {groupState.error && <p className="map-group-notice" role="alert">{groupState.error} <button type="button" onClick={groupState.retry}>다시 시도</button>{groupId && <Link to="/map">내 지도로</Link>}</p>}

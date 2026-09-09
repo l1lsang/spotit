@@ -56,12 +56,14 @@ service cloud.firestore {
     }
     function validGroupMember(groupId, uid) {
       let data = request.resource.data;
+      let code = data.get('inviteCode', '');
       return isOwner(uid) && data.keys().hasOnly(['uid', 'groupId', 'joinedAt', 'inviteCode'])
         && data.uid == uid && data.groupId == groupId && data.joinedAt == request.time
         && getAfter(/databases/$(database)/documents/users/$(uid)/groupMemberships/$(groupId)).data == data
         && (exists(/databases/$(database)/documents/groups/$(groupId))
-          ? (data.inviteCode is string && data.inviteCode.matches('^[A-HJ-NP-Z2-9]{12}$')
-            && get(/databases/$(database)/documents/groupInvites/$(data.inviteCode)).data.groupId == groupId
+          ? (((get(/databases/$(database)/documents/groups/$(groupId)).data.get('visibility', 'public') == 'public' && !('inviteCode' in data))
+              || (code is string && code.matches('^[A-HJ-NP-Z2-9]{12}$')
+                && get(/databases/$(database)/documents/groupInvites/$(code)).data.groupId == groupId))
             && getAfter(/databases/$(database)/documents/groups/$(groupId)).data.memberCount == get(/databases/$(database)/documents/groups/$(groupId)).data.memberCount + 1)
           : getAfter(/databases/$(database)/documents/groups/$(groupId)).data.ownerUid == uid);
     }

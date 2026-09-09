@@ -66,7 +66,8 @@ async function createGroup(client, input) {
   inviteCodes.set(id, await client.groups.getGroupInviteCode(id))
   return id
 }
-const join = (client, id) => client.groups.joinGroupWithCode(inviteCodes.get(id), client.uid, id)
+const join = (client, id) => client.groups.setGroupMembership(id, client.uid, true)
+const joinWithCode = (client, id) => client.groups.joinGroupWithCode(inviteCodes.get(id), client.uid, id)
 
 function observe(subscribe, predicate) {
   return new Promise((resolve, reject) => {
@@ -94,7 +95,7 @@ test('any active account can create groups; creator membership and count are ato
   }
 })
 
-test('code joins are idempotent under concurrency, and leave/rejoin preserve counts and live indexes', async () => {
+test('public groups join without codes under concurrency; leave/rejoin preserve counts and live indexes', async () => {
   const [owner, member, other] = await Promise.all([account(), account(), account()])
   const id = await createGroup(owner, { name: '열린 그룹', description: '' })
   const joined = observe((next, error) => member.groups.subscribeMyGroupIds(member.uid, next, error), ids => ids.includes(id))
@@ -102,6 +103,7 @@ test('code joins are idempotent under concurrency, and leave/rejoin preserve cou
   await Promise.all([join(member, id), join(member, id), join(other, id)])
   await joined
   assert.equal(await count(owner, id), 3)
+  assert.equal('inviteCode' in (await firestore.getDoc(firestore.doc(member.db, 'groups', id, 'members', member.uid))).data(), false)
   await member.groups.setGroupMembership(id, member.uid, false)
   await member.groups.setGroupMembership(id, member.uid, false)
   assert.equal(await count(owner, id), 2)
@@ -168,13 +170,14 @@ test('raw writes cannot forge membership, counts, ownership, or group posting pe
   await outsider.groups.setGroupMembership(id, outsider.uid, false)
   await assert.rejects(firestore.updateDoc(firestore.doc(outsider.db, 'posts', personal), { groupId: id, visibility: 'public' }), denied)
   await authSdk.signOut(outsider.auth)
+  await assert.rejects(join(outsider, id), denied)
   await assert.rejects(firestore.getDoc(groupDoc(outsider, id)), denied)
   await assert.rejects(outsider.groups.createGroup({ name: '비로그인 그룹', description: '' }, outsider.uid), denied)
 })
 
-test('public and private groups both require valid codes; invitations cannot be listed, read from groups, or forged', async () => {
+test('only private groups require codes; invitations cannot be listed, read from groups, or forged', async () => {
   const [owner, outsider] = await Promise.all([account(), account()])
-  const publicId = await createGroup(owner, { name: '코드가 필요한 공개 그룹', description: '' })
+  const publicId = await createGroup(owner, { name: '바로 가입하는 공개 그룹', description: '' })
   const privateId = await createGroup(owner, { name: '초대 전용 그룹', description: '비밀 소개', visibility: 'private' })
   const listed = await observe((next, error) => outsider.groups.subscribeGroups(next, error), groups => groups.some(group => group.id === publicId))
   assert.ok(!listed.some(group => group.id === privateId))
@@ -184,18 +187,27 @@ test('public and private groups both require valid codes; invitations cannot be 
 
   for (const id of [publicId, privateId]) {
     await assert.rejects(outsider.groups.getGroupInviteCode(id), denied)
-    await assert.rejects(outsider.groups.setGroupMembership(id, outsider.uid, true), /초대코드/)
+    if (id === privateId) await assert.rejects(join(outsider, id), denied)
+    else {
+      await join(outsider, id)
+      assert.equal(await count(owner, id), 2)
+      await outsider.groups.setGroupMembership(id, outsider.uid, false)
+    }
     await assert.rejects(outsider.groups.joinGroupWithCode('wrong', outsider.uid, id), /12자리/)
     await assert.rejects(outsider.groups.joinGroupWithCode('AAAAAAAAAAAA', outsider.uid, id), /올바르지/)
     await assert.rejects(outsider.groups.joinGroupWithCode(inviteCodes.get(id === publicId ? privateId : publicId), outsider.uid, id), /올바르지/)
-    // A correctly shaped atomic batch still cannot bypass the invitation check.
+    // Public groups allow a code-free atomic join; private groups still reject that same batch.
     for (const inviteCode of [undefined, 'AAAAAAAAAAAA', inviteCodes.get(id === publicId ? privateId : publicId)]) {
       const data = { uid: outsider.uid, groupId: id, joinedAt: firestore.serverTimestamp(), ...(inviteCode ? { inviteCode } : {}) }
       const batch = firestore.writeBatch(outsider.db)
       batch.set(firestore.doc(outsider.db, 'groups', id, 'members', outsider.uid), data)
       batch.set(firestore.doc(outsider.db, 'users', outsider.uid, 'groupMemberships', id), data)
       batch.update(groupDoc(outsider, id), { memberCount: firestore.increment(1) })
-      await assert.rejects(batch.commit(), denied)
+      if (id === publicId && inviteCode === undefined) {
+        await batch.commit()
+        assert.equal(await count(owner, id), 2)
+        await outsider.groups.setGroupMembership(id, outsider.uid, false)
+      } else await assert.rejects(batch.commit(), denied)
     }
     assert.equal(await count(owner, id), 1)
   }
@@ -203,6 +215,7 @@ test('public and private groups both require valid codes; invitations cannot be 
   await assert.rejects(firestore.setDoc(firestore.doc(outsider.db, 'groupInvites', 'AAAAAAAAAAAA'), { groupId: privateId }), denied)
   await assert.rejects(firestore.updateDoc(groupDoc(owner, privateId), { visibility: 'public' }), denied)
   await assert.rejects(firestore.updateDoc(firestore.doc(owner.db, 'groupInvites', inviteCodes.get(publicId)), { groupId: privateId }), denied)
+  assert.equal(await joinWithCode(outsider, publicId), publicId)
   const formatted = inviteCodes.get(privateId).toLowerCase().match(/.{4}/g).join(' - ')
   assert.equal(await outsider.groups.joinGroupWithCode(formatted, outsider.uid), privateId)
   assert.equal((await firestore.getDoc(groupDoc(outsider, privateId))).data().description, '비밀 소개')
@@ -229,7 +242,7 @@ test('private group pins stay out of public and follower queries, and leaving re
   assert.ok(!(await visitor.posts.getVisiblePosts(visitor.uid)).some(post => post.id === pinId))
   assert.ok(!(await visitor.posts.getProfilePosts(owner.uid, visitor.uid)).posts.some(post => post.id === pinId))
 
-  await join(member, id)
+  await joinWithCode(member, id)
   const live = await observe((next, error) => member.posts.subscribeGroupPosts(id, next, error, 'private'), posts => posts.length === 1)
   assert.deepEqual(live.map(post => post.id), [pinId])
   assert.equal((await member.posts.getPostById(pinId, member.uid)).visibility, 'group')
@@ -245,7 +258,7 @@ test('private group pins stay out of public and follower queries, and leaving re
   assert.equal((await member.posts.getPostById(ownPin, member.uid)).visibility, 'group')
   await member.posts.deletePost(ownPin, member.uid)
   assert.equal(await count(owner, id), 1)
-  await join(member, id)
+  await joinWithCode(member, id)
   assert.equal((await member.posts.getPostById(pinId, member.uid)).id, pinId)
 })
 
@@ -261,6 +274,10 @@ test('legacy groups migrate without changing private groups, memberships, or pin
   await batch.commit()
   const privateId = await createGroup(owner, { name: '유지할 비공개 그룹', description: '', visibility: 'private' })
   const pinId = await owner.posts.createPost(input(legacy.id), [], author(owner))
+  // Legacy public groups need neither a visibility migration nor an invitation to accept members.
+  await join(visitor, legacy.id)
+  assert.equal(await count(owner, legacy.id), 2)
+  await visitor.groups.setGroupMembership(legacy.id, visitor.uid, false)
   assert.equal((await migrateGroups(db)).eligible, 1)
   assert.equal((await legacy.get()).data().visibility, undefined)
   assert.equal((await migrateGroups(db, { apply: true, pageSize: 2 })).migrated, 1)

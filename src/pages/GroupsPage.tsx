@@ -49,7 +49,7 @@ export function GroupsPage() {
             <div className="group-card-top"><span className="group-symbol">{group.visibility === 'private' ? <Lock size={27} aria-hidden="true" /> : <Compass size={27} aria-hidden="true" />}</span><span className="group-public">{group.visibility === 'private' ? '비공개 그룹' : '공개 그룹'} <ArrowUpRight size={15} aria-hidden="true" /></span></div>
             <h2>{group.name}</h2><p>{group.description || '함께 발견한 좋은 장소들을 이곳에 모아요.'}</p>
           </Link>
-          <div className="group-card-bottom"><span><UsersRound size={16} aria-hidden="true" />멤버 {group.memberCount}명</span><GroupJoinButton groupId={group.id} joined={joinedIds.includes(group.id)} /></div>
+          <div className="group-card-bottom"><span><UsersRound size={16} aria-hidden="true" />멤버 {group.memberCount}명</span><GroupJoinButton groupId={group.id} visibility={group.visibility} joined={joinedIds.includes(group.id)} /></div>
         </li>)}
       </ul>}
       {creating && <CreateGroupDialog onClose={() => setCreating(false)} onCreated={id => { setCreating(false); navigate(`/groups/${id}`) }} />}

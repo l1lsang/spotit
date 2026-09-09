@@ -78,7 +78,7 @@ export async function joinGroupWithCode(codeInput: string, uid: string, expected
 // Read only the caller's membership so private groups can be joined without disclosing their contents first.
 // Membership, personal index, and count change atomically, including when two tabs join at once.
 export async function setGroupMembership(groupId: string, uid: string, joined: boolean, inviteCode?: string): Promise<void> {
-  if (joined && (!inviteCode || !isGroupInviteCode(normalizeGroupInviteCode(inviteCode)))) throw new Error('그룹에 가입하려면 초대코드가 필요합니다.')
+  if (joined && inviteCode !== undefined && !isGroupInviteCode(normalizeGroupInviteCode(inviteCode))) throw new Error('초대코드 12자리를 확인해 주세요.')
   const db = requireDb()
   const groupRef = doc(db, 'groups', groupId)
   const memberRef = doc(groupRef, 'members', uid)
@@ -87,7 +87,7 @@ export async function setGroupMembership(groupId: string, uid: string, joined: b
     const member = await transaction.get(memberRef)
     if (member.exists() === joined) return
     if (joined) {
-      const membership = { uid, groupId, joinedAt: serverTimestamp(), inviteCode: normalizeGroupInviteCode(inviteCode!) }
+      const membership = { uid, groupId, joinedAt: serverTimestamp(), ...(inviteCode !== undefined ? { inviteCode: normalizeGroupInviteCode(inviteCode) } : {}) }
       transaction.set(memberRef, membership)
       transaction.set(indexRef, membership)
     } else {

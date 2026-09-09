@@ -46,13 +46,13 @@ function GroupHome({ groupId }: { groupId: string }) {
   async function shareGroup() {
     try {
       const url = `${window.location.origin}/groups/${groupId}`
-      if (navigator.share) await navigator.share({ title: group?.name, text: '함께 장소를 모아요. 그룹 멤버에게 초대코드를 받아 가입해 주세요.', url })
+      if (navigator.share) await navigator.share({ title: group?.name, text: visibility === 'private' ? '함께 장소를 모아요. 그룹 멤버에게 초대코드를 받아 가입해 주세요.' : '함께 장소를 모아요. 초대코드 없이 바로 가입할 수 있어요.', url })
       else { await navigator.clipboard.writeText(url); setShareMessage('그룹 링크를 복사했습니다.') }
     } catch (cause) { if ((cause as { name?: string }).name !== 'AbortError') setShareMessage('공유하지 못했습니다. 다시 시도해 주세요.') }
   }
 
   if (loading) return <PageContainer className="content-page"><p className="empty-text" role="status">그룹을 불러오는 중입니다.</p></PageContainer>
-  if (error || !group || !canReadPins) return <PageContainer className="content-page"><div className="empty-state"><h1>{error ? '그룹을 불러오지 못했어요' : '가입이 필요하거나 찾을 수 없는 그룹이에요'}</h1>{error ? <p role="alert">{error}</p> : <><p>비공개 그룹은 초대코드로 가입한 뒤 볼 수 있어요.</p><GroupJoinButton groupId={groupId} joined={false} /></>}{error && <button className="button button-secondary" type="button" onClick={retry}>다시 시도</button>}<Link className="button button-primary" to="/groups">그룹 둘러보기</Link></div></PageContainer>
+  if (error || !group || !canReadPins) return <PageContainer className="content-page"><div className="empty-state"><h1>{error ? '그룹을 불러오지 못했어요' : '가입이 필요하거나 찾을 수 없는 그룹이에요'}</h1>{error ? <p role="alert">{error}</p> : <><p>비공개 그룹은 초대코드로 가입한 뒤 볼 수 있어요.</p><GroupJoinButton groupId={groupId} visibility="private" joined={false} /></>}{error && <button className="button button-secondary" type="button" onClick={retry}>다시 시도</button>}<Link className="button button-primary" to="/groups">그룹 둘러보기</Link></div></PageContainer>
 
   return (
     <PageContainer className="content-page groups-page">
@@ -60,7 +60,7 @@ function GroupHome({ groupId }: { groupId: string }) {
       <section className="group-home-heading">
         <div className="group-home-title">
           <span className="group-symbol">{visibility === 'private' ? <Lock size={30} aria-hidden="true" /> : <Compass size={30} aria-hidden="true" />}</span>
-          <div><p className="eyebrow">{visibility === 'private' ? '비공개 그룹 · 멤버만 볼 수 있어요' : '공개 그룹'} · 초대코드로 가입</p><h1>{group.name}</h1></div>
+          <div><p className="eyebrow">{visibility === 'private' ? '비공개 그룹 · 멤버만 볼 수 있어요 · 초대코드로 가입' : '공개 그룹 · 누구나 바로 가입'}</p><h1>{group.name}</h1></div>
         </div>
         <p className="group-description">{group.description || '함께 발견한 좋은 장소들을 이곳에 모아요.'}</p>
         <div className="group-home-footer">
@@ -71,15 +71,15 @@ function GroupHome({ groupId }: { groupId: string }) {
           </div>
           <div className="group-home-actions">
             <button className="button button-secondary" type="button" onClick={() => void shareGroup()} aria-label="그룹 공유"><Share2 size={17} aria-hidden="true" />공유</button>
-            <GroupJoinButton groupId={groupId} joined={joined} allowLeave />
+            <GroupJoinButton groupId={groupId} visibility={group.visibility} joined={joined} allowLeave />
           </div>
         </div>
         {shareMessage && <p className="group-note" role="status">{shareMessage}</p>}
       </section>
-      {joined && <GroupInvitePanel groupId={groupId} />}
+      {joined && visibility === 'private' && <GroupInvitePanel groupId={groupId} />}
       <div className="group-participation group-map-invite">
         <div>
-          <p>{joined ? '지도 탭에서 장소를 검색하거나 지도를 길게 눌러 그룹 핀을 남겨보세요.' : '이 그룹이 마음에 드나요? 멤버에게 초대코드를 받아 나의 장소도 함께 모아보세요.'}</p>
+          <p>{joined ? '지도 탭에서 장소를 검색하거나 지도를 길게 눌러 그룹 핀을 남겨보세요.' : '이 그룹이 마음에 드나요? 바로 가입하고 나의 장소도 함께 모아보세요.'}</p>
           {joined && <small>탈퇴해도 남긴 핀은 유지되며, 내 핀은 언제든 수정·삭제할 수 있어요.</small>}
         </div>
         <Link className="button button-primary" to={mapUrl}>

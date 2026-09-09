@@ -32,16 +32,21 @@ async function loadModule(path, dependencies = {}) {
 
 const unexpected = () => { throw new Error('Unexpected side effect during render') }
 const groupState = {
-  groups: [{ id: 'my-group', name: '내 산책 그룹', description: '산책 장소', memberCount: 2, ownerUid: 'viewer' },
-    { id: 'public-group', name: '공개 맛집 그룹', description: '맛집 장소', memberCount: 3, ownerUid: 'other' }],
+  groups: [{ id: 'my-group', name: '내 산책 그룹', description: '산책 장소', visibility: 'public', memberCount: 2, ownerUid: 'viewer' },
+    { id: 'public-group', name: '공개 맛집 그룹', description: '맛집 장소', visibility: 'public', memberCount: 3, ownerUid: 'other' }],
   joinedIds: ['my-group'], loading: false, error: '', retry: unexpected,
 }
 const authState = { currentUser: { uid: 'viewer' }, profile: { nickname: '참여자' }, firebaseReady: true }
+const { GroupJoinButton } = await loadModule('../src/components/group/GroupJoinButton.tsx', {
+  '../../hooks/useAuth': { useAuth: () => authState },
+  '../../services/groupService': { setGroupMembership: unexpected },
+  './JoinGroupDialog': { JoinGroupDialog: () => null },
+})
 const shared = {
   '../hooks/useAuth': { useAuth: () => authState },
   '../hooks/useGroups': { useGroups: () => groupState },
   '../lib/groupNavigation': navigation,
-  '../components/group/GroupJoinButton': { GroupJoinButton: ({ joined }) => react.createElement('button', null, joined ? '그룹 탈퇴' : '코드로 가입') },
+  '../components/group/GroupJoinButton': { GroupJoinButton },
   '../components/group/GroupInvitePanel': { GroupInvitePanel: () => react.createElement('div', null, '그룹 초대코드') },
   '../components/layout/PageContainer': { PageContainer: ({ children }) => react.createElement('main', null, children) },
 }
@@ -107,9 +112,12 @@ test('group homes send members and visitors to the same scoped map without an em
   const visitor = render(GroupDetailPage, '/groups/public-group', '/groups/:groupId')
   assert.match(visitor, /href="\/map\?group=public-group"/)
   assert.match(visitor, /지도에서 그룹 핀 보기/)
+  assert.match(visitor, /바로 가입/)
+  assert.doesNotMatch(visitor, /초대코드로 가입|코드로 가입/)
   for (const html of [member, visitor]) {
     assert.doesNotMatch(html, /<form|role="dialog"|class="group-map-shell"/)
     assert.match(html, /함께 모은 핀/)
+    assert.doesNotMatch(html, /그룹 초대코드/)
   }
 })
 
@@ -130,7 +138,8 @@ test('map entry icon, group selector, and pin destination follow the selected ro
 
   html = render(MapPage, '/map?group=public-group')
   assert.match(html, /value="public-group" selected=""/)
-  assert.match(html, /코드로 가입/)
+  assert.match(html, /바로 가입/)
+  assert.doesNotMatch(html, /코드로 가입/)
   assert.equal(formProps.initialGroupId, 'public-group')
   assert.equal(formProps.isOpen, false)
 
@@ -164,6 +173,7 @@ test('private groups stay out of discovery and lose their home and invitation pa
     const discovery = render(GroupsPage, '/groups')
     assert.doesNotMatch(discovery, /숨겨진 이름|숨겨진 소개/)
     assert.match(discovery, /초대코드로 가입/)
+    assert.match(discovery, /바로 가입/)
     const member = render(GroupDetailPage, '/groups/private-group', '/groups/:groupId')
     assert.match(member, /숨겨진 이름/)
     assert.match(member, /그룹 초대코드/)
