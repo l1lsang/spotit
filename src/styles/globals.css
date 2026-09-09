@@ -125,6 +125,14 @@ img {
   object-position: left center;
 }
 
+.site-header .brand-logo {
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-strong);
+  object-position: center;
+}
+
 .brand-lockup strong {
   display: block;
   font-size: 1.03rem;
