@@ -2,9 +2,10 @@ import { Plus, Save, X } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { saveUserPinTheme } from '../../services/userService'
+import { PinColorPicker } from './PinColorPicker'
 import {
-  DEFAULT_POST_PIN_COLOR, FOLLOWING_PIN_COLOR, PIN_THEME_NAME_MAX_LENGTH,
-  getPinThemeError, getPostPinColor, type PinTheme, type PostFormInput,
+  DEFAULT_POST_PIN_COLOR, FOLLOWING_PIN_COLOR, PIN_COLOR_PALETTE, PIN_THEME_NAME_MAX_LENGTH,
+  getPinThemeError, getPostPinColor, parsePinColorCode, type PinTheme, type PostFormInput,
 } from '../../types/post'
 
 type PinSelection = Pick<PostFormInput, 'pinColor' | 'pinThemeId'>
@@ -18,16 +19,15 @@ export function PinThemePicker({ value, onChange }: PinThemePickerProps) {
   const { currentUser, profile } = useAuth()
   const [editingTheme, setEditingTheme] = useState<PinTheme | null>(null)
   const themes = profile?.pinThemes || []
-  const color = value ? getPostPinColor(value, themes) : DEFAULT_POST_PIN_COLOR
+  const color = value
+    ? value.pinThemeId ? getPostPinColor(value, themes) : value.pinColor
+    : PIN_COLOR_PALETTE[0].color
 
   return (
     <fieldset className="field pin-theme-settings">
       <legend>{value ? '내 핀 색상과 테마' : '내 핀 테마'}</legend>
-      {value && (
-        <label className="pin-color-picker">
-          <input type="color" value={color} onChange={(event) => onChange?.({ pinColor: event.target.value, pinThemeId: '' })} />
-          <span>색상 직접 선택 <small>{color.toUpperCase()}</small></span>
-        </label>
+      {value && !editingTheme && (
+        <PinColorPicker value={color} onChange={pinColor => onChange?.({ pinColor, pinThemeId: '' })} />
       )}
       <div className="pin-group-palette">
         {themes.map((theme) => (
@@ -43,7 +43,7 @@ export function PinThemePicker({ value, onChange }: PinThemePickerProps) {
             {theme.name}
           </button>
         ))}
-        <button className="color-swatch-button pin-theme-add" type="button" disabled={!currentUser} onClick={() => setEditingTheme({ id: crypto.randomUUID(), name: '', color })}>
+        <button className="color-swatch-button pin-theme-add" type="button" disabled={!currentUser} onClick={() => setEditingTheme({ id: crypto.randomUUID(), name: '', color: parsePinColorCode(color) || DEFAULT_POST_PIN_COLOR })}>
           <Plus size={14} aria-hidden="true" />핀 테마 추가
         </button>
       </div>
@@ -79,7 +79,9 @@ function PinThemeEditor({ theme, uid, onSaved, onCancel }: {
 
   async function save() {
     if (saving) return
-    const next = { id: theme.id, name: name.trim(), color }
+    const parsedColor = parsePinColorCode(color)
+    if (!parsedColor) { setError('올바른 HEX 색상 코드를 입력해 주세요.'); return }
+    const next = { id: theme.id, name: name.trim(), color: parsedColor }
     const validationError = getPinThemeError(next)
     if (validationError) { setError(validationError); return }
     setSaving(true)
@@ -103,14 +105,11 @@ function PinThemeEditor({ theme, uid, onSaved, onCancel }: {
         <span>테마 이름</span>
         <input autoFocus maxLength={PIN_THEME_NAME_MAX_LENGTH} value={name} onChange={(event) => setName(event.target.value)} placeholder="예: 다시 가고 싶은 곳" disabled={saving} />
       </label>
-      <label className="pin-color-picker">
-        <input type="color" value={color} onChange={(event) => setColor(event.target.value)} disabled={saving} />
-        <span>테마 색상 <small>{color.toUpperCase()}</small></span>
-      </label>
+      <PinColorPicker value={color} onChange={setColor} disabled={saving} />
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="pin-theme-editor-actions">
         <button className="button button-secondary" type="button" onClick={onCancel} disabled={saving}><X size={15} aria-hidden="true" />취소</button>
-        <button className="button button-primary" type="button" onClick={() => void save()} disabled={saving}><Save size={15} aria-hidden="true" />{saving ? '저장 중' : '테마 저장'}</button>
+        <button className="button button-primary" type="button" onClick={() => void save()} disabled={saving || !parsePinColorCode(color)}><Save size={15} aria-hidden="true" />{saving ? '저장 중' : '테마 저장'}</button>
       </div>
     </div>
   )

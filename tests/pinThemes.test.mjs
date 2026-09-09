@@ -1,6 +1,22 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { DEFAULT_POST_PIN_COLOR, FOLLOWING_PIN_COLOR, getPinThemeError, getPostMarkerColor, getPostPinColor, normalizePinColor } from '../src/types/post.ts'
+import { DEFAULT_POST_PIN_COLOR, FOLLOWING_PIN_COLOR, getPinThemeError, getPostMarkerColor, getPostPinColor, normalizePinColor, parsePinColorCode } from '../src/types/post.ts'
+
+test('entered HEX codes accept both lengths and optional hash, and normalize for persistence', () => {
+  for (const [input, expected] of [['#8B7EC8', '#8b7ec8'], ['8B7EC8', '#8b7ec8'], ['#AbC', '#aabbcc'], ['abc', '#aabbcc'], ['  #FFF  ', '#ffffff'], ['000000', '#000000']]) {
+    const color = parsePinColorCode(input)
+    assert.equal(color, expected)
+    assert.equal(normalizePinColor(input), expected)
+    assert.equal(getPinThemeError({ id: 'custom', name: '내 색상', color }), '')
+    assert.equal(getPostPinColor({ pinColor: input, pinThemeId: '' }), expected)
+  }
+})
+
+test('incomplete and invalid color codes are rejected rather than saved as another color', () => {
+  for (const input of ['', ' ', '#', '#12', '#1234', '#12345', '#1234567', '12345678', '##123456', '#GG0000', '12 3456', 'red', 'url(example.test)']) {
+    assert.equal(parsePinColorCode(input), null)
+  }
+})
 
 test('custom colors survive normalization and malformed values use a safe default', () => {
   assert.equal(normalizePinColor('#12ABef'), '#12abef')

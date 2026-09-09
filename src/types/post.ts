@@ -12,6 +12,28 @@ export const DEFAULT_POST_PIN_COLOR = '#e8674f'
 export const FOLLOWING_PIN_COLOR = '#e03b2f'
 export const PIN_THEME_NAME_MAX_LENGTH = 18
 
+export const PIN_COLOR_PALETTE = [
+  { name: '피치 코랄', color: '#e88c78' },
+  { name: '더스티 로즈', color: '#c9758b' },
+  { name: '라벤더', color: '#9380c4' },
+  { name: '페리윙클', color: '#7e91ca' },
+  { name: '클라우드 블루', color: '#6f9fbd' },
+  { name: '오션 틸', color: '#4c9895' },
+  { name: '세이지', color: '#8aa88b' },
+  { name: '올리브', color: '#969b65' },
+  { name: '허니 골드', color: '#d4aa58' },
+  { name: '살구', color: '#dda074' },
+  { name: '모카', color: '#a18478' },
+  { name: '슬레이트', color: '#788797' },
+] as const
+
+export function parsePinColorCode(value: string): string | null {
+  const hex = value.trim().replace(/^#/, '')
+  if (/^[\da-f]{6}$/i.test(hex)) return `#${hex.toLowerCase()}`
+  if (/^[\da-f]{3}$/i.test(hex)) return `#${[...hex.toLowerCase()].map(char => char + char).join('')}`
+  return null
+}
+
 // Preserve colors on records saved before custom themes were introduced.
 const legacyPinColors: Record<string, string> = {
   default: DEFAULT_POST_PIN_COLOR, cafe: '#2b756d', food: '#bc7a1f',
@@ -20,7 +42,8 @@ const legacyPinColors: Record<string, string> = {
 
 export function normalizePinColor(value: unknown): string {
   if (typeof value !== 'string') return DEFAULT_POST_PIN_COLOR
-  if (/^#[\da-f]{6}$/i.test(value)) return value.toLowerCase()
+  const color = parsePinColorCode(value)
+  if (color) return color
   return Object.hasOwn(legacyPinColors, value) ? legacyPinColors[value] : DEFAULT_POST_PIN_COLOR
 }
 

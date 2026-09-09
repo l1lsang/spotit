@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth'
 import {
   normalizePinColor,
   getPostPinColor,
+  parsePinColorCode,
   type Post,
   type PostFormInput,
   type PostVisibility,
@@ -91,6 +92,11 @@ export function PostFormModal({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (!form.pinThemeId && !parsePinColorCode(form.pinColor)) {
+      setError('올바른 HEX 색상 코드를 입력해 주세요.')
+      return
+    }
 
     if ((!initialPost && !location && !placePrefill) || !isValidLocation(form)) {
       setError('지도에서 기록할 위치를 먼저 선택해 주세요.')
