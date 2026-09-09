@@ -1,4 +1,4 @@
-import { MessageCircle, Plus, RefreshCw, UsersRound, X } from 'lucide-react'
+import { MessageCircle, Plus, RefreshCw, Search, UsersRound, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -24,6 +24,10 @@ export function ChatListPage() {
   const { currentUser, firebaseReady, profile } = useAuth()
   const [chats, setChats] = useState<DaymarkChat[]>([])
   const [users, setUsers] = useState<DaymarkUser[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [usersError, setUsersError] = useState('')
+  const [usersRevision, setUsersRevision] = useState(0)
+  const [memberSearch, setMemberSearch] = useState('')
   const [groupName, setGroupName] = useState('')
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false)
@@ -31,6 +35,12 @@ export function ChatListPage() {
   const [groupError, setGroupError] = useState('')
   const [creatingGroup, setCreatingGroup] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const viewerUid = currentUser?.uid
+  const searchKeyword = memberSearch.trim().toLowerCase()
+  const filteredUsers = users.filter((user) => !searchKeyword
+    || user.nickname.toLowerCase().includes(searchKeyword)
+    || user.username?.toLowerCase().includes(searchKeyword.replace(/^@/, '')))
+  const selectedUsers = users.filter((user) => selectedUserIds.has(user.uid))
 
   useEffect(() => {
     if (!firebaseReady || !currentUser) {
@@ -46,16 +56,35 @@ export function ChatListPage() {
   }, [currentUser, firebaseReady, refreshKey])
 
   useEffect(() => {
-    if (!firebaseReady || !currentUser || !isGroupModalOpen) {
+    if (!firebaseReady || !viewerUid || !isGroupModalOpen) {
       return
     }
 
+    let active = true
+    setUsersLoading(true)
+    setUsersError('')
     void listUsers()
-      .then((nextUsers) => setUsers(nextUsers.filter((user) => user.uid !== currentUser.uid)))
-      .catch((loadError) =>
-        setGroupError(loadError instanceof Error ? loadError.message : '초대할 사람을 불러오지 못했습니다.'),
-      )
-  }, [currentUser, firebaseReady, isGroupModalOpen])
+      .then((nextUsers) => {
+        if (!active) return
+        const candidates = nextUsers.filter((user) => user.uid !== viewerUid)
+        setUsers(candidates)
+        const candidateIds = new Set(candidates.map((user) => user.uid))
+        setSelectedUserIds((previous) => new Set([...previous].filter((uid) => candidateIds.has(uid))))
+      })
+      .catch((loadError) => {
+        if (active) setUsersError(loadError instanceof Error ? loadError.message : '초대할 사람을 불러오지 못했습니다.')
+      })
+      .finally(() => { if (active) setUsersLoading(false) })
+    return () => { active = false }
+  }, [viewerUid, firebaseReady, isGroupModalOpen, usersRevision])
+
+  function handleOpenGroupModal() {
+    setMemberSearch('')
+    setGroupError('')
+    setUsersError('')
+    setUsersLoading(true)
+    setIsGroupModalOpen(true)
+  }
 
   function toggleSelectedUser(uid: string) {
     setSelectedUserIds((previous) => {
@@ -74,17 +103,15 @@ export function ChatListPage() {
   async function handleCreateGroup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!profile) {
+    if (!profile || creatingGroup || usersLoading || usersError || selectedUsers.length === 0) {
       return
     }
-
-    const members = users.filter((user) => selectedUserIds.has(user.uid))
 
     setCreatingGroup(true)
     setGroupError('')
 
     try {
-      const chatId = await createGroupChat(profile, members, groupName)
+      const chatId = await createGroupChat(profile, selectedUsers, groupName)
       setIsGroupModalOpen(false)
       setGroupName('')
       setSelectedUserIds(new Set())
@@ -109,7 +136,7 @@ export function ChatListPage() {
             <RefreshCw size={17} aria-hidden="true" />
             새로고침
           </button>
-          <button className="button button-primary" type="button" onClick={() => setIsGroupModalOpen(true)}>
+          <button className="button button-primary" type="button" disabled={!firebaseReady || !profile} onClick={handleOpenGroupModal}>
             <Plus size={17} aria-hidden="true" />
             단체방
           </button>
@@ -176,7 +203,7 @@ export function ChatListPage() {
                 <p className="eyebrow">Group chat</p>
                 <h2 id="group-chat-title">단체방 만들기</h2>
               </div>
-              <button className="button-icon" type="button" onClick={() => setIsGroupModalOpen(false)} aria-label="닫기">
+              <button className="button-icon" type="button" disabled={creatingGroup} onClick={() => setIsGroupModalOpen(false)} aria-label="닫기">
                 <X size={20} aria-hidden="true" />
               </button>
             </div>
@@ -186,28 +213,79 @@ export function ChatListPage() {
                 <span>방 이름</span>
                 <input
                   maxLength={32}
+                  disabled={creatingGroup}
                   value={groupName}
                   onChange={(event) => setGroupName(event.target.value)}
                   placeholder="예: 주말 맛집 핀 모임"
                 />
               </label>
 
-              <fieldset className="field">
+              <fieldset className="field" disabled={creatingGroup}>
                 <legend>초대할 사람</legend>
-                <div className="invite-list">
-                  {users.map((user) => (
-                    <label className="invite-row" key={user.uid}>
+                <label className="invite-search">
+                  <Search size={18} aria-hidden="true" />
+                  <input
+                    type="search"
+                    value={memberSearch}
+                    onChange={(event) => setMemberSearch(event.target.value)}
+                    onKeyDown={(event) => { if (event.key === 'Enter') event.preventDefault() }}
+                    placeholder="닉네임 또는 @사용자 이름으로 친구 검색"
+                    aria-label="친구 검색"
+                    aria-controls="group-chat-candidates"
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    enterKeyHint="search"
+                  />
+                </label>
+                <p className="invite-selection-count" role="status">선택한 친구 {selectedUsers.length}명</p>
+                {selectedUsers.length > 0 && (
+                  <ul className="invite-selected-list" aria-label="선택한 친구">
+                    {selectedUsers.map((user) => (
+                      <li key={user.uid}>
+                        <button
+                          type="button"
+                          onClick={() => toggleSelectedUser(user.uid)}
+                          aria-label={`${user.nickname}${user.username ? ` (@${user.username})` : ''} 선택 해제`}
+                        >
+                          <span>{user.nickname}</span>
+                          <X size={14} aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {usersError && (
+                  <div>
+                    <p className="form-error" role="alert">{usersError}</p>
+                    <button className="button button-secondary" type="button" onClick={() => setUsersRevision((value) => value + 1)}>
+                      다시 불러오기
+                    </button>
+                  </div>
+                )}
+                <div className="invite-list" id="group-chat-candidates" aria-busy={usersLoading}>
+                  {usersLoading && <p className="empty-text" role="status">친구 목록을 불러오는 중입니다.</p>}
+                  {!usersLoading && !usersError && filteredUsers.length === 0 && (
+                    <p className="empty-text" role="status">
+                      {searchKeyword ? '검색 결과가 없습니다. 다른 닉네임이나 사용자 이름을 입력해 보세요.' : '초대할 수 있는 사람이 없습니다.'}
+                    </p>
+                  )}
+                  {!usersLoading && !usersError && filteredUsers.map((user) => (
+                    <label className={`invite-row${selectedUserIds.has(user.uid) ? ' is-selected' : ''}`} key={user.uid}>
                       <input
                         type="checkbox"
                         checked={selectedUserIds.has(user.uid)}
                         onChange={() => toggleSelectedUser(user.uid)}
                       />
                       {user.photoURL ? (
-                        <img className="chat-avatar" src={user.photoURL} alt={`${user.nickname} 프로필`} />
+                        <img className="chat-avatar" src={user.photoURL} alt="" loading="lazy" />
                       ) : (
-                        <span className="profile-avatar small">{user.nickname.slice(0, 1) || 'D'}</span>
+                        <span className="profile-avatar small" aria-hidden="true">{user.nickname.slice(0, 1) || 'D'}</span>
                       )}
-                      <span>{user.nickname}</span>
+                      <span className="invite-identity">
+                        <strong>{user.nickname}</strong>
+                        {user.username && <small>@{user.username}</small>}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -216,13 +294,13 @@ export function ChatListPage() {
               {groupError && <p className="form-error">{groupError}</p>}
 
               <div className="modal-actions">
-                <button className="button button-secondary" type="button" onClick={() => setIsGroupModalOpen(false)}>
+                <button className="button button-secondary" type="button" disabled={creatingGroup} onClick={() => setIsGroupModalOpen(false)}>
                   취소
                 </button>
                 <button
                   className="button button-primary"
                   type="submit"
-                  disabled={creatingGroup || selectedUserIds.size === 0}
+                  disabled={creatingGroup || usersLoading || Boolean(usersError) || selectedUsers.length === 0}
                 >
                   <UsersRound size={17} aria-hidden="true" />
                   {creatingGroup ? '만드는 중' : '만들기'}

@@ -1277,6 +1277,84 @@ img {
   accent-color: var(--accent);
 }
 
+.invite-search {
+  position: relative;
+  display: block;
+}
+
+.invite-search > svg {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.invite-search input {
+  padding-left: 40px;
+}
+
+.invite-selection-count {
+  margin: 4px 0 0;
+  font-size: .85rem;
+  color: var(--muted);
+}
+
+.invite-selected-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 104px;
+  overflow: auto;
+  margin: 0;
+  padding: 3px;
+  list-style: none;
+}
+
+.invite-selected-list button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #fff2ea;
+  color: var(--ink);
+}
+
+.invite-selected-list button > span {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .8rem;
+}
+
+.invite-selected-list button > svg {
+  flex-shrink: 0;
+}
+
+.invite-row.is-selected {
+  border-color: var(--accent);
+  background: #fff2ea;
+}
+
+.invite-identity {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  overflow-wrap: anywhere;
+}
+
+.invite-identity > small {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 400;
+}
+
 .group-avatar {
   color: #fffaf4;
   background: var(--ink);
