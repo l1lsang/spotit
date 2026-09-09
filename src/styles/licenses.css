@@ -1,0 +1,223 @@
+.licenses-page {
+  max-width: 880px;
+}
+
+.licenses-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.licenses-page .page-heading h1 {
+  line-height: 1.25;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+}
+
+.licenses-description {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.8;
+  word-break: keep-all;
+}
+
+.license-filters {
+  display: flex;
+  gap: 12px;
+}
+
+.license-search,
+.license-scope {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.license-search {
+  flex: 1;
+}
+
+.license-search-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.license-search-input svg {
+  flex-shrink: 0;
+}
+
+.license-search-input input,
+.license-scope select {
+  min-width: 0;
+  min-height: 46px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.license-search-input input {
+  width: 100%;
+  padding: 10px 8px 10px 0;
+  border: 0;
+  background: transparent;
+}
+
+.license-scope select {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.license-count {
+  margin: 20px 0 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.license-list {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.license-item + .license-item {
+  border-top: 1px solid var(--line);
+}
+
+.license-item summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 84px;
+  padding: 18px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.license-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.license-item summary:hover,
+.license-item[open] summary {
+  background: #fff2ea;
+}
+
+.license-package-heading {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
+
+.license-package-heading strong {
+  overflow-wrap: anywhere;
+  font-size: 0.95rem;
+}
+
+.license-package-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  overflow-wrap: anywhere;
+}
+
+.license-badge {
+  max-width: 36%;
+  padding: 5px 8px;
+  border-radius: 5px;
+  color: var(--teal);
+  background: #edf3e9;
+  font-size: 0.72rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.license-chevron {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.license-item[open] .license-chevron {
+  transform: rotate(180deg);
+}
+
+.license-item-body {
+  padding: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.license-source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  color: var(--teal);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.license-document h2 {
+  margin: 16px 0 8px;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.license-document pre {
+  max-height: 480px;
+  margin: 8px 0 0;
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
+}
+
+.licenses-page :is(a, input, select, button, pre):focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.license-item summary:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: -3px;
+}
+
+@media (max-width: 480px) {
+  .license-filters {
+    flex-direction: column;
+  }
+
+  .license-item summary {
+    gap: 8px;
+    padding: 16px 12px;
+  }
+
+  .license-item-body {
+    padding: 12px;
+  }
+}

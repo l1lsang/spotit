@@ -1,6 +1,7 @@
 import { ArrowRight, MapPin } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { PolicyFooter } from '../components/layout/PolicyFooter'
 
 export function LandingPage() {
   const navigate = useNavigate()
@@ -24,6 +25,7 @@ export function LandingPage() {
             시작하기
             <ArrowRight size={18} aria-hidden="true" />
           </button>
+          <PolicyFooter />
         </div>
 
         <div className="landing-map-art" aria-label="지도 위 장소 기록 예시">

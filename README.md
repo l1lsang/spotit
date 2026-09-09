@@ -17,6 +17,25 @@ npm run dev
 npm run build
 ```
 
+## 오픈소스 라이선스
+
+설정의 **약관 및 정책 → 오픈소스 라이선스**에서 전체 목록을 확인할 수 있습니다. `/licenses`는 로그인 없이도 열 수 있으며 이름·버전·라이선스 검색, 사용 범위 필터, 원문 펼치기를 지원합니다.
+
+`src/data/openSourceLicenses.json`은 앱과 `functions`의 잠금 파일에 있는 직접·간접 의존성, 개발 도구, 플랫폼별 선택 의존성을 이름과 버전별로 모은 목록입니다. 배포 패키지의 LICENSE·NOTICE 및 원문이 포함된 README를 수집하며, 빠진 원문은 npm이 기록한 배포 커밋의 공식 저장소에서 가져옵니다. 별도 원문이 없는 일부 MIT 패키지는 실제 패키지의 라이선스 선언·저작자 정보와 SPDX 표준 라이선스 본문을 구분하여 제공합니다. Lucide의 Feather 아이콘 고지와 Vite의 포함 라이브러리 고지도 보존합니다.
+
+의존성을 변경하면 아래 명령으로 목록을 갱신하고 생성 파일을 함께 커밋합니다. 갱신에는 네트워크가 필요할 수 있고, 기존 버전의 고지는 재사용합니다. `npm run build`는 네트워크 없이 양쪽 잠금 파일과 목록이 일치하는지 검사하여 누락된 상태로 빌드되지 않게 합니다.
+
+```bash
+npm run licenses:generate
+npm run licenses:check
+```
+
+## 약관 및 정책
+
+설정의 **약관 및 정책** 및 공개 경로 `/policies`에서 이용약관, 개인정보처리방침, 운영정책, 청소년보호정책, 위치기반서비스 이용약관과 오픈소스 라이선스를 볼 수 있습니다. 시작·로그인·가입 화면에도 문서 링크가 있으며, 가입 화면에서는 새 탭으로 열어 입력 중인 내용을 유지합니다. 문서별 목차·직접 링크·인쇄를 지원합니다.
+
+본문과 운영자 연락처는 `src/data/policies.ts`, 문서 목록은 `src/lib/policyNavigation.ts`에서 관리합니다. 현재 문서는 **시행 전 검토본**입니다. 만 14세 미만 가입 허용 방침을 반영했으나 연령·법정대리인 동의 확인 기능은 구현되어 있지 않습니다. 실제 수탁자·국외 이전·보유기간과 파일 파기 절차도 확정해야 합니다. 문서 제공만으로 동의가 수집되거나 기존 회원에게 새 약관이 적용되지는 않습니다. 확인 근거와 시행 준비 사항은 [정책 검토 기록](docs/policy-review.md)에 정리했습니다.
+
 ## 환경변수 설정
 
 `.env.example`을 참고해 프로젝트 루트에 `.env`를 만듭니다. Vite 환경변수는 반드시 `VITE_` prefix를 사용합니다.
@@ -180,7 +199,7 @@ chats/{chatId}/messages/{messageId}
 
 ## 관리자·신고·문의 및 보안 규칙
 
-관리자 통계, 유저 검색·정지, 핀·유저·채팅 신고와 문의 기능은 [관리자 기능 설정](docs/admin-setup.md)을 참고합니다. 실제 Firestore 규칙은 [firestore.rules](firestore.rules), 인덱스는 [firestore.indexes.json](firestore.indexes.json)에서 관리합니다.
+관리자 통계, 유저 검색·정지, 핀·유저·채팅·사진 신고와 문의 기능은 [관리자 기능 설정](docs/admin-setup.md)을 참고합니다. 사진은 기록 상세·다른 사람의 프로필·채팅·미디어 모아보기에서 개별 신고할 수 있고, 관리자 `사진 신고` 필터로 검토합니다. 실제 Firestore 규칙은 [firestore.rules](firestore.rules), 인덱스는 [firestore.indexes.json](firestore.indexes.json)에서 관리합니다.
 
 아래 Storage 규칙은 별도 예시입니다.
 

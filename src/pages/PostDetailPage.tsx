@@ -212,8 +212,15 @@ export function PostDetailPage() {
 
           {post.photoUrls.length > 0 && (
             <div className="photo-gallery">
-              {post.photoUrls.map((url) => (
-                <img key={url} src={url} alt={`${post.title} 사진`} />
+              {post.photoUrls.map((url, index) => (
+                <figure className="reportable-post-photo" key={`${url}-${index}`}>
+                  <img src={url} alt={`${post.title} 사진 ${index + 1}`} />
+                  {!isOwner && <figcaption>
+                    <span>사진 {index + 1}</span>
+                    {currentUser ? <ReportButton compact label="사진 신고" target={{ kind: 'photo', sourceKind: 'pin', targetId: post.id, photoUrl: url, label: `${post.title} 사진 ${index + 1}` }} />
+                      : <Link to="/login" state={{ from: `/posts/${post.id}` }}>로그인 후 사진 신고</Link>}
+                  </figcaption>}
+                </figure>
               ))}
             </div>
           )}

@@ -6,6 +6,7 @@ import { PageContainer } from '../components/layout/PageContainer'
 import { ImageEditorModal } from '../components/image/ImageEditorModal'
 import { PinThemePicker } from '../components/post/PinThemePicker'
 import { useAuth } from '../hooks/useAuth'
+import { policyNavigation } from '../lib/policyNavigation'
 import { BIO_MAX_LENGTH, USERNAME_MAX_LENGTH, getProfilePhotoError, getUsernameError } from '../lib/userProfile'
 import { deleteAccount, logout } from '../services/authService'
 import {
@@ -484,6 +485,17 @@ export function ProfileSettingsPage() {
           </button>
         </div>
       </form>
+
+      <section className="profile-policy-section" aria-labelledby="profile-policy-title">
+        <h2 id="profile-policy-title">약관 및 정책</h2>
+        {policyNavigation.map(item => <Link key={item.id} className="profile-policy-link" to={`/policies/${item.id}`}>
+          <span>{item.title}</span><ChevronRight size={17} aria-hidden="true" />
+        </Link>)}
+        <Link className="profile-policy-link" to="/licenses">
+          <span>오픈소스 라이선스</span>
+          <ChevronRight size={17} aria-hidden="true" />
+        </Link>
+      </section>
 
       <section className="profile-account-section" aria-labelledby="profile-account-title">
         <h2 id="profile-account-title">계정 관리</h2>

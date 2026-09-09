@@ -2,8 +2,11 @@ import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Images, Pin, X } fr
 import { useEffect, useId, useRef, useState } from 'react'
 import { formatTimestamp } from '../../lib/date'
 import type { ChatMessage } from '../../types/chat'
+import { ReportButton } from '../moderation/ReportButton'
 
 interface ChatCollectionDialogProps {
+  chatId: string
+  currentUserUid: string
   kind: 'pins' | 'media'
   messages: ChatMessage[]
   loading: boolean
@@ -13,7 +16,7 @@ interface ChatCollectionDialogProps {
   onRetry: () => void
 }
 
-export function ChatCollectionDialog({ kind, messages, loading, error, onClose, onJump, onRetry }: ChatCollectionDialogProps) {
+export function ChatCollectionDialog({ chatId, currentUserUid, kind, messages, loading, error, onClose, onJump, onRetry }: ChatCollectionDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleId = useId()
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -67,6 +70,8 @@ export function ChatCollectionDialog({ kind, messages, loading, error, onClose, 
         <button className="button-icon subtle" type="button" disabled={selectedIndex >= messages.length - 1} onClick={() => setSelectedId(messages[selectedIndex + 1].id)} aria-label="다음 사진"><ChevronRight size={20} aria-hidden="true" /></button>
       </div>
       <button className="button button-secondary" type="button" onClick={() => onJump(selected.id)}><ArrowUpRight size={16} aria-hidden="true" />대화로 이동</button>
+      {selected.photoUrl && selected.uid !== currentUserUid && selected.uid !== 'deleted-user' && <ReportButton key={selected.id} label="사진 신고"
+        target={{ kind: 'photo', sourceKind: 'chat', targetId: chatId, messageId: selected.id, photoUrl: selected.photoUrl, label: `${selected.authorNickname}의 채팅 사진` }} />}
     </footer>}
   </dialog>
 }

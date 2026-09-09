@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { isPublicPolicyPath } from '../lib/policyNavigation'
 import { InstallPrompt } from '../components/layout/InstallPrompt'
 import { ChatListPage } from '../pages/ChatListPage'
 import { ChatRoomPage } from '../pages/ChatRoomPage'
@@ -19,6 +20,8 @@ import { SignupPage } from '../pages/SignupPage'
 import { SupportPage } from '../pages/SupportPage'
 
 const AdminPage = lazy(() => import('../pages/AdminPage').then(module => ({ default: module.AdminPage })))
+const OpenSourceLicensesPage = lazy(() => import('../pages/OpenSourceLicensesPage').then(module => ({ default: module.OpenSourceLicensesPage })))
+const PoliciesPage = lazy(() => import('../pages/PoliciesPage').then(module => ({ default: module.PoliciesPage })))
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const location = useLocation()
@@ -38,7 +41,7 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 function OnboardingGuard({ children }: { children: ReactNode }) {
   const { currentUser, profile, loading, profileError, refreshProfile } = useAuth()
   const location = useLocation()
-  if (location.pathname === '/signup' || location.pathname.replace(/\/$/, '') === '/admin') return children
+  if (isPublicPolicyPath(location.pathname) || location.pathname === '/signup' || ['/admin', '/licenses'].includes(location.pathname.replace(/\/$/, ''))) return children
   if (loading) return <div className="screen-message">로그인 상태를 확인하는 중입니다.</div>
   if (currentUser && profileError) {
     return (
@@ -64,6 +67,8 @@ export function AppRouter() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/licenses" element={<Suspense fallback={<div className="screen-message">라이선스를 불러오는 중입니다.</div>}><OpenSourceLicensesPage /></Suspense>} />
+          <Route path="/policies/:policyId?" element={<Suspense fallback={<div className="screen-message">약관 및 정책을 불러오는 중입니다.</div>}><PoliciesPage /></Suspense>} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/posts/:postId" element={<PostDetailPage />} />

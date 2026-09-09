@@ -508,7 +508,7 @@ function ChatRoom({ chatId }: { chatId: string }) {
         </form>
       </section>
 
-      {chat && collection && <ChatCollectionDialog key={collection} kind={collection} messages={collection === 'pins' ? pinnedMessages : mediaMessages}
+      {chat && currentUser && collection && <ChatCollectionDialog key={collection} chatId={chat.id} currentUserUid={currentUser.uid} kind={collection} messages={collection === 'pins' ? pinnedMessages : mediaMessages}
         loading={messagesLoading} error={messagesError} onClose={closeCollection} onJump={jumpToMessage} onRetry={() => setMessagesRevision(value => value + 1)} />}
 
       {isInviteOpen && (

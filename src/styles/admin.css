@@ -80,6 +80,15 @@
 .report-target { display: grid; gap: 6px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
 .report-target small { color: var(--muted); font-size: .75rem; }
 .report-target strong { font-size: .9rem; line-height: 1.6; }
+.report-photo-preview { width: 100%; max-height: 230px; object-fit: contain; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.reportable-post-photo { min-width: 0; margin: 0; }
+.reportable-post-photo figcaption { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; color: var(--muted); font-size: .75rem; }
+.reportable-post-photo figcaption a, .reportable-post-photo .report-compact { display: inline-flex; align-items: center; min-height: 44px; }
+.person-profile-photo-with-report { display: grid; justify-items: center; flex-shrink: 0; gap: 4px; }
+.person-profile-photo-with-report .report-compact { min-height: 44px; }
+.message-photo-report { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; min-height: 44px; padding: 5px 0; border: 0; color: var(--muted); background: transparent; font-size: .72rem; }
+.message-photo-report:hover { color: var(--danger); }
+.message-photo-report:focus-visible, .report-compact:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 .report-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
 .report-actions .button { min-height: 46px; }
 .admin-dialog::backdrop, .report-dialog::backdrop { background: #1f241b80; backdrop-filter: blur(3px); }

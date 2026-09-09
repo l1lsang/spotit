@@ -3341,6 +3341,7 @@ body.chat-room-active .message-form:focus-within {
   padding-inline: 24px;
 }
 
+.profile-policy-section,
 .profile-account-section {
   display: grid;
   gap: 12px;
@@ -3349,12 +3350,43 @@ body.chat-room-active .message-form:focus-within {
   border-top: 1px solid var(--line);
 }
 
+.profile-policy-section h2,
 .profile-account-section h2 {
   margin: 0;
   color: var(--muted);
   font-size: 0.85rem;
   font-weight: 700;
 }
+
+.profile-policy-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.profile-policy-link:hover {
+  color: var(--teal);
+}
+
+.profile-policy-link:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
+
+.profile-policy-link + .profile-policy-link { border-top: 1px solid var(--line); }
+.profile-policy-section { gap: 0; }
+.profile-policy-section h2 { margin-bottom: 10px; }
+.policy-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 16px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+.policy-footer a { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); font-size: 0.76rem; line-height: 1.6; }
+.policy-footer .policy-footer-privacy { color: var(--ink); font-weight: 700; }
+.policy-footer a:hover { color: var(--teal); text-decoration: underline; }
+.policy-footer a:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+.landing-copy .policy-footer { justify-content: flex-start; }
 
 .profile-logout-button {
   display: flex;

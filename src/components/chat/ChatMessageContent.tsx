@@ -13,7 +13,7 @@ interface ChatMessageContentProps {
 }
 
 export function ChatMessageContent({ message, chatId, canReport, pinned = false, onTogglePin }: ChatMessageContentProps) {
-  const [view, setView] = useState<'actions' | 'report' | null>(null)
+  const [view, setView] = useState<'actions' | 'report' | 'photo-report' | null>(null)
   const trigger = useRef<HTMLDivElement>(null)
   const [press] = useState(() => createLongPress(() => setView('actions')))
   const canOpenMenu = canReport || Boolean(onTogglePin)
@@ -67,20 +67,27 @@ export function ChatMessageContent({ message, chatId, canReport, pinned = false,
             <img className="message-photo" src={message.photoUrl} alt={message.photoName || '채팅 사진'} draggable={false} />
           </a>
         )}
+        {message.photoUrl && canReport && <button className="message-photo-report" type="button" onClick={() => setView('photo-report')}>
+          <Flag size={13} aria-hidden="true" />사진 신고
+        </button>}
         {message.content && <p className="message-bubble">{message.content}</p>}
       </div>
       {canOpenMenu && view === 'actions' && (
-        <MessageActions message={message} onClose={close} onReport={canReport ? () => setView('report') : undefined} pinned={pinned} onTogglePin={onTogglePin} />
+        <MessageActions message={message} onClose={close} onReport={canReport ? () => setView('report') : undefined}
+          onReportPhoto={canReport && message.photoUrl ? () => setView('photo-report') : undefined} pinned={pinned} onTogglePin={onTogglePin} />
       )}
       {canReport && view === 'report' && (
         <ReportDialog target={{ kind: 'chat', targetId: chatId, messageId: message.id, label: `${message.authorNickname}의 메시지` }} onClose={close} />
+      )}
+      {canReport && message.photoUrl && view === 'photo-report' && (
+        <ReportDialog target={{ kind: 'photo', sourceKind: 'chat', targetId: chatId, messageId: message.id, photoUrl: message.photoUrl, label: `${message.authorNickname}의 채팅 사진` }} onClose={close} />
       )}
     </>
   )
 }
 
-function MessageActions({ message, onClose, onReport, pinned, onTogglePin }: {
-  message: ChatMessage; onClose: () => void; onReport?: () => void; pinned: boolean; onTogglePin?: () => Promise<void>
+function MessageActions({ message, onClose, onReport, onReportPhoto, pinned, onTogglePin }: {
+  message: ChatMessage; onClose: () => void; onReport?: () => void; onReportPhoto?: () => void; pinned: boolean; onTogglePin?: () => Promise<void>
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const pointerStartedHere = useRef(false)
@@ -138,6 +145,9 @@ function MessageActions({ message, onClose, onReport, pinned, onTogglePin }: {
       {error && <p className="form-error" role="alert">{error}</p>}
       {onReport && <button className="message-report-action" type="button" onClick={onReport} disabled={saving}>
         <Flag size={18} aria-hidden="true" />이 메시지 신고
+      </button>}
+      {onReportPhoto && <button className="message-report-action" type="button" onClick={onReportPhoto} disabled={saving}>
+        <Flag size={18} aria-hidden="true" />이 사진 신고
       </button>}
     </dialog>
   )

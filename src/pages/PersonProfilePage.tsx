@@ -117,7 +117,10 @@ export function PersonProfile({ userId }: { userId: string }) {
       {!loading && !loadError && !user && <div className="empty-state"><h1>프로필을 찾을 수 없습니다.</h1><p>탈퇴했거나 아직 프로필을 완성하지 않은 사용자입니다.</p></div>}
       {user && <article className="person-profile-card">
         <div className="person-profile-heading">
-          {user.photoURL ? <img className="person-profile-photo" src={user.photoURL} alt={`${user.nickname} 프로필 사진`} />
+          {user.photoURL ? <div className="person-profile-photo-with-report">
+            <img className="person-profile-photo" src={user.photoURL} alt={`${user.nickname} 프로필 사진`} />
+            {!ownProfile && <ReportButton compact label="사진 신고" target={{ kind: 'photo', sourceKind: 'user', targetId: user.uid, photoUrl: user.photoURL, label: `${user.nickname} 프로필 사진` }} />}
+          </div>
             : <span className="profile-avatar person-profile-photo" aria-hidden="true">{user.nickname.slice(0, 1) || 'S'}</span>}
           <div className="person-profile-identity">
             <h1>{user.nickname || '스팟잇 사용자'}</h1>

@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, AtSign, Camera, Check, Crop, KeyRound, Mail, Use
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { FirebaseNotice } from '../components/layout/FirebaseNotice'
+import { PolicyFooter } from '../components/layout/PolicyFooter'
 import { ImageEditorModal } from '../components/image/ImageEditorModal'
 import { useAuth } from '../hooks/useAuth'
 import { requireAuth } from '../lib/firebase'
@@ -230,6 +231,7 @@ export function SignupPage() {
           </form>
         )}
         {!currentUser && <p className="auth-switch">이미 계정이 있다면 <Link to="/login">로그인</Link></p>}
+        <PolicyFooter newTab />
       </section>
       {editingPhoto && <ImageEditorModal source={editingPhoto} square onClose={() => setEditingPhoto(null)} onApply={file => {
         setPhotoFile(file)

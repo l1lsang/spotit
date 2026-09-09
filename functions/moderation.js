@@ -74,7 +74,12 @@ exports.submitModerationCase = onCall(options, async request => {
   const reporterUid = uid(request)
   const data = request.data || {}
   const kind = data.kind
-  if (!['pin', 'user', 'chat', 'inquiry'].includes(kind)) throw new HttpsError('invalid-argument', '접수 유형을 확인해 주세요.')
+  if (!['pin', 'user', 'chat', 'photo', 'inquiry'].includes(kind)) throw new HttpsError('invalid-argument', '접수 유형을 확인해 주세요.')
+  const sourceKind = kind === 'photo' ? data.sourceKind : kind
+  if (kind === 'photo' && !['pin', 'user', 'chat'].includes(sourceKind)) throw new HttpsError('invalid-argument', '사진이 포함된 콘텐츠를 확인해 주세요.')
+  const photoUrl = kind === 'photo' ? text(data.photoUrl, '사진 주소', 4096) : ''
+  if (kind === 'photo' && !/^https?:\/\//i.test(photoUrl)) throw new HttpsError('invalid-argument', '사진 주소를 확인해 주세요.')
+  if (kind === 'photo' && sourceKind === 'chat' && !data.messageId) throw new HttpsError('invalid-argument', '사진 메시지를 선택해 주세요.')
   if (kind !== 'inquiry' && (await db.doc(`moderationUsers/${reporterUid}`).get()).data()?.suspended) throw new HttpsError('permission-denied', '이용 정지된 계정입니다. 문의를 통해 이의를 제기할 수 있습니다.')
   const details = text(data.details || '', '내용', 2000, kind === 'inquiry')
   const reason = kind === 'inquiry' ? 'inquiry' : data.reason
@@ -86,7 +91,7 @@ exports.submitModerationCase = onCall(options, async request => {
   let title = kind === 'inquiry' ? text(data.title, '제목', 100) : ''
   let evidence = {}
   let messageId = ''
-  if (kind === 'pin') {
+  if (sourceKind === 'pin') {
     const post = (await db.doc(`posts/${targetId}`).get()).data()
     if (!post) throw new HttpsError('not-found', '핀을 찾을 수 없습니다.')
     const follows = post.visibility === 'followers' && (await db.doc(`users/${post.uid}/followers/${reporterUid}`).get()).exists
@@ -94,14 +99,14 @@ exports.submitModerationCase = onCall(options, async request => {
     targetUid = post.uid
     title = post.title || post.placeName || '핀 신고'
     evidence = { title, content: post.content || '', placeName: post.placeName || '', address: post.address || '', photoUrls: post.photoUrls || [], authorNickname: post.authorNickname || '', uid: post.uid }
-  } else if (kind === 'user') {
+  } else if (sourceKind === 'user') {
     const user = (await db.doc(`users/${targetId}`).get()).data()
     if (!user) throw new HttpsError('not-found', '사용자를 찾을 수 없습니다.')
     if (targetId === reporterUid) throw new HttpsError('invalid-argument', '본인은 신고할 수 없습니다.')
     targetUid = targetId
     title = user.nickname || '사용자 신고'
     evidence = { nickname: user.nickname || '', username: user.username || '', bio: user.bio || '', photoUrls: user.photoURL ? [user.photoURL] : [] }
-  } else if (kind === 'chat') {
+  } else if (sourceKind === 'chat') {
     const chat = (await db.doc(`chats/${targetId}`).get()).data()
     if (!chat?.participantIds?.includes(reporterUid)) throw new HttpsError('permission-denied', '참여 중인 채팅만 신고할 수 있습니다.')
     title = chat.name || '채팅 신고'
@@ -109,6 +114,7 @@ exports.submitModerationCase = onCall(options, async request => {
       messageId = id(data.messageId)
       const message = (await db.doc(`chats/${targetId}/messages/${messageId}`).get()).data()
       if (!message) throw new HttpsError('not-found', '메시지를 찾을 수 없습니다.')
+      if (kind === 'photo' && message.uid === 'deleted-user') throw new HttpsError('not-found', '삭제된 메시지의 사진은 신고할 수 없습니다.')
       if (message.uid === reporterUid) throw new HttpsError('invalid-argument', '본인의 메시지는 신고할 수 없습니다.')
       targetUid = message.uid
       evidence = { content: message.content || '', authorNickname: message.authorNickname || '', photoUrls: message.photoUrl ? [message.photoUrl] : [], messageId }
@@ -118,12 +124,24 @@ exports.submitModerationCase = onCall(options, async request => {
       evidence = { messages: messages.docs.reverse().map(doc => ({ id: doc.id, uid: doc.data().uid, authorNickname: doc.data().authorNickname || '', content: doc.data().content || '', photoUrl: doc.data().photoUrl || '' })) }
     }
   }
+  if (kind === 'photo') {
+    if (targetUid === reporterUid) throw new HttpsError('invalid-argument', '본인의 사진은 신고할 수 없습니다.')
+    // Only accept a photo currently attached to the authorized server-side source.
+    // Never fetch the submitted URL or trust client-provided evidence/author fields.
+    if (!Array.isArray(evidence.photoUrls) || !evidence.photoUrls.includes(photoUrl)) throw new HttpsError('not-found', '해당 콘텐츠에서 사진을 찾을 수 없습니다. 새로고침 후 다시 확인해 주세요.')
+    const authorNickname = evidence.authorNickname || evidence.nickname || ''
+    evidence = { photoUrls: [photoUrl], authorNickname, sourceKind, ...(messageId ? { messageId } : {}) }
+    const sourceLabel = sourceKind === 'pin' ? '기록' : sourceKind === 'user' ? '프로필' : '채팅'
+    title = `${sourceLabel} 사진 신고 · ${title}`
+  }
   const reporter = (await db.doc(`users/${reporterUid}`).get()).data()
-  const dedupe = kind === 'inquiry' ? id(data.requestId) : hash(`${reporterUid}:${kind}:${targetId}:${messageId}`)
+  const dedupe = kind === 'inquiry' ? id(data.requestId)
+    : kind === 'photo' ? hash(JSON.stringify([reporterUid, kind, sourceKind, targetId, messageId, photoUrl]))
+    : hash(`${reporterUid}:${kind}:${targetId}:${messageId}`)
   const ref = db.doc(`moderationCases/${kind === 'inquiry' ? hash(reporterUid + ':' + dedupe) : dedupe}`)
   return db.runTransaction(async tx => {
     if ((await tx.get(ref)).exists) return { id: ref.id, duplicate: true }
-    tx.create(ref, { kind, targetId, targetUid, messageId, title, reason, details, evidence, reporterUid,
+    tx.create(ref, { kind, ...(kind === 'photo' ? { sourceKind } : {}), targetId, targetUid, messageId, title, reason, details, evidence, reporterUid,
       reporterName: reporter?.nickname || '사용자', status: 'open', reply: '', note: '', createdAt: stamp(), updatedAt: stamp() })
     return { id: ref.id, duplicate: false }
   })
@@ -133,8 +151,8 @@ exports.listMyModerationCases = onCall(options, async request => {
   const reporterUid = uid(request)
   const snapshot = await db.collection('moderationCases').where('reporterUid', '==', reporterUid).get()
   return { cases: snapshot.docs.map(doc => {
-    const { kind, title, details, reason, status, reply, createdAt, updatedAt } = doc.data()
-    return serialize({ id: doc.id, kind, title, details, reason, status, reply, createdAt, updatedAt })
+    const { kind, sourceKind, title, details, reason, status, reply, createdAt, updatedAt } = doc.data()
+    return serialize({ id: doc.id, kind, ...(sourceKind ? { sourceKind } : {}), title, details, reason, status, reply, createdAt, updatedAt })
   }).sort((a, b) => b.createdAt - a.createdAt) }
 })
 
@@ -142,7 +160,7 @@ exports.adminListCases = onCall(options, async request => {
   await session(request)
   const kind = request.data?.kind || 'all'
   const status = request.data?.status || 'all'
-  if (!['all', 'pin', 'user', 'chat', 'inquiry', 'auto'].includes(kind) || !['all', 'open', 'reviewing', 'resolved', 'dismissed'].includes(status)) throw new HttpsError('invalid-argument', '필터를 확인해 주세요.')
+  if (!['all', 'pin', 'user', 'chat', 'photo', 'inquiry', 'auto'].includes(kind) || !['all', 'open', 'reviewing', 'resolved', 'dismissed'].includes(status)) throw new HttpsError('invalid-argument', '필터를 확인해 주세요.')
   let query = db.collection('moderationCases')
   if (kind !== 'all') query = query.where('kind', '==', kind)
   if (status !== 'all') query = query.where('status', '==', status)
@@ -172,7 +190,7 @@ exports.adminReviewCase = onCall(options, async request => {
     const item = (await tx.get(ref)).data()
     if (!item) throw new HttpsError('not-found', '접수 내역을 찾을 수 없습니다.')
     if (action !== 'save') {
-      if (!['pin', 'auto'].includes(item.kind)) throw new HttpsError('invalid-argument', '핀 신고에서만 숨김을 처리할 수 있습니다.')
+      if (!['pin', 'auto'].includes(item.kind) && !(item.kind === 'photo' && item.sourceKind === 'pin')) throw new HttpsError('invalid-argument', '핀 또는 핀 사진 신고에서만 연결된 핀을 숨길 수 있습니다.')
       const postRef = db.doc(`posts/${item.targetId}`)
       const hiddenRef = db.doc(`moderationPosts/${item.targetId}`)
       const [post, hidden] = await Promise.all([tx.get(postRef), tx.get(hiddenRef)])
