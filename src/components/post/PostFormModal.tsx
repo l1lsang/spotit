@@ -4,6 +4,7 @@ import { getTodayDateKey } from '../../lib/date'
 import type { LatLng } from '../../lib/kakaoMap'
 import { isValidLocation } from '../../lib/mapLocation'
 import { useAuth } from '../../hooks/useAuth'
+import { useLocationConsent } from '../../contexts/locationConsentCore'
 import {
   normalizePinColor,
   getPostPinColor,
@@ -65,6 +66,7 @@ export function PostFormModal({
   onSubmit,
 }: PostFormModalProps) {
   const { profile } = useAuth()
+  const ensureLocationConsent = useLocationConsent()
   const [form, setForm] = useState<PostFormInput>(() => createInitialForm(initialPost, location, placePrefill))
   const [files, setFiles] = useState<File[]>([])
   const [existingPhotoUrls, setExistingPhotoUrls] = useState<string[]>([])
@@ -92,6 +94,7 @@ export function PostFormModal({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (submitting) return
 
     if (!form.pinThemeId && !parsePinColorCode(form.pinColor)) {
       setError('올바른 HEX 색상 코드를 입력해 주세요.')
@@ -107,6 +110,10 @@ export function PostFormModal({
     setError('')
 
     try {
+      if (!await ensureLocationConsent(true)) {
+        setError('장소를 기록하려면 위치기반서비스 이용약관에 동의해 주세요.')
+        return
+      }
       await onSubmit({ ...form, pinColor: getPostPinColor(form, profile?.pinThemes), files, existingPhotoUrls })
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : '기록 저장에 실패했습니다.')

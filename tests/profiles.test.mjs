@@ -66,6 +66,7 @@ async function account(name) {
   return { ...result, user }
 }
 const details = username => ({ username, nickname: '한글 닉네임', bio: '산책과 여행을 좋아해요.\n두 번째 줄' })
+const signupRequirements = { birthDate: '2000-01-01', termsAccepted: true, privacyAccepted: true, locationAccepted: false }
 after(async () => {
   await Promise.all(apps.map(deleteApp))
   await adminApp.delete()
@@ -90,7 +91,7 @@ test('new accounts stay incomplete until profile save; photo and profile persist
   assert.equal(initial.username, undefined)
   const photoURL = await c.uploadProfilePhoto(c.user.uid, new File([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aB9sAAAAASUVORK5CYII=', 'base64')], 'profile.png', { type: 'image/png' }))
   assert.match(photoURL, /127.0.0.1:9199/)
-  await c.service.updateUserProfileDetails(c.user.uid, { ...details('New.Name_' + Date.now()), photoURL })
+  await c.service.updateUserProfileDetails(c.user.uid, { ...details('New.Name_' + Date.now()), photoURL }, signupRequirements)
   const saved = await c.service.getUserProfile(c.user.uid)
   assert.equal(saved.onboardingComplete, true)
   assert.equal(saved.nickname, '한글 닉네임')
@@ -107,21 +108,21 @@ test('concurrent signup cannot claim the same case-insensitive name; rejected pr
   await Promise.all([a.service.upsertUserProfile(a.user), b.service.upsertUserProfile(b.user)])
   const name = 'race_' + Date.now()
   const results = await Promise.allSettled([
-    a.service.updateUserProfileDetails(a.user.uid, details(name.toUpperCase())),
-    b.service.updateUserProfileDetails(b.user.uid, details(name)),
+    a.service.updateUserProfileDetails(a.user.uid, details(name.toUpperCase()), signupRequirements),
+    b.service.updateUserProfileDetails(b.user.uid, details(name), signupRequirements),
   ])
   assert.equal(results.filter(result => result.status === 'fulfilled').length, 1)
   const loser = results[0].status === 'rejected' ? a : b
   assert.equal((await loser.service.getUserProfile(loser.user.uid)).onboardingComplete, false)
   assert.equal(await loser.service.isUsernameAvailable(name), false)
-  await loser.service.updateUserProfileDetails(loser.user.uid, details(name + '_retry'))
+  await loser.service.updateUserProfileDetails(loser.user.uid, details(name + '_retry'), signupRequirements)
 })
 
 test('anonymous lookup works; forged reservations, invalid names, and another owner are rejected by rules', async () => {
   const owner = await account('rules')
   await owner.service.upsertUserProfile(owner.user)
   const name = 'owned_' + Date.now()
-  await owner.service.updateUserProfileDetails(owner.user.uid, details(name))
+  await owner.service.updateUserProfileDetails(owner.user.uid, details(name), signupRequirements)
   const visitor = await client('visitor')
   assert.equal(await visitor.service.isUsernameAvailable(name), false)
   assert.equal(await visitor.service.isUsernameAvailable('free_' + Date.now()), true)
@@ -138,7 +139,7 @@ test('rename releases previous reservation and supports names reserved as bare F
   const c = await account('rename')
   await c.service.upsertUserProfile(c.user)
   const original = 'rename_' + Date.now()
-  await c.service.updateUserProfileDetails(c.user.uid, details(original))
+  await c.service.updateUserProfileDetails(c.user.uid, details(original), signupRequirements)
   for (const username of ['.', '..', '__name__', original + '_done']) {
     await c.service.updateUserProfileDetails(c.user.uid, details(username))
     assert.equal((await c.service.getUserProfile(c.user.uid)).username, username)

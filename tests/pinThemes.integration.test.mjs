@@ -56,6 +56,10 @@ async function client(suffix) {
 async function account(name) {
   const result = await client(name)
   const { user } = await authSdk.createUserWithEmailAndPassword(result.auth, name + '-' + crypto.randomUUID() + '@example.test', 'TestPassword123!')
+  await result.service.upsertUserProfile(user)
+  await result.service.updateUserProfileDetails(user.uid, {
+    username: crypto.randomUUID().replaceAll('-', '').slice(0, 25), nickname: '핀 테스트', bio: '',
+  }, { birthDate: '2000-01-01', termsAccepted: true, privacyAccepted: true, locationAccepted: true })
   return { ...result, user }
 }
 after(async () => { await Promise.all(apps.map(deleteApp)) })

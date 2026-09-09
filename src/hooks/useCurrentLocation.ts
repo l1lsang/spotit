@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { LatLng } from '../lib/kakaoMap'
+import { useLocationConsent } from '../contexts/locationConsentCore'
+import { auth } from '../lib/firebase'
 
 export const SEOUL_CITY_HALL: LatLng = {
   lat: 37.566535,
@@ -7,11 +9,23 @@ export const SEOUL_CITY_HALL: LatLng = {
 }
 
 export function useCurrentLocation() {
+  const ensureLocationConsent = useLocationConsent()
   const [location, setLocation] = useState<LatLng>(SEOUL_CITY_HALL)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const requestLocation = useCallback(async (): Promise<LatLng> => {
+  const requestLocation = useCallback(async (promptForConsent = true): Promise<LatLng> => {
+    const requestUid = auth?.currentUser?.uid
+    try {
+      if (!await ensureLocationConsent(promptForConsent)) {
+        setError(promptForConsent ? '현재 위치는 로그인 후 위치기반서비스 이용약관에 동의하면 사용할 수 있습니다.' : '')
+        setLocation(SEOUL_CITY_HALL)
+        return SEOUL_CITY_HALL
+      }
+    } catch {
+      setError('위치 동의 내역을 확인하지 못했습니다. 다시 시도해 주세요.')
+      return SEOUL_CITY_HALL
+    }
     if (!navigator.geolocation) {
       setError('브라우저에서 현재 위치를 지원하지 않아 서울 시청 근처로 표시합니다.')
       setLocation(SEOUL_CITY_HALL)
@@ -24,6 +38,11 @@ export function useCurrentLocation() {
     return new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          if (auth?.currentUser?.uid !== requestUid) {
+            setLoading(false)
+            resolve(SEOUL_CITY_HALL)
+            return
+          }
           const nextLocation = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
@@ -41,7 +60,7 @@ export function useCurrentLocation() {
         { enableHighAccuracy: true, timeout: 8_000 },
       )
     })
-  }, [])
+  }, [ensureLocationConsent])
 
   return {
     location,

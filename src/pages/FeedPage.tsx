@@ -45,7 +45,7 @@ export function FeedPage() {
     let active = true
 
     async function centerOnCurrentLocation() {
-      const nextLocation = await requestLocation()
+      const nextLocation = await requestLocation(false)
 
       if (!active) {
         return

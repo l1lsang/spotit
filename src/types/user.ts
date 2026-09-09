@@ -8,6 +8,7 @@ export interface DaymarkUser {
   username?: string
   bio?: string
   onboardingComplete?: boolean
+  registrationRequired?: boolean
   photoURL: string
   pinThemes?: PinTheme[]
   isPrivate?: boolean

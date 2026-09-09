@@ -10,12 +10,16 @@ import {
   type User,
 } from 'firebase/auth'
 import { requireAuth } from '../lib/firebase'
+import { getSignupRequirementsError, type SignupRequirements } from '../lib/signupRequirements'
 import { deleteUserAccountData, upsertUserProfile } from './userService'
 
 export async function signupWithEmail(
   email: string,
   password: string,
+  requirements: SignupRequirements,
 ): Promise<User> {
+  const error = getSignupRequirementsError(requirements)
+  if (error) throw new Error(error)
   const credential = await createUserWithEmailAndPassword(requireAuth(), email.trim(), password)
 
   return credential.user

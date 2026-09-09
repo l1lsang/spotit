@@ -17,6 +17,7 @@ import {
   type WriteBatch,
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
+import { getSignupRequirementsError, SIGNUP_POLICY_VERSION, type SignupRequirements } from '../lib/signupRequirements'
 import { BIO_MAX_LENGTH, NICKNAME_MAX_LENGTH, createRandomUsername, getUsernameError, normalizeUsername } from '../lib/userProfile'
 import type { DaymarkUser } from '../types/user'
 import { getPinThemeError, normalizePinColor, type PinTheme } from '../types/post'
@@ -67,6 +68,7 @@ export async function upsertUserProfile(user: FirebaseUser): Promise<DaymarkUser
           nickname: getFallbackNickname(user),
           bio: '',
           onboardingComplete: false,
+          registrationRequired: true,
           isPrivate: false,
           followerCount: 0,
           followingCount: 0,
@@ -107,7 +109,11 @@ export interface UserProfileDetails {
   photoURL?: string
 }
 
-export async function updateUserProfileDetails(uid: string, details: UserProfileDetails): Promise<void> {
+export async function updateUserProfileDetails(uid: string, details: UserProfileDetails, requirements?: SignupRequirements): Promise<void> {
+  if (requirements) {
+    const error = getSignupRequirementsError(requirements)
+    if (error) throw new Error(error)
+  }
   const username = normalizeUsername(details.username)
   const validationError = getUsernameError(username)
   if (validationError) throw new Error(validationError)
@@ -129,6 +135,19 @@ export async function updateUserProfileDetails(uid: string, details: UserProfile
       ? doc(db, 'usernames', `@${previousUsername}`)
       : null
     const previousSnapshot = previousRef ? await transaction.get(previousRef) : null
+    const isSignup = userSnapshot.data().onboardingComplete === false
+    if (isSignup) {
+      if (!requirements) throw new Error('생년월일과 필수 약관 동의를 확인해 주세요.')
+      const [birthYear, birthMonth, birthDay] = requirements.birthDate.split('-').map(Number)
+      transaction.set(doc(db, 'users', uid, 'private', 'registration'), {
+        birthYear, birthMonth, birthDay,
+        termsAccepted: true, privacyAccepted: true,
+        version: SIGNUP_POLICY_VERSION, acceptedAt: serverTimestamp(),
+      })
+      transaction.set(doc(db, 'users', uid, 'private', 'locationConsent'), {
+        accepted: requirements.locationAccepted, version: SIGNUP_POLICY_VERSION, updatedAt: serverTimestamp(),
+      })
+    }
 
     // The reservation and profile are committed together, including simultaneous signups.
     transaction.set(usernameRef, { uid })
@@ -415,6 +434,8 @@ export async function deleteUserAccountData(uid: string): Promise<void> {
     const usernameRef = username ? doc(db, 'usernames', `@${username}`) : null
     const usernameSnapshot = usernameRef ? await transaction.get(usernameRef) : null
     if (usernameRef && usernameSnapshot?.data()?.uid === uid) transaction.delete(usernameRef)
+    transaction.delete(doc(db, 'users', uid, 'private', 'registration'))
+    transaction.delete(doc(db, 'users', uid, 'private', 'locationConsent'))
     transaction.delete(userRef)
   })
 }

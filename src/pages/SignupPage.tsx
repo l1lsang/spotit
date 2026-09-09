@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { FirebaseNotice } from '../components/layout/FirebaseNotice'
 import { PolicyFooter } from '../components/layout/PolicyFooter'
+import { SignupRequirementsFields } from '../components/layout/SignupRequirementsFields'
 import { ImageEditorModal } from '../components/image/ImageEditorModal'
 import { useAuth } from '../hooks/useAuth'
 import { requireAuth } from '../lib/firebase'
+import { getSignupRequirementsError, type SignupRequirements } from '../lib/signupRequirements'
 import { BIO_MAX_LENGTH, NICKNAME_MAX_LENGTH, USERNAME_MAX_LENGTH, getProfilePhotoError, getUsernameError, normalizeUsername } from '../lib/userProfile'
 import { signupWithEmail } from '../services/authService'
 import { uploadProfilePhoto } from '../services/storageService'
@@ -21,6 +23,9 @@ export function SignupPage() {
   const [bio, setBio] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [requirements, setRequirements] = useState<SignupRequirements>({
+    birthDate: '', termsAccepted: false, privacyAccepted: false, locationAccepted: false,
+  })
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [editingPhoto, setEditingPhoto] = useState<File | string | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
@@ -52,6 +57,8 @@ export function SignupPage() {
     setUsernameError(validationError)
     setError('')
     if (validationError) return
+    const requirementsError = getSignupRequirementsError(requirements)
+    if (requirementsError) { setError(requirementsError); return }
 
     submitLock.current = true
     setSubmitting(true)
@@ -74,6 +81,8 @@ export function SignupPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (submitLock.current) return
+    const requirementsError = getSignupRequirementsError(requirements)
+    if (requirementsError) { setError(requirementsError); setStep('account'); return }
     if (!nickname.trim()) {
       setError('닉네임을 입력해 주세요.')
       return
@@ -86,12 +95,12 @@ export function SignupPage() {
       // The final transaction also prevents concurrent signups taking the same name.
       if (!await isUsernameAvailable(username, requireAuth().currentUser?.uid)) throw new UsernameTakenError()
       // Reuse a newly created account when retrying after an upload or profile save failure.
-      const user = requireAuth().currentUser || await signupWithEmail(email, password)
+      const user = requireAuth().currentUser || await signupWithEmail(email, password, requirements)
       setPassword('')
       await upsertUserProfile(user)
       const photoURL = photoFile ? await uploadProfilePhoto(user.uid, photoFile) : user.photoURL || ''
       await updateProfile(user, { displayName: nickname.trim(), photoURL })
-      await updateUserProfileDetails(user.uid, { username, nickname, bio, photoURL })
+      await updateUserProfileDetails(user.uid, { username, nickname, bio, photoURL }, requirements)
       await refreshProfile()
       navigate('/map', { replace: true })
     } catch (signupError) {
@@ -183,6 +192,7 @@ export function SignupPage() {
                     onChange={(event) => setPassword(event.target.value)} placeholder="6자 이상" />
                 </label>
               </>}
+              <SignupRequirementsFields value={requirements} onChange={value => { setRequirements(value); setError('') }} />
               {error && <p className="form-error" role="alert">{error}</p>}
               <button className="button button-primary wide" type="submit" disabled={!firebaseReady}>
                 {submitting ? '사용자 이름 확인 중' : '다음'}<ArrowRight size={18} aria-hidden="true" />

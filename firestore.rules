@@ -2,11 +2,41 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function active() {
+    function authenticated() {
       return signedIn() && (!exists(/databases/$(database)/documents/moderationUsers/$(request.auth.uid))
         || get(/databases/$(database)/documents/moderationUsers/$(request.auth.uid)).data.suspended != true);
     }
+    function active() {
+      return authenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('onboardingComplete', true) != false;
+    }
+    function accountOwner(uid) { return authenticated() && request.auth.uid == uid; }
     function isOwner(uid) { return active() && request.auth.uid == uid; }
+    function validRegistration(data) {
+      let today = request.time + duration.value(9, 'h');
+      let birth = timestamp.date(data.birthYear, data.birthMonth, data.birthDay);
+      return data.keys().hasOnly(['birthYear', 'birthMonth', 'birthDay', 'termsAccepted', 'privacyAccepted', 'version', 'acceptedAt'])
+        && data.birthYear is int && data.birthMonth is int && data.birthDay is int
+        && data.birthYear >= 1900 && birth.year() == data.birthYear && birth.month() == data.birthMonth && birth.day() == data.birthDay
+        && (today.year() - data.birthYear > 14 || (today.year() - data.birthYear == 14
+          && (today.month() > data.birthMonth || (today.month() == data.birthMonth && today.day() >= data.birthDay))))
+        && data.termsAccepted == true && data.privacyAccepted == true
+        && data.version == '2026-09-09.2' && data.acceptedAt == request.time;
+    }
+    function registrationComplete(uid) {
+      return existsAfter(/databases/$(database)/documents/users/$(uid)/private/registration);
+    }
+    function locationConsented() {
+      let consent = get(/databases/$(database)/documents/users/$(request.auth.uid)/private/locationConsent).data;
+      return consent.accepted == true && consent.version == '2026-09-09.2';
+    }
+    function validOnboardingUpdate(uid) {
+      // Existing completed accounts keep their access. New and unfinished accounts must enroll.
+      return request.resource.data.get('registrationRequired', false) == resource.data.get('registrationRequired', false)
+        && (request.resource.data.onboardingComplete == false
+          || (resource.data.get('onboardingComplete', true) != false && !resource.data.get('registrationRequired', false))
+          || registrationComplete(uid));
+    }
     function canReadPost(data) {
       return active() && (data.uid == request.auth.uid || data.visibility == 'public'
         || (data.visibility == 'followers' && exists(/databases/$(database)/documents/users/$(data.uid)/followers/$(request.auth.uid))));
@@ -44,20 +74,36 @@ service cloud.firestore {
     match /usernames/{usernameKey} {
       allow get: if true;
       allow list: if false;
-      allow create, update: if request.resource.data.keys().hasOnly(['uid']) && isOwner(request.resource.data.uid)
+      allow create, update: if request.resource.data.keys().hasOnly(['uid']) && accountOwner(request.resource.data.uid)
         && usernameKey.matches('^@[a-z0-9._]{1,30}$')
         && (!exists(/databases/$(database)/documents/usernames/$(usernameKey)) || resource.data.uid == request.auth.uid)
         && usernameKey == '@' + getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.username;
-      allow delete: if isOwner(resource.data.uid)
+      allow delete: if accountOwner(resource.data.uid)
         && (!existsAfter(/databases/$(database)/documents/users/$(request.auth.uid))
           || usernameKey != '@' + getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.username);
     }
     match /users/{uid} {
-      allow read: if active();
-      allow create: if isOwner(uid) && request.resource.data.uid == uid && validProfileIdentity(uid) && validProfileText();
-      allow update: if (isOwner(uid) && request.resource.data.uid == uid && validProfileIdentity(uid) && validProfileText() && releasesOldUsername()) || networkChange(uid);
-      allow delete: if isOwner(uid) && (!('username' in resource.data)
+      allow read: if active() || accountOwner(uid);
+      allow create: if accountOwner(uid) && request.resource.data.uid == uid && validProfileIdentity(uid) && validProfileText()
+        && request.resource.data.onboardingComplete == false && request.resource.data.registrationRequired == true;
+      allow update: if (accountOwner(uid) && request.resource.data.uid == uid && validProfileIdentity(uid) && validProfileText()
+        && validOnboardingUpdate(uid) && releasesOldUsername()) || networkChange(uid);
+      allow delete: if accountOwner(uid) && (!('username' in resource.data)
         || !existsAfter(/databases/$(database)/documents/usernames/$('@' + resource.data.username)));
+      match /private/registration {
+        allow read: if accountOwner(uid);
+        allow create: if accountOwner(uid) && validRegistration(request.resource.data);
+        allow update: if false;
+        allow delete: if accountOwner(uid) && !existsAfter(/databases/$(database)/documents/users/$(uid));
+      }
+      match /private/locationConsent {
+        allow read: if accountOwner(uid);
+        allow create, update: if accountOwner(uid)
+          && request.resource.data.keys().hasOnly(['accepted', 'version', 'updatedAt'])
+          && request.resource.data.accepted is bool && request.resource.data.version == '2026-09-09.2'
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if accountOwner(uid) && !existsAfter(/databases/$(database)/documents/users/$(uid));
+      }
       match /followers/{followerUid} {
         allow read: if active();
         allow create: if canFollow(uid, followerUid) && request.resource.data.uid == followerUid;
@@ -90,9 +136,11 @@ service cloud.firestore {
       allow get: if active() && (!exists(/databases/$(database)/documents/posts/$(postId)) || canReadPost(resource.data));
       allow list: if canReadPost(resource.data);
       allow create: if isOwner(request.resource.data.uid)
+        && locationConsented()
         && !exists(/databases/$(database)/documents/moderationPosts/$(postId))
         && request.resource.data.visibility in ['followers', 'private', 'public'];
       allow update: if (isOwner(resource.data.uid) && request.resource.data.uid == resource.data.uid
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lat', 'lng', 'placeName', 'address', 'visibility']) || locationConsented())
           && request.resource.data.visibility in ['followers', 'private', 'public'])
         || (canReadPost(resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'commentCount', 'updatedAt']));
       allow delete: if isOwner(resource.data.uid);

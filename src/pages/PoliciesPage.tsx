@@ -74,10 +74,9 @@ export function PoliciesPage() {
         <div className="empty-state"><p>주소를 확인하거나 약관 및 정책 목록에서 문서를 선택해 주세요.</p><Link to="/policies">목록 보기</Link></div>
       ) : (
         <>
-          <aside className="policy-draft-notice" aria-label="문서 상태">
-            <strong>시행 전 검토본</strong>
-            <p>법정대리인 동의, 보관·파기 기준, 국외 이전과 위치정보 제공 절차를 확인 중입니다.
-              시행일이 확정되기 전까지 이 문서를 최종 약관이나 동의서로 사용하지 않습니다.</p>
+          <aside className="policy-draft-notice" aria-label="문서 개정 안내">
+            <strong>약관 및 개인정보처리방침 개정 안내</strong>
+            <p>만 14세 미만 가입 제한, 가입 시 필수·선택 동의, 개인정보 보관·파기와 Firebase 미국 서버로의 국외이전 기준을 안내합니다.</p>
             <small>작성일 {policyPublication.preparedAt} · 시행일 {policyPublication.effectiveDate} · {policyPublication.version}</small>
           </aside>
           {document ? (

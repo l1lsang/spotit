@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:signup": "node --experimental-strip-types --test tests/signupRequirements.test.mjs",
+    "test:signup:integration": "firebase emulators:exec --config firebase.signup.json --only auth,firestore --project demo-spotit-signup \"node --experimental-strip-types --experimental-vm-modules --test tests/signup.integration.test.mjs\"",
     "test:install-guide": "node --experimental-strip-types --test tests/installGuide.test.mjs",
     "test:feed-chat-tools": "node --experimental-strip-types --test tests/feedChatTools.test.mjs",
     "test:chat-pins:integration": "firebase emulators:exec --config firebase.pin-themes.json --only auth,firestore --project demo-spotit-pins \"node --experimental-vm-modules --test tests/chatPins.integration.test.mjs\"",

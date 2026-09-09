@@ -36,8 +36,16 @@ async function client() {
     return module
   }
   const module = await load(resolve(root, 'src/services/chatService.ts'))
-  await module.link((specifier, parent) => load(specifier.startsWith('.') ? resolve(dirname(parent.identifier), specifier + '.ts') : specifier))
+  const linker = (specifier, parent) => load(specifier.startsWith('.') ? resolve(dirname(parent.identifier), specifier + '.ts') : specifier)
+  await module.link(linker)
   await module.evaluate()
+  const users = await load(resolve(root, 'src/services/userService.ts'))
+  if (users.status === 'unlinked') await users.link(linker)
+  if (users.status !== 'evaluated') await users.evaluate()
+  await users.namespace.upsertUserProfile(user)
+  await users.namespace.updateUserProfileDetails(user.uid, {
+    username: crypto.randomUUID().replaceAll('-', '').slice(0, 25), nickname: '테스트 참여자', bio: '',
+  }, { birthDate: '2000-01-01', termsAccepted: true, privacyAccepted: true, locationAccepted: false })
   return { db, uid: user.uid, person: { uid: user.uid, nickname: '테스트 참여자', photoURL: '' }, service: module.namespace }
 }
 
