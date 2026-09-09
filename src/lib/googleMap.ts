@@ -23,6 +23,7 @@ interface GoogleMapsNamespace {
   Map: new (container: HTMLElement, options: {
     center: LatLng; zoom: number; mapId: string; mapTypeControl: boolean; streetViewControl: boolean
     tilt: number; heading: number
+    gestureHandling: 'auto' | 'cooperative' | 'greedy' | 'none'
   }) => GoogleMapInstance
   LatLng: new (lat: number, lng: number) => GoogleLatLng
   marker: { AdvancedMarkerElement: new (options: {

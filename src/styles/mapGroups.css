@@ -15,14 +15,14 @@
 .map-group-notice a, .map-group-notice button, .map-with-groups .map-error button { margin-left: 8px; padding: 0; border: 0; background: transparent; color: var(--teal); font: inherit; text-decoration: underline; }
 .map-with-groups .map-place-results, .map-with-groups .map-side-panel { top: calc(var(--map-toolbar-top) + var(--map-toolbar-height) + 10px); }
 .map-with-groups .map-login-prompt { display: flex; right: 18px; }
-.map-bottom-controls { position: absolute; right: 18px; bottom: 18px; z-index: 9; display: flex; gap: 10px; }
+.map-bottom-controls { position: absolute; right: 18px; bottom: var(--map-controls-bottom, 18px); z-index: 9; display: flex; gap: 10px; }
 .map-control-icon { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 46px; height: 46px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: rgba(255, 253, 248, .98); color: var(--ink); box-shadow: 0 3px 12px #2e2a241a; cursor: pointer; }
 .map-control-icon:hover { background: #eef5ea; color: var(--teal); }
 .map-control-icon:focus-visible, .map-provider-control:focus-within { outline: 2px solid var(--teal); outline-offset: 3px; }
 .map-provider-icon-select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font: inherit; }
 .map-control-icon.is-locating { color: var(--teal); }
 .map-control-icon.is-locating svg { animation: map-location-pulse 1s ease-in-out infinite; }
-.map-with-groups .map-preview, .map-with-groups .map-floating, .map-with-groups .map-side-panel { bottom: 80px; }
+.map-with-groups .map-preview, .map-with-groups .map-floating, .map-with-groups .map-side-panel { bottom: calc(var(--map-controls-bottom, 18px) + 62px); }
 @keyframes map-location-pulse { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .map-control-icon.is-locating svg { animation: none; } }
 @media (max-width: 900px) { .map-search-row { width: 100%; } }
@@ -39,5 +39,5 @@
   .map-with-groups .map-toolbar > span { order: 5; }
   .map-group-notice { grid-column: 1 / -1; order: 6; }
   .map-with-groups .map-login-prompt { right: 12px; left: 12px; }
-  .map-bottom-controls { right: 12px; bottom: 18px; }
+  .map-bottom-controls { right: 12px; }
 }

@@ -439,7 +439,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   }
 
   return (
-    <PageContainer fullBleed className="map-page">
+    <PageContainer fullBleed fillViewport className="map-page">
       <div ref={mapShellRef} className="map-shell map-with-groups" aria-busy={loadingPosts || Boolean(groupId && groupState.loading)}>
         {initialLocationReady ? (
           <MapView

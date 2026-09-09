@@ -63,6 +63,7 @@ export function createMapDriver(
   const map = new google.Map(container, {
     center, zoom: 15, mapId: googleMapId, mapTypeControl: false, streetViewControl: false,
     tilt: 0, heading: 0,
+    gestureHandling: 'greedy',
   })
   const listener = map.addListener('click', (event) => {
     event?.stop?.() // Selecting a place creates our pin instead of a competing POI popup.

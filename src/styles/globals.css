@@ -97,6 +97,36 @@ img {
   padding-bottom: 0;
 }
 
+.app-shell-viewport {
+  --bottom-nav-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  --map-controls-bottom: calc(var(--bottom-nav-bottom) + 82px);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.app-shell-viewport > .site-header,
+.app-shell-viewport > .notice {
+  flex-shrink: 0;
+}
+
+.app-shell-viewport > .page {
+  flex: 1;
+  min-height: 0;
+}
+
+.app-shell-viewport > .page-full {
+  width: 100%;
+}
+
+.app-shell-viewport > .bottom-nav {
+  bottom: var(--bottom-nav-bottom);
+}
+
 .site-header {
   position: sticky;
   top: 0;
@@ -1286,14 +1316,13 @@ img {
   background: #eaf7f0;
 }
 
-.map-page {
-  min-height: calc(100vh - 67px);
+.map-page .location-map {
+  min-height: 0;
 }
 
 .map-shell {
   position: relative;
-  height: calc(100vh - 67px - 82px);
-  min-height: 560px;
+  height: 100%;
   background: #eee4d6;
 }
 
@@ -3604,11 +3633,6 @@ body.chat-room-active .message-form:focus-within {
 
   .landing-map-art {
     min-height: 360px;
-  }
-
-  .map-shell {
-    height: calc(100vh - 63px - 82px);
-    min-height: 520px;
   }
 
   .map-toolbar {
