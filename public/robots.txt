@@ -7,4 +7,4 @@ Disallow: /chats
 Disallow: /my
 Disallow: /profile
 
-Sitemap: https://spotit-one.vercel.app/sitemap.xml
+Sitemap: https://spotitmap.kr/sitemap.xml

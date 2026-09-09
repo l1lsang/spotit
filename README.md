@@ -2,6 +2,8 @@
 
 글로벌 이름은 **Daymark**입니다. 오늘 내가 있었던 장소를 지도 위에 핀으로 남기고, 사진과 메모를 기록하며 팔로우 관계 안에서 공유하는 지도 기반 SNS MVP입니다.
 
+운영 주소는 **https://spotitmap.kr**입니다. 카카오 지도·로그인과 Firebase의 도메인 등록 방법은 [운영 도메인 설정](docs/domain-setup.md)을 참고합니다.
+
 ## 실행 방법
 
 ```bash
@@ -49,16 +51,18 @@ VITE_GOOGLE_MAPS_MAP_ID=
 
 Firebase Auth는 Kakao를 기본 provider로 제공하지 않으므로 커스텀 OIDC Provider를 사용합니다.
 
-1. Kakao Developers에서 앱을 만들고 카카오 로그인을 활성화합니다.
-2. Redirect URI에 Firebase Auth OIDC 콜백 URL을 등록합니다.
+1. Kakao Developers에서 앱을 만들고 카카오 로그인과 OpenID Connect를 활성화합니다.
+2. 앱 > 플랫폼 키 > 로그인에 사용하는 REST API 키 > 카카오 로그인 리다이렉트 URI에 Firebase Auth OIDC 콜백 URL(`https://<VITE_FIREBASE_AUTH_DOMAIN>/__/auth/handler`)을 등록합니다.
 3. Firebase Console > Authentication > Sign-in method > OpenID Connect를 추가합니다.
 4. Provider ID를 `oidc.kakao`로 만들거나, 다른 ID를 쓴다면 `.env`의 `VITE_FIREBASE_KAKAO_PROVIDER_ID`를 바꿉니다.
 5. Client ID/Secret, issuer 등 OIDC 설정은 Firebase Console에 저장합니다. 클라이언트 코드에는 secret을 넣지 않습니다.
 
+Firebase OIDC는 Authentication with Identity Platform이 활성화된 프로젝트에서 사용할 수 있습니다. 서비스 도메인을 바꾸면 Authentication > Settings > Authorized domains에 `spotitmap.kr`를 추가합니다. 기존 Firebase `authDomain`과 OIDC 콜백 주소는 유지합니다. 구체적인 값은 [운영 도메인 설정](docs/domain-setup.md#카카오-로그인-firebase-oidc)을 참고합니다.
+
 ## Kakao Map API 설정
 
 1. Kakao Developers에서 JavaScript 앱 키를 발급합니다.
-2. 플랫폼 Web에 로컬 개발 주소와 배포 도메인을 등록합니다.
+2. 앱 > 플랫폼 키 > 사용할 JavaScript 키 > JavaScript SDK 도메인에 `https://spotitmap.kr`와 로컬 개발 주소(`http://localhost:5173`)를 등록합니다.
 3. `.env`의 `VITE_KAKAO_MAP_JS_KEY`에 JavaScript 키를 입력합니다.
 
 Kakao Map SDK 로드와 타입 래퍼는 `src/lib/kakaoMap.ts`, 공통 지도 렌더링은 `src/components/map/MapView.tsx`에 분리되어 있습니다.
@@ -208,7 +212,7 @@ Vercel 기준:
 2. Framework Preset은 Vite로 설정합니다.
 3. Environment Variables에 `.env.example`의 값을 등록합니다.
 4. Build Command는 `npm run build`, Output Directory는 `dist`를 사용합니다.
-5. Kakao Developers Web 플랫폼과 Firebase Auth OIDC 설정에 Vercel 배포 도메인을 추가합니다.
+5. Vercel 프로젝트에 운영 도메인 `spotitmap.kr`를 연결하고, [운영 도메인 설정](docs/domain-setup.md)에 따라 카카오 JavaScript SDK 도메인과 Firebase Authentication 승인된 도메인을 등록합니다.
 6. `vercel.json`의 SPA rewrite 설정으로 `/feed`, `/profile`, `/chats/:id` 같은 경로에서 새로고침해도 `index.html`이 로드됩니다.
 
 ## 휴대폰 푸시 알림
