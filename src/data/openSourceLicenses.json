@@ -1,6 +1,6 @@
 {
   "sources": {
-    "package-lock.json": "4a2b1e70d7e75e754e88f04c4f4e40828e0915a26f8bbbb95f3f72f2a1346c25",
+    "package-lock.json": "08c94f638fba1e8c6b47cf0768b85b0cf167fbdba8bae150ee0fdb10c412a200",
     "functions/package-lock.json": "e3270ec8a57dfa02c681794beff1f5ebcf2674e7a52a3796410f1cd71bbb4f4d"
   },
   "packages": [
@@ -640,6 +640,78 @@
       ]
     },
     {
+      "name": "@emnapi/core",
+      "version": "1.10.0",
+      "license": "MIT",
+      "integrity": "sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==",
+      "scopes": [
+        "development"
+      ],
+      "direct": false,
+      "repository": "https://github.com/toyobayashi/emnapi",
+      "documents": [
+        {
+          "title": "LICENSE",
+          "textId": "f2b64fe47691e3771cd3bc1cf496bcdbd9c909026cff17c8cca1c34a0232c736",
+          "source": "https://raw.githubusercontent.com/toyobayashi/emnapi/ba84999164c8d9ee10e57f72bb6fa5fa0b192b54/LICENSE"
+        }
+      ]
+    },
+    {
+      "name": "@emnapi/core",
+      "version": "1.11.3",
+      "license": "MIT",
+      "integrity": "sha512-zLpS5asjEb7lq8jYLq37N6XKaE41DIexlY1rF/z4/tIl3wo13Sqm28fRyfIsKZD+NZ8mM5RoKkpW/rBcuoSZSg==",
+      "scopes": [
+        "development"
+      ],
+      "direct": false,
+      "repository": "https://github.com/toyobayashi/emnapi",
+      "documents": [
+        {
+          "title": "LICENSE",
+          "textId": "f2b64fe47691e3771cd3bc1cf496bcdbd9c909026cff17c8cca1c34a0232c736",
+          "source": "https://raw.githubusercontent.com/toyobayashi/emnapi/b2011ea96d28fe60a6b8eabb82c2d6264daf7460/LICENSE"
+        }
+      ]
+    },
+    {
+      "name": "@emnapi/runtime",
+      "version": "1.10.0",
+      "license": "MIT",
+      "integrity": "sha512-ewvYlk86xUoGI0zQRNq/mC+16R1QeDlKQy21Ki3oSYXNgLb45GV1P6A0M+/s6nyCuNDqe5VpaY84BzXGwVbwFA==",
+      "scopes": [
+        "development"
+      ],
+      "direct": false,
+      "repository": "https://github.com/toyobayashi/emnapi",
+      "documents": [
+        {
+          "title": "LICENSE",
+          "textId": "f2b64fe47691e3771cd3bc1cf496bcdbd9c909026cff17c8cca1c34a0232c736",
+          "source": "https://raw.githubusercontent.com/toyobayashi/emnapi/ba84999164c8d9ee10e57f72bb6fa5fa0b192b54/LICENSE"
+        }
+      ]
+    },
+    {
+      "name": "@emnapi/runtime",
+      "version": "1.11.3",
+      "license": "MIT",
+      "integrity": "sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==",
+      "scopes": [
+        "development"
+      ],
+      "direct": false,
+      "repository": "https://github.com/toyobayashi/emnapi",
+      "documents": [
+        {
+          "title": "LICENSE",
+          "textId": "f2b64fe47691e3771cd3bc1cf496bcdbd9c909026cff17c8cca1c34a0232c736",
+          "source": "https://raw.githubusercontent.com/toyobayashi/emnapi/b2011ea96d28fe60a6b8eabb82c2d6264daf7460/LICENSE"
+        }
+      ]
+    },
+    {
       "name": "@emnapi/wasi-threads",
       "version": "1.2.1",
       "license": "MIT",
@@ -654,6 +726,24 @@
           "title": "LICENSE",
           "textId": "f2b64fe47691e3771cd3bc1cf496bcdbd9c909026cff17c8cca1c34a0232c736",
           "source": "@emnapi/wasi-threads@1.2.1/LICENSE"
+        }
+      ]
+    },
+    {
+      "name": "@emnapi/wasi-threads",
+      "version": "1.2.3",
+      "license": "MIT",
+      "integrity": "sha512-ELEBe8PsLvvJ6QMr0zLt8ffvOHW/dc1m3CEzNMg7aJUv3bMaoDtw2TXyDAwkYBuroxxuHEwhRTLJSe5sya547g==",
+      "scopes": [
+        "development"
+      ],
+      "direct": false,
+      "repository": "https://github.com/toyobayashi/emnapi",
+      "documents": [
+        {
+          "title": "LICENSE",
+          "textId": "f2b64fe47691e3771cd3bc1cf496bcdbd9c909026cff17c8cca1c34a0232c736",
+          "source": "https://raw.githubusercontent.com/toyobayashi/emnapi/b2011ea96d28fe60a6b8eabb82c2d6264daf7460/LICENSE"
         }
       ]
     },
