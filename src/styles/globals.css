@@ -3578,6 +3578,11 @@ body.chat-room-active .message-form:focus-within {
 .policy-footer a:hover { color: var(--primary); text-decoration: underline; }
 .policy-footer a:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .landing-copy .policy-footer { justify-content: flex-start; }
+.logo-credit { display: flex; align-items: center; justify-content: center; gap: 4px; margin: 4px 0 0; color: var(--muted); font-size: 0.76rem; line-height: 1.6; }
+.logo-credit a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: underline; text-underline-offset: 3px; }
+.logo-credit a:hover { color: var(--primary); }
+.logo-credit a:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.landing-copy .logo-credit { justify-content: flex-start; }
 
 .profile-logout-button {
   display: flex;
