@@ -7,14 +7,14 @@
 .chat-pinned-banner strong { font-size: 0.75rem; }
 .chat-pinned-banner > span > span { overflow: hidden; color: var(--ink); font-size: 0.83rem; text-overflow: ellipsis; white-space: nowrap; }
 .message-content { position: relative; }
-.message-options-button { position: absolute; top: 0; right: -34px; display: grid; place-items: center; width: 30px; min-height: 34px; padding: 0; border: 0; border-radius: 8px; color: var(--muted); background: transparent; }
+.message-options-button { position: absolute; top: 0; right: -34px; display: grid; place-items: center; width: 30px; min-height: 34px; padding: 0; border: 0; border-radius: 999px; color: var(--muted); background: transparent; }
 .message-row.mine .message-options-button { right: auto; left: -34px; }
 .message-options-button:hover, .message-options-button:focus-visible { background: var(--surface); color: var(--ink); }
 .message-pinned-label { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 0.7rem; }
 .message-pin-action { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--olive-soft); font-weight: 700; }
 .message-pin-action:disabled { opacity: 0.65; cursor: wait; }
 .message-pin-hint { margin: 8px 0 16px; color: var(--muted); font-size: 0.76rem; line-height: 1.5; }
-.message-row.message-highlighted { border-radius: 10px; outline: 3px solid var(--primary); outline-offset: 5px; }
+.message-row.message-highlighted { border-radius: 22px; outline: 3px solid var(--primary); outline-offset: 5px; }
 .chat-collection-dialog { width: min(680px, calc(100% - 24px)); height: min(760px, calc(var(--chat-viewport-height, 100dvh) - 24px)); max-width: none; max-height: calc(var(--chat-viewport-height, 100dvh) - 24px); padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); color: var(--ink); box-shadow: var(--shadow); }
 .chat-collection-dialog[open] { display: flex; flex-direction: column; }
 .chat-collection-dialog::backdrop { background: color-mix(in srgb, var(--ink) 60%, transparent); backdrop-filter: blur(3px); }
@@ -29,11 +29,11 @@
 .chat-collection-empty small { max-width: 300px; line-height: 1.7; }
 .chat-collection-hint { margin: 0 0 8px; color: var(--muted); font-size: 0.78rem; line-height: 1.7; }
 .chat-media-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
-.chat-media-tile { position: relative; min-width: 0; aspect-ratio: 1; overflow: hidden; padding: 0; border: 0; border-radius: 6px; background: var(--surface); }
+.chat-media-tile { position: relative; min-width: 0; aspect-ratio: 1; overflow: hidden; padding: 0; border: 0; border-radius: 16px; background: var(--surface); }
 .chat-media-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .chat-pinned-list { display: grid; gap: 10px; }
-.chat-pinned-item { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: var(--paper); text-align: left; }
-.chat-pinned-item > img { width: 56px; height: 64px; flex-shrink: 0; border-radius: 6px; object-fit: cover; }
+.chat-pinned-item { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 20px; color: var(--ink); background: var(--paper); text-align: left; }
+.chat-pinned-item > img { width: 56px; height: 64px; flex-shrink: 0; border-radius: 12px; object-fit: cover; }
 .chat-pinned-item > span { display: grid; flex: 1; gap: 7px; min-width: 0; }
 .chat-pinned-item strong { font-size: 0.82rem; overflow-wrap: anywhere; }
 .chat-pinned-item > span > span { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; }

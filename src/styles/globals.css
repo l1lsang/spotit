@@ -2290,7 +2290,7 @@ img {
   min-height: 76px;
   padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 20px;
   background: var(--paper);
   box-shadow: 0 10px 26px color-mix(in srgb, var(--ink) 8%, transparent);
 }
@@ -2347,9 +2347,14 @@ img {
   width: 48px;
   height: 48px;
   border: 2px solid var(--paper);
-  border-radius: 8px;
+  border-radius: 50%;
   object-fit: cover;
   box-shadow: 0 6px 18px color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.chat-row .profile-avatar,
+.chat-room-page .profile-avatar {
+  border-radius: 50%;
 }
 
 .chat-room-page {
@@ -2495,7 +2500,7 @@ img {
   height: 32px;
   flex: 0 0 32px;
   border: 2px solid var(--paper);
-  border-radius: 8px;
+  border-radius: 50%;
   object-fit: cover;
   box-shadow: 0 6px 14px color-mix(in srgb, var(--ink) 12%, transparent);
 }
@@ -2535,7 +2540,7 @@ img {
   user-select: none;
   -webkit-user-select: none;
   touch-action: pan-y pinch-zoom;
-  border-radius: 8px;
+  border-radius: 22px;
 }
 
 .message-content.reportable:focus-visible {
@@ -2676,17 +2681,18 @@ img {
   width: fit-content;
   max-width: 100%;
   margin: 0;
-  padding: 11px 13px;
+  padding: 12px 16px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 22px 22px 22px 8px;
   background: var(--paper);
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--ink) 8%, transparent);
-  line-height: 1.55;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--ink) 5%, transparent);
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
 .message-row.mine .message-bubble {
   border-color: var(--primary);
+  border-radius: 22px 22px 8px 22px;
   color: var(--paper);
   background: var(--primary);
 }
@@ -2701,7 +2707,7 @@ img {
   width: 100%;
   max-height: 300px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 20px;
   object-fit: cover;
   background: var(--surface);
   box-shadow: 0 8px 18px color-mix(in srgb, var(--ink) 8%, transparent);
@@ -2843,6 +2849,7 @@ img {
   padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom))
     max(12px, env(safe-area-inset-left));
   border-top: 1px solid var(--line);
+  border-radius: 24px 24px 0 0;
   background: var(--paper);
 }
 
@@ -2861,14 +2868,14 @@ body.chat-room-active .message-form:focus-within {
   max-width: 100%;
   padding: 9px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 18px;
   background: var(--surface);
 }
 
 .message-attachment-preview img {
   width: 62px;
   height: 62px;
-  border-radius: 8px;
+  border-radius: 14px;
   object-fit: cover;
 }
 
@@ -2902,8 +2909,8 @@ body.chat-room-active .message-form:focus-within {
   max-height: 120px;
   resize: none;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 22px;
+  padding: 12px 16px;
   color: var(--ink);
   background: var(--paper);
   outline: none;
