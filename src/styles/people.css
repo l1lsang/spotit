@@ -1,8 +1,8 @@
 .people-page, .person-profile-page { max-width: 760px; }
-.people-list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.people-list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
 .people-list > li + li { border-top: 1px solid var(--line); }
 .user-summary-link { display: flex; align-items: center; gap: 14px; min-height: 82px; min-width: 0; padding: 14px 18px; border-radius: 8px; transition: background 150ms ease; }
-.user-summary-link:hover { background: #f2eee5; }
+.user-summary-link:hover { background: var(--surface); }
 .user-summary-link > :first-child { flex: 0 0 48px; }
 .user-summary-identity { display: grid; gap: 5px; min-width: 0; }
 .user-summary-identity strong { font-size: 1rem; overflow-wrap: anywhere; }
@@ -12,12 +12,12 @@
 .person-profile-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; color: var(--muted); font-size: 0.9rem; }
 .person-profile-toolbar .person-profile-back { margin-bottom: 0; }
 .person-profile-toolbar .profile-settings-link { width: 44px; height: 44px; }
-.person-profile-card { padding: clamp(18px, 4vw, 30px); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.person-profile-card { padding: clamp(18px, 4vw, 30px); border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 .person-profile-heading { display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: center; gap: 18px; }
 .person-profile-photo { width: 80px; height: 80px; border-radius: 12px; object-fit: cover; }
 .person-profile-identity { min-width: 0; overflow-wrap: anywhere; }
 .person-profile-identity h1 { margin: 0; font-size: clamp(1.3rem, 4vw, 1.75rem); }
-.person-profile-username { margin: 7px 0 0; color: var(--teal); font-size: 0.9rem; }
+.person-profile-username { margin: 7px 0 0; color: var(--primary); font-size: 0.9rem; }
 .person-profile-about { margin: 24px 0; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .person-profile-about h2 { margin: 0 0 12px; color: var(--muted); font-size: 0.85rem; }
 .person-profile-about > p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
@@ -28,9 +28,9 @@
 .person-profile-report { display: flex; justify-content: flex-end; margin-top: 18px; }
 .person-profile-report .report-compact { min-height: 44px; padding: 8px; }
 .person-profile-error { margin-bottom: 18px; color: var(--danger); }
-.person-follow-dialog { width: min(520px, calc(100% - 32px)); max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: var(--surface); }
+.person-follow-dialog { width: min(520px, calc(100% - 32px)); max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: var(--paper); }
 .person-follow-dialog[open] { display: flex; flex-direction: column; }
-.person-follow-dialog::backdrop { background: rgba(46, 42, 36, 0.45); }
+.person-follow-dialog::backdrop { background: color-mix(in srgb, var(--ink) 45%, transparent); }
 .person-follow-header { display: flex; flex-shrink: 0; justify-content: space-between; align-items: flex-start; gap: 14px; padding: 18px; border-bottom: 1px solid var(--line); }
 .person-follow-header > div { min-width: 0; overflow-wrap: anywhere; }
 .person-follow-header p { margin: 0 0 5px; color: var(--muted); font-size: 0.85rem; }
@@ -38,21 +38,21 @@
 .person-follow-header button { flex-shrink: 0; }
 .person-follow-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px; }
 .person-follow-body .people-list { border: 0; }
-.user-summary-link:focus-visible, .person-profile-page :is(a, button):focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+.user-summary-link:focus-visible, .person-profile-page :is(a, button):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 
 .profile-pin-album { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
 .pin-album-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .pin-album-heading h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1rem; }
 .pin-album-heading h2 > span { color: var(--muted); font-size: 0.85rem; font-weight: 500; }
 .pin-album-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.pin-album-tile { position: relative; display: block; min-width: 0; aspect-ratio: 1; overflow: hidden; border-radius: 6px; background: #e4ece0; }
+.pin-album-tile { position: relative; display: block; min-width: 0; aspect-ratio: 1; overflow: hidden; border-radius: 6px; background: var(--coral-soft); }
 .pin-album-tile > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 180ms ease; }
 .pin-album-tile:hover > img { transform: scale(1.03); }
-.pin-album-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 18px 12px 36px; color: var(--teal); background: linear-gradient(135deg, #e5eddf, #f6eee0); text-align: center; }
+.pin-album-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 18px 12px 36px; color: var(--coral); background: linear-gradient(135deg, var(--coral-soft), var(--paper)); text-align: center; }
 .pin-album-placeholder > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.85rem; line-height: 1.4; }
 .pin-album-placeholder > svg { flex-shrink: 0; }
-.pin-album-caption { position: absolute; right: 0; bottom: 0; left: 0; padding: 25px 10px 10px; overflow: hidden; color: #fff; background: linear-gradient(transparent, rgba(26, 29, 23, 0.8)); font-size: 0.85rem; text-overflow: ellipsis; white-space: nowrap; }
-.pin-album-photo-count, .pin-album-visibility { position: absolute; top: 7px; display: inline-flex; align-items: center; gap: 4px; min-height: 25px; padding: 4px 6px; border-radius: 5px; color: #fff; background: rgba(26, 29, 23, 0.65); font-size: 0.72rem; }
+.pin-album-caption { position: absolute; right: 0; bottom: 0; left: 0; padding: 25px 10px 10px; overflow: hidden; color: var(--paper); background: linear-gradient(transparent, color-mix(in srgb, var(--ink) 80%, transparent)); font-size: 0.85rem; text-overflow: ellipsis; white-space: nowrap; }
+.pin-album-photo-count, .pin-album-visibility { position: absolute; top: 7px; display: inline-flex; align-items: center; gap: 4px; min-height: 25px; padding: 4px 6px; border-radius: 5px; color: var(--paper); background: color-mix(in srgb, var(--ink) 65%, transparent); font-size: 0.72rem; }
 .pin-album-photo-count { right: 7px; }
 .pin-album-visibility { left: 7px; }
 .pin-album-state { display: grid; justify-items: center; gap: 8px; margin: 0; padding: 48px 16px; color: var(--muted); text-align: center; }
@@ -66,7 +66,7 @@
   .person-profile-actions .button { padding-inline: 10px; }
   .pin-album-grid { gap: 4px; }
   .pin-album-caption { padding: 20px 7px 7px; font-size: 0.75rem; }
-  .pin-album-placeholder { gap: 4px; padding: 10px 6px 28px; }
+  .pin-album-placeholder { gap: 4px; padding: 10px 6px 28px; color: var(--coral); background: linear-gradient(135deg, var(--coral-soft), var(--paper)); }
   .pin-album-placeholder > svg { width: 24px; height: 24px; }
   .pin-album-placeholder > span { font-size: 0.7rem; }
 }

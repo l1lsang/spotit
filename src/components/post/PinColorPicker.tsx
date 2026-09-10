@@ -12,7 +12,7 @@ export function PinColorPicker({ value, onChange, disabled = false }: PinColorPi
   const id = useId()
   const color = parsePinColorCode(value)
   const preset = PIN_COLOR_PALETTE.find(item => item.color === color)
-  const previewColor = color || '#a6a3a0'
+  const previewColor = color || '#a0a49d'
 
   return <div className="pin-color-control" role="group" aria-labelledby={`${id}-label`}>
     <div className="pin-color-control-heading">
@@ -39,7 +39,7 @@ export function PinColorPicker({ value, onChange, disabled = false }: PinColorPi
     <label className="pin-hex-field" htmlFor={`${id}-hex`}>
       <span>HEX 색상 코드</span>
       <input id={`${id}-hex`} type="text" value={value} required disabled={disabled}
-        placeholder="#9380C4" autoComplete="off" autoCapitalize="characters" spellCheck={false}
+        placeholder="#DF7658" autoComplete="off" autoCapitalize="characters" spellCheck={false}
         pattern="\s*#?([a-fA-F0-9]{3}|[a-fA-F0-9]{6})\s*"
         aria-invalid={!color} aria-describedby={`${id}-hint`}
         onChange={event => onChange(event.target.value)}

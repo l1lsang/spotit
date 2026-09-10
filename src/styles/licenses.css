@@ -51,7 +51,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--muted);
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .license-search-input svg {
@@ -79,7 +79,7 @@
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .license-count {
@@ -92,7 +92,7 @@
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .license-item + .license-item {
@@ -115,7 +115,7 @@
 
 .license-item summary:hover,
 .license-item[open] summary {
-  background: #fff2ea;
+  background: var(--primary-soft);
 }
 
 .license-package-heading {
@@ -143,8 +143,8 @@
   max-width: 36%;
   padding: 5px 8px;
   border-radius: 5px;
-  color: var(--teal);
-  background: #edf3e9;
+  color: var(--primary);
+  background: var(--primary-soft);
   font-size: 0.72rem;
   font-weight: 700;
   overflow-wrap: anywhere;
@@ -169,7 +169,7 @@
   align-items: center;
   gap: 6px;
   min-height: 44px;
-  color: var(--teal);
+  color: var(--primary);
   font-size: 0.85rem;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -198,12 +198,12 @@
 }
 
 .licenses-page :is(a, input, select, button, pre):focus-visible {
-  outline: 2px solid var(--teal);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
 .license-item summary:focus-visible {
-  outline: 2px solid var(--teal);
+  outline: 2px solid var(--primary);
   outline-offset: -3px;
 }
 
