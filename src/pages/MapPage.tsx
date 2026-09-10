@@ -278,6 +278,11 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
     setClusterPosts([])
   }
 
+  function handleDismissLocation() {
+    setSelectedLocation(null)
+    setSelectedPlace(null)
+  }
+
   function handleSelectPost(post: Post) {
     setProviderOverride('auto')
     setSelectedPost(post)
@@ -684,17 +689,29 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
         )}
 
         {selectedLocation && mapMode === 'main' && !isFormOpen && currentUser && canCreatePin && (
-          <div className="map-floating map-record-floating">
-            {selectedPlace ? (
-              <p>
-                <strong>{selectedPlace.placeName}</strong>
-                <span>{selectedPlace.address || '주소 정보 없음'}</span>
-              </p>
-            ) : (
-              <p>
-                선택한 좌표 {selectedLocation.lat.toFixed(5)}, {selectedLocation.lng.toFixed(5)}
-              </p>
-            )}
+          <div className="map-floating map-record-floating" role="region" aria-label="선택한 위치에 기록하기"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.stopPropagation()
+                handleDismissLocation()
+              }
+            }}>
+            <div className="map-record-heading">
+              {selectedPlace ? (
+                <p>
+                  <strong>{selectedPlace.placeName}</strong>
+                  <span>{selectedPlace.address || '주소 정보 없음'}</span>
+                </p>
+              ) : (
+                <p>
+                  선택한 좌표 {selectedLocation.lat.toFixed(5)}, {selectedLocation.lng.toFixed(5)}
+                </p>
+              )}
+              <button className="button-icon ghost map-record-close" type="button"
+                onClick={handleDismissLocation} aria-label="선택한 위치 닫기" title="닫기">
+                <X size={20} aria-hidden="true" />
+              </button>
+            </div>
             <button
               className="button button-primary"
               type="button"

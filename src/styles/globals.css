@@ -6,6 +6,7 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  color-scheme: light;
   --bg: #F5F4EE;
   --paper: #FFFEFA;
   --surface: #ECEDE6;
@@ -37,6 +38,7 @@ body,
 
 body {
   min-width: 320px;
+  background: var(--bg);
 }
 
 body.chat-room-active {
@@ -148,7 +150,7 @@ img {
   gap: 18px;
   padding: 14px clamp(18px, 4vw, 48px);
   border-bottom: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  background: var(--bg);
   backdrop-filter: blur(14px);
 }
 
@@ -1718,7 +1720,38 @@ img {
 .map-record-floating {
   left: 18px;
   right: auto;
-  max-width: min(420px, calc(100% - 36px));
+  display: grid;
+  width: min(420px, calc(100% - 36px));
+  gap: 12px;
+}
+
+.map-record-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.map-record-heading p {
+  flex: 1;
+  min-width: 0;
+  padding-top: 10px;
+  overflow-wrap: anywhere;
+}
+
+.map-record-close {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+}
+
+.map-record-close:hover {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.map-record-close:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .map-floating p {

@@ -1,11 +1,11 @@
-const CACHE_NAME = 'spotit-shell-v2'
+const CACHE_NAME = 'spotit-shell-v3'
 const APP_SHELL = ['/', '/map', '/manifest.webmanifest', '/logo.png', '/icon-192.png', '/icon-512.png']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
+      .then((cache) => cache.addAll(APP_SHELL.map((url) => new Request(url, { cache: 'reload' }))))
       .then(() => self.skipWaiting()),
   )
 })
