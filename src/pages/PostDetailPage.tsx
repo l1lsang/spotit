@@ -160,9 +160,8 @@ export function PostDetailPage() {
           <p className="detail-content">{post.content}</p>
 
           <div className="detail-actions">
-            <button className="button button-secondary" type="button" onClick={() => void handleSharePost()}>
-              <Share2 size={17} aria-hidden="true" />
-              핀 공유
+            <button className="button-icon subtle share-icon-button" type="button" onClick={() => void handleSharePost()} aria-label="핀 공유" title="핀 공유">
+              <Share2 size={19} aria-hidden="true" />
             </button>
             {isOwner && (
               <>

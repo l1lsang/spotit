@@ -70,7 +70,7 @@ function GroupHome({ groupId }: { groupId: string }) {
             {group.ownerUid === uid && <span className="pill">내가 만든 그룹</span>}
           </div>
           <div className="group-home-actions">
-            <button className="button button-secondary" type="button" onClick={() => void shareGroup()} aria-label="그룹 공유"><Share2 size={17} aria-hidden="true" />공유</button>
+            <button className="button-icon subtle share-icon-button" type="button" onClick={() => void shareGroup()} aria-label="그룹 공유" title="그룹 공유"><Share2 size={19} aria-hidden="true" /></button>
             <GroupJoinButton groupId={groupId} visibility={group.visibility} joined={joined} allowLeave />
           </div>
         </div>

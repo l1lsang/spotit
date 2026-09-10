@@ -74,6 +74,7 @@ async function notifications(client, postId) {
   return snapshot.docs.map(item => ({ ...item.data(), id: item.id }))
 }
 async function firstComment(postId) { return (await owner.comments.listComments(postId))[0] }
+async function handleFor(client) { return (await firestore.getDoc(firestore.doc(client.db, 'users', client.uid))).data().username }
 async function until(predicate) {
   const deadline = Date.now() + 8000
   while (!predicate()) {
@@ -260,4 +261,102 @@ test('liked pins load newest first, include older likes, and update on unlike, d
     })
   })
   assert.equal(deniedList, true)
+})
+
+test('comment and reply mentions resolve typed handles, notify once per recipient and suppress self notifications', { timeout: 30000 }, async () => {
+  const postId = await pin()
+  const [ownerHandle, commenterHandle, replierHandle, outsiderHandle] = await Promise.all([owner, commenter, replier, outsider].map(handleFor))
+  await commenter.comments.addComment(postId, commenter.actor, `@${ownerHandle} @${replierHandle.toUpperCase()} @${replierHandle} @${commenterHandle} 함께 가요!`)
+  const comment = await firstComment(postId)
+  assert.deepEqual(comment.mentions, { [`@${ownerHandle}`]: owner.uid, [`@${replierHandle}`]: replier.uid, [`@${commenterHandle}`]: commenter.uid })
+  for (const recipient of [owner, replier]) {
+    const notice = await notifications(recipient, postId)
+    assert.equal(notice.length, 1)
+    assert.equal(notice[0].type, 'mention')
+    assert.equal(notice[0].href, `/posts/${postId}#comment-${comment.id}`)
+  }
+  assert.equal((await notifications(commenter, postId)).length, 0)
+  await replier.comments.addReply(postId, comment.id, replier.actor, `@${commenterHandle} @${ownerHandle} @${outsiderHandle} 답글에서 멘션`)
+  const reply = (await firstComment(postId)).replies[0]
+  for (const recipient of [owner, commenter, outsider]) {
+    const notices = (await notifications(recipient, postId)).filter(notice => notice.replyId === reply.id)
+    assert.equal(notices.length, 1)
+    assert.equal(notices[0].type, 'mention')
+    assert.equal(notices[0].href, `/posts/${postId}#reply-${reply.id}`)
+  }
+  assert.equal((await counts(postId)).commentCount, 2)
+})
+
+test('mention lookup ignores unknown handles and emails; stored links survive username changes', { timeout: 30000 }, async () => {
+  const person = await client('사용자 이름 변경')
+  const postId = await pin()
+  const users = await person.service('user')
+  const username = 'mention.dot_' + crypto.randomUUID().slice(0, 8)
+  await users.updateUserProfileDetails(person.uid, { username, nickname: person.actor.nickname, bio: '' })
+  const lookup = await commenter.service('mention')
+  const results = await lookup.searchMentionUsers(username.slice(0, -2))
+  assert.equal(results.length, 1)
+  assert.equal(results[0].uid, person.uid)
+  assert.deepEqual(Object.keys(results[0]).sort(), ['nickname', 'photoURL', 'uid', 'username'])
+  await commenter.comments.addComment(postId, commenter.actor, `@${username} person@${username} @no_such_person_test`)
+  const comment = await firstComment(postId)
+  assert.deepEqual(comment.mentions, { [`@${username}`]: person.uid })
+  assert.equal((await notifications(person, postId)).length, 1)
+  await users.updateUserProfileDetails(person.uid, { username: 'renamed_' + crypto.randomUUID().slice(0, 8), nickname: person.actor.nickname, bio: '' })
+  const replacement = await client('예전 이름 사용자')
+  await (await replacement.service('user')).updateUserProfileDetails(replacement.uid, { username, nickname: replacement.actor.nickname, bio: '' })
+  assert.equal((await firstComment(postId)).mentions[`@${username}`], person.uid)
+  assert.equal((await notifications(replacement, postId)).length, 0)
+})
+
+test('private and followers-only pins notify only mentioned people who can read the pin', { timeout: 30000 }, async () => {
+  const [commenterHandle, replierHandle] = await Promise.all([commenter, replier].map(handleFor))
+  const privateId = await pin('private')
+  await owner.comments.addComment(privateId, owner.actor, `@${replierHandle} 비공개 기록`)
+  assert.equal((await notifications(replier, privateId)).length, 0)
+  assert.equal((await firstComment(privateId)).mentions[`@${replierHandle}`], replier.uid)
+  const followersId = await pin('followers')
+  const followerRef = firestore.doc(owner.db, 'users', owner.uid, 'followers', commenter.uid)
+  if (!(await firestore.getDoc(followerRef)).exists()) await firestore.setDoc(followerRef, { uid: commenter.uid })
+  await owner.comments.addComment(followersId, owner.actor, `@${commenterHandle} @${replierHandle} 팔로워 공개 기록`)
+  assert.equal((await notifications(commenter, followersId)).length, 1)
+  assert.equal((await notifications(replier, followersId)).length, 0)
+})
+
+test('private group mentions support five recipients atomically without opening member lists to outsiders', { timeout: 30000 }, async () => {
+  const people = await Promise.all(Array.from({ length: 5 }, (_, index) => client(`그룹 멘션 ${index}`)))
+  const groupService = await owner.service('group')
+  const groupId = await groupService.createGroup({ name: '멘션할 그룹', description: '', visibility: 'private' }, owner.uid)
+  const code = await groupService.getGroupInviteCode(groupId)
+  for (const person of [commenter, ...people]) await (await person.service('group')).joinGroupWithCode(code, person.uid)
+  const postId = await pin('group', { groupId })
+  const handles = await Promise.all(people.map(handleFor))
+  await owner.comments.addComment(postId, owner.actor, '그룹 원댓글')
+  const parent = await firstComment(postId)
+  await commenter.comments.addReply(postId, parent.id, commenter.actor, handles.map(name => '@' + name).join(' '))
+  assert.equal((await counts(postId)).commentCount, 2)
+  for (const person of people) assert.equal((await notifications(person, postId)).length, 1)
+  assert.equal((await notifications(owner, postId)).length, 1)
+  const outsiderHandle = await handleFor(outsider)
+  await owner.comments.addComment(postId, owner.actor, `@${outsiderHandle} 접근 권한 없음`)
+  assert.equal((await notifications(outsider, postId)).length, 0)
+  await assert.rejects(firestore.getDoc(firestore.doc(outsider.db, 'groups', groupId, 'members', people[0].uid)), denied)
+  await assert.rejects(firestore.getDocs(firestore.collection(commenter.db, 'groups', groupId, 'members')), denied)
+})
+
+test('excessive and forged mention notifications are rejected without partial writes', { timeout: 30000 }, async () => {
+  const postId = await pin()
+  await assert.rejects(commenter.comments.addComment(postId, commenter.actor, '@one @two @three @four @five @six'), /최대 5명/)
+  assert.equal((await counts(postId)).commentCount, 0)
+  const replierHandle = await handleFor(replier)
+  const ref = firestore.doc(firestore.collection(commenter.db, 'posts', postId, 'comments'))
+  const batch = firestore.writeBatch(commenter.db)
+  batch.set(ref, { id: ref.id, uid: commenter.uid, authorNickname: commenter.actor.nickname, content: `@${replierHandle}`, mentions: {}, replyCount: 0, createdAt: firestore.serverTimestamp() })
+  commenter.notifications.queueNotification(batch, {
+    recipientUid: replier.uid, actor: commenter.actor, type: 'mention', title: '위조 멘션', message: '본문의 멘션 대상에 없음',
+    href: `/posts/${postId}#comment-${ref.id}`, postId, commentId: ref.id, mentionUsername: replierHandle,
+  })
+  await assert.rejects(batch.commit(), denied)
+  assert.equal((await owner.comments.listComments(postId)).length, 0)
+  assert.equal((await notifications(replier, postId)).length, 0)
 })

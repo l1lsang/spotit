@@ -29,6 +29,7 @@ export interface CreateNotificationInput {
   chatId?: string
   commentId?: string
   replyId?: string
+  mentionUsername?: string
 }
 
 interface TimestampLike {
@@ -87,6 +88,7 @@ export function queueNotification(writer: { set: (ref: DocumentReference, data: 
     chatId: input.chatId || '',
     commentId: input.commentId || '',
     replyId: input.replyId || '',
+    ...(input.mentionUsername ? { mentionUsername: input.mentionUsername } : {}),
     readAt: null,
     createdAt: serverTimestamp(),
   })

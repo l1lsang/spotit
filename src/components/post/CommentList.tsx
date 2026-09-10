@@ -3,6 +3,9 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatTimestamp } from '../../lib/date'
 import { COMMENT_MAX_LENGTH, type PostComment, type PostReply } from '../../types/comment'
+import { getMentionUsernames, MAX_COMMENT_MENTIONS } from '../../lib/commentMentions'
+import { CommentContent } from './CommentContent'
+import { MentionTextarea } from './MentionTextarea'
 
 interface CommentListProps {
   comments: PostComment[]
@@ -57,7 +60,7 @@ export function CommentList({ comments, currentUserUid, postOwnerUid, postId, an
                 <Trash2 size={15} aria-hidden="true" />
               </button>}
             </div>
-            <p className={comment.deleted ? 'comment-deleted' : undefined}>{comment.deleted ? '삭제된 댓글입니다.' : comment.content}</p>
+            <p className={comment.deleted ? 'comment-deleted' : undefined}>{comment.deleted ? '삭제된 댓글입니다.' : <CommentContent content={comment.content} mentions={comment.mentions} />}</p>
             {!comment.deleted && <div className="comment-actions">
               <button className="text-action" type="button" disabled={!currentUserUid || busy} aria-expanded={isReplying}
                 onClick={() => { setReplyingTo(isReplying ? '' : comment.id); setReplyContent(''); setError('') }}>
@@ -77,7 +80,7 @@ export function CommentList({ comments, currentUserUid, postOwnerUid, postId, an
                         <Trash2 size={15} aria-hidden="true" />
                       </button>}
                     </div>
-                    <p>{reply.content}</p>
+                    <p><CommentContent content={reply.content} mentions={reply.mentions} /></p>
                   </div>
                 </li>
               })}
@@ -85,11 +88,15 @@ export function CommentList({ comments, currentUserUid, postOwnerUid, postId, an
             {isReplying && <form className="reply-form" onSubmit={event => {
               event.preventDefault()
               if (!replyContent.trim()) return
+              if (getMentionUsernames(replyContent).length > MAX_COMMENT_MENTIONS) {
+                setError(`멘션은 답글 하나에 최대 ${MAX_COMMENT_MENTIONS}명까지 할 수 있습니다.`)
+                return
+              }
               void run(async () => { await onReply(comment, replyContent); setReplyContent(''); setReplyingTo('') })
             }}>
               <label htmlFor={`reply-input-${postId}-${comment.id}`}>{comment.authorNickname}님에게 답글</label>
-              <textarea id={`reply-input-${postId}-${comment.id}`} value={replyContent} onChange={event => setReplyContent(event.target.value)}
-                placeholder="답글을 입력하세요" rows={2} maxLength={COMMENT_MAX_LENGTH} disabled={busy} autoFocus />
+              <MentionTextarea id={`reply-input-${postId}-${comment.id}`} value={replyContent} onChange={setReplyContent}
+                placeholder="답글을 입력하세요" rows={2} disabled={busy} autoFocus />
               <div className="comment-compose-actions">
                 <small>{replyContent.length.toLocaleString()} / {COMMENT_MAX_LENGTH.toLocaleString()}</small>
                 <button className="text-action comment-submit" type="submit" disabled={busy || !replyContent.trim()}>

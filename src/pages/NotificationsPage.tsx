@@ -1,4 +1,4 @@
-import { Bell, BellRing, BellOff, CheckCheck, CornerDownRight, Heart, MessageCircle, UserPlus } from 'lucide-react'
+import { AtSign, Bell, BellRing, BellOff, CheckCheck, CornerDownRight, Heart, MessageCircle, UserPlus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -18,6 +18,7 @@ import {
 import type { DaymarkNotification } from '../types/notification'
 
 function getNotificationIcon(type: DaymarkNotification['type']) {
+  if (type === 'mention') return AtSign
   if (type === 'like') return Heart
   if (type === 'reply') return CornerDownRight
   if (type === 'follow' || type === 'follow_request') {
@@ -136,7 +137,7 @@ export function NotificationsPage() {
         <div>
           <p className="eyebrow">Notifications</p>
           <h1>알림</h1>
-          <p>채팅, 팔로우, 좋아요, 댓글과 답글 소식을 모아봅니다.</p>
+          <p>채팅, 팔로우, 좋아요, 댓글·답글과 멘션 소식을 모아봅니다.</p>
         </div>
         <button className="button button-secondary" type="button" onClick={() => void handleReadAll()}>
           <CheckCheck size={17} aria-hidden="true" />

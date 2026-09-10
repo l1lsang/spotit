@@ -48,8 +48,26 @@ service cloud.firestore {
     function post(postId) { return get(/databases/$(database)/documents/posts/$(postId)).data; }
     function validComment(data) {
       return data.content is string && data.content.size() > 0 && data.content.size() <= 2000
+        && data.get('mentions', {}) is map && data.get('mentions', {}).size() <= 5
         && data.authorNickname == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nickname
         && data.createdAt == request.time;
+    }
+    function recipientCanReadPost(source, uid) {
+      return source.uid == uid || source.visibility == 'public'
+        || (source.visibility == 'followers' && exists(/databases/$(database)/documents/users/$(source.uid)/followers/$(uid)))
+        || (source.visibility == 'group' && exists(/databases/$(database)/documents/groups/$(source.groupId)/members/$(uid)));
+    }
+    function validMentionNotification(recipientUid, source) {
+      let data = request.resource.data;
+      let commentPath = /databases/$(database)/documents/posts/$(data.postId)/comments/$(data.commentId);
+      let isReply = data.get('replyId', '') != '';
+      let message = isReply ? getAfter(/databases/$(database)/documents/posts/$(data.postId)/comments/$(data.commentId)/replies/$(data.replyId)).data : getAfter(commentPath).data;
+      return message.uid == request.auth.uid && message.createdAt == request.time
+        && data.mentionUsername is string && data.mentionUsername.matches('^[a-z0-9._]{1,30}$')
+        && message.get('mentions', {}).get('@' + data.mentionUsername, '') == recipientUid
+        && get(/databases/$(database)/documents/usernames/$('@' + data.mentionUsername)).data.uid == recipientUid
+        && recipientCanReadPost(source, recipientUid)
+        && data.href == '/posts/' + data.postId + (isReply ? '#reply-' + data.replyId : '#comment-' + data.commentId);
     }
     function validSocialNotification(recipientUid) {
       let data = request.resource.data;
@@ -67,7 +85,8 @@ service cloud.firestore {
             && (recipientUid == source.uid || recipientUid == get(/databases/$(database)/documents/posts/$(data.postId)/comments/$(data.commentId)).data.uid)
             && getAfter(/databases/$(database)/documents/posts/$(data.postId)/comments/$(data.commentId)/replies/$(data.replyId)).data.uid == request.auth.uid
             && getAfter(/databases/$(database)/documents/posts/$(data.postId)/comments/$(data.commentId)/replies/$(data.replyId)).data.createdAt == request.time
-            && data.href == '/posts/' + data.postId + '#reply-' + data.replyId));
+            && data.href == '/posts/' + data.postId + '#reply-' + data.replyId)
+          || (data.type == 'mention' && validMentionNotification(recipientUid, source)));
     }
     function validPostGroup(data, previousGroupId) {
       let groupId = data.get('groupId', '');
@@ -175,7 +194,7 @@ service cloud.firestore {
       match /notifications/{notificationId} {
         allow read: if isOwner(uid) || isOwner(resource.data.actorUid);
         allow create: if active() && request.resource.data.actorUid == request.auth.uid && request.resource.data.recipientUid == uid
-          && (!(request.resource.data.type in ['like', 'comment', 'reply']) || validSocialNotification(uid));
+          && (!(request.resource.data.type in ['like', 'comment', 'reply', 'mention']) || validSocialNotification(uid));
         allow update: if isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt']);
         allow delete: if isOwner(uid) || isOwner(resource.data.actorUid);
       }
@@ -208,7 +227,9 @@ service cloud.firestore {
             && !existsAfter(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid))
             && request.resource.data.memberCount == resource.data.memberCount - 1));
       match /members/{uid} {
-        allow read: if isOwner(uid);
+        // A member may check a specific recipient's membership when composing a mention.
+        allow get: if isOwner(uid) || (active() && groupMember(groupId));
+        allow list: if isOwner(uid);
         allow create: if validGroupMember(groupId, uid);
         allow delete: if isOwner(uid)
           && !existsAfter(/databases/$(database)/documents/users/$(uid)/groupMemberships/$(groupId))

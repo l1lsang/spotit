@@ -1,6 +1,6 @@
 import type { Timestamp } from 'firebase/firestore'
 
-export type NotificationType = 'chat' | 'follow' | 'follow_request' | 'like' | 'comment' | 'reply'
+export type NotificationType = 'chat' | 'follow' | 'follow_request' | 'like' | 'comment' | 'reply' | 'mention'
 
 export interface DaymarkNotification {
   id: string
@@ -16,6 +16,7 @@ export interface DaymarkNotification {
   chatId?: string
   commentId?: string
   replyId?: string
+  mentionUsername?: string
   readAt?: Timestamp | null
   createdAt?: Timestamp
 }

@@ -1,11 +1,22 @@
 import {
   collection, doc, getDocFromServer, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp,
-  type DocumentData, type QueryDocumentSnapshot, type Unsubscribe,
+  type DocumentData, type QueryDocumentSnapshot, type Unsubscribe, type Transaction,
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
 import { COMMENT_MAX_LENGTH, type PostComment, type PostReply } from '../types/comment'
 import type { NotificationActor } from '../types/notification'
+import type { Post } from '../types/post'
 import { queueNotification } from './notificationService'
+import { resolveCommentMentions, type MentionUser } from './mentionService'
+
+function queueMentionNotifications(transaction: Transaction, recipients: MentionUser[], author: NotificationActor,
+  target: { postId: string; commentId: string; replyId?: string }) {
+  recipients.forEach(user => queueNotification(transaction, {
+    ...target, recipientUid: user.uid, actor: author, type: 'mention', title: '새 멘션', mentionUsername: user.username,
+    message: `${author.nickname}님이 ${target.replyId ? '답글' : '댓글'}에서 나를 멘션했습니다.`,
+    href: `/posts/${target.postId}#${target.replyId ? `reply-${target.replyId}` : `comment-${target.commentId}`}`,
+  }))
+}
 
 function toComment(snapshot: QueryDocumentSnapshot<DocumentData>): PostComment {
   const data = snapshot.data() as Omit<PostComment, 'id' | 'replies'>
@@ -74,13 +85,15 @@ export async function addComment(postId: string, author: NotificationActor, cont
   await runTransaction(db, async transaction => {
     const snapshot = await transaction.get(postRef)
     if (!snapshot.exists()) throw new Error('삭제되었거나 볼 수 없는 기록입니다.')
-    const post = snapshot.data()
+    const post = snapshot.data() as Post
+    const { mentions, recipients } = await resolveCommentMentions(transaction, trimmed, post, author.uid)
     transaction.set(commentRef, {
       id: commentRef.id, uid: author.uid, authorNickname: author.nickname, authorPhotoURL: author.photoURL || '',
-      content: trimmed, replyCount: 0, createdAt: serverTimestamp(),
+      content: trimmed, mentions, replyCount: 0, createdAt: serverTimestamp(),
     })
     transaction.update(postRef, { commentCount: (post.commentCount || 0) + 1, updatedAt: serverTimestamp() })
-    queueNotification(transaction, {
+    queueMentionNotifications(transaction, recipients, author, { postId, commentId: commentRef.id })
+    if (!recipients.some(user => user.uid === post.uid)) queueNotification(transaction, {
       recipientUid: post.uid, actor: author, type: 'comment', title: '새 댓글',
       message: `${author.nickname}님이 "${post.title}"에 댓글을 남겼습니다.`,
       href: `/posts/${postId}#comment-${commentRef.id}`, postId, commentId: commentRef.id,
@@ -99,15 +112,19 @@ export async function addReply(postId: string, commentId: string, author: Notifi
     if (!postSnapshot.exists()) throw new Error('삭제되었거나 볼 수 없는 기록입니다.')
     const commentSnapshot = await transaction.get(commentRef)
     if (!commentSnapshot.exists() || commentSnapshot.data().deleted) throw new Error('삭제된 댓글에는 답글을 남길 수 없습니다.')
-    const post = postSnapshot.data()
+    const post = postSnapshot.data() as Post
     const comment = commentSnapshot.data()
+    const { mentions, recipients } = await resolveCommentMentions(transaction, trimmed, post, author.uid)
     transaction.set(replyRef, {
       id: replyRef.id, commentId, uid: author.uid, authorNickname: author.nickname, authorPhotoURL: author.photoURL || '',
-      content: trimmed, createdAt: serverTimestamp(),
+      content: trimmed, mentions, createdAt: serverTimestamp(),
     })
     transaction.update(commentRef, { replyCount: (comment.replyCount || 0) + 1 })
     transaction.update(postRef, { commentCount: (post.commentCount || 0) + 1, updatedAt: serverTimestamp() })
-    new Set([comment.uid, post.uid]).forEach(recipientUid => queueNotification(transaction, {
+    queueMentionNotifications(transaction, recipients, author, { postId, commentId, replyId: replyRef.id })
+    const normalRecipients = new Set<string>([comment.uid, post.uid])
+    recipients.forEach(user => normalRecipients.delete(user.uid))
+    normalRecipients.forEach(recipientUid => queueNotification(transaction, {
       recipientUid, actor: author, type: 'reply', title: recipientUid === comment.uid ? '내 댓글에 답글' : '새 답글',
       message: recipientUid === comment.uid ? `${author.nickname}님이 내 댓글에 답글을 남겼습니다.`
         : `${author.nickname}님이 "${post.title}"에 답글을 남겼습니다.`,

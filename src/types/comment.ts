@@ -9,6 +9,7 @@ export interface PostComment {
   authorPhotoURL?: string
   deleted?: boolean
   content: string
+  mentions?: Record<string, string>
   replyCount?: number
   replies: PostReply[]
   createdAt: Timestamp
@@ -21,5 +22,6 @@ export interface PostReply {
   authorNickname: string
   authorPhotoURL?: string
   content: string
+  mentions?: Record<string, string>
   createdAt: Timestamp
 }

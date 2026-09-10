@@ -61,9 +61,8 @@ export function MapPostPreview({ post, onClose, onBack }: MapPostPreviewProps) {
         <Link className="button button-primary" to={`/posts/${post.id}`}>
           상세보기
         </Link>
-        <button className="button button-secondary" type="button" onClick={() => void handleShare()}>
-          <Share2 size={16} aria-hidden="true" />
-          공유
+        <button className="button-icon subtle share-icon-button" type="button" onClick={() => void handleShare()} aria-label="핀 공유" title="핀 공유">
+          <Share2 size={19} aria-hidden="true" />
         </button>
       </div>
     </article>

@@ -6,6 +6,8 @@ import { addComment, addReply, deleteComment, deleteReply, subscribeToComments }
 import { COMMENT_MAX_LENGTH, type PostComment } from '../../types/comment'
 import type { Post } from '../../types/post'
 import { CommentList } from './CommentList'
+import { MentionTextarea } from './MentionTextarea'
+import { getMentionUsernames, MAX_COMMENT_MENTIONS } from '../../lib/commentMentions'
 
 export function CommentThread({ post, anchorTargets }: { post: Post; anchorTargets: boolean }) {
   const { currentUser, profile } = useAuth()
@@ -53,6 +55,10 @@ export function CommentThread({ post, anchorTargets }: { post: Post; anchorTarge
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (pending.current || !content.trim()) return
+    if (getMentionUsernames(content).length > MAX_COMMENT_MENTIONS) {
+      setError(`멘션은 댓글 하나에 최대 ${MAX_COMMENT_MENTIONS}명까지 할 수 있습니다.`)
+      return
+    }
     pending.current = true; setBusy(true); setError('')
     try { await addComment(post.id, actor(), content); setContent('') }
     catch { setError('댓글을 저장하지 못했습니다. 입력한 내용을 확인하고 다시 시도해 주세요.') }
@@ -71,9 +77,9 @@ export function CommentThread({ post, anchorTargets }: { post: Post; anchorTarge
       onDeleteReply={(comment, reply) => deleteReply(post.id, comment.id, reply.id, actor().uid)} />}
     <form className="comment-form" onSubmit={event => void submit(event)}>
       <label className="sr-only" htmlFor={`comment-input-${post.id}`}>댓글 입력</label>
-      <textarea id={`comment-input-${post.id}`} value={content} onChange={event => setContent(event.target.value)}
+      <MentionTextarea id={`comment-input-${post.id}`} value={content} onChange={setContent}
         placeholder={uid ? '댓글을 남겨보세요' : '로그인 후 댓글을 남길 수 있습니다'} rows={2}
-        maxLength={COMMENT_MAX_LENGTH} disabled={!uid || busy || Boolean(loadError)} />
+        disabled={!uid || busy || Boolean(loadError)} />
       <div className="comment-compose-actions">
         <small>{content.length.toLocaleString()} / {COMMENT_MAX_LENGTH.toLocaleString()}</small>
         <button className="text-action comment-submit" type="submit" disabled={!uid || busy || !content.trim() || Boolean(loadError)}>
