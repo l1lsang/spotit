@@ -46,6 +46,29 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
     }
     function post(postId) { return get(/databases/$(database)/documents/posts/$(postId)).data; }
+    function validComment(data) {
+      return data.content is string && data.content.size() > 0 && data.content.size() <= 2000
+        && data.authorNickname == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nickname
+        && data.createdAt == request.time;
+    }
+    function validSocialNotification(recipientUid) {
+      let data = request.resource.data;
+      let source = post(data.postId);
+      return canReadPost(source) && recipientUid != request.auth.uid && data.createdAt == request.time && data.readAt == null
+        && data.actorNickname == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nickname
+        && ((data.type == 'like' && recipientUid == source.uid
+            && getAfter(/databases/$(database)/documents/posts/$(data.postId)/likes/$(request.auth.uid)).data.createdAt == request.time
+            && data.href == '/posts/' + data.postId)
+          || (data.type == 'comment' && recipientUid == source.uid
+            && getAfter(/databases/$(database)/documents/posts/$(data.postId)/comments/$(data.commentId)).data.uid == request.auth.uid
+            && getAfter(/databases/$(database)/documents/posts/$(data.postId)/comments/$(data.commentId)).data.createdAt == request.time
+            && data.href == '/posts/' + data.postId + '#comment-' + data.commentId)
+          || (data.type == 'reply'
+            && (recipientUid == source.uid || recipientUid == get(/databases/$(database)/documents/posts/$(data.postId)/comments/$(data.commentId)).data.uid)
+            && getAfter(/databases/$(database)/documents/posts/$(data.postId)/comments/$(data.commentId)/replies/$(data.replyId)).data.uid == request.auth.uid
+            && getAfter(/databases/$(database)/documents/posts/$(data.postId)/comments/$(data.commentId)/replies/$(data.replyId)).data.createdAt == request.time
+            && data.href == '/posts/' + data.postId + '#reply-' + data.replyId));
+    }
     function validPostGroup(data, previousGroupId) {
       let groupId = data.get('groupId', '');
       return groupId is string && groupId.size() <= 128
@@ -151,7 +174,8 @@ service cloud.firestore {
       }
       match /notifications/{notificationId} {
         allow read: if isOwner(uid) || isOwner(resource.data.actorUid);
-        allow create: if active() && request.resource.data.actorUid == request.auth.uid && request.resource.data.recipientUid == uid;
+        allow create: if active() && request.resource.data.actorUid == request.auth.uid && request.resource.data.recipientUid == uid
+          && (!(request.resource.data.type in ['like', 'comment', 'reply']) || validSocialNotification(uid));
         allow update: if isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt']);
         allow delete: if isOwner(uid) || isOwner(resource.data.actorUid);
       }
@@ -223,12 +247,21 @@ service cloud.firestore {
       allow delete: if isOwner(resource.data.uid);
       match /comments/{commentId} {
         allow read: if canReadPost(post(postId)) || isOwner(resource.data.uid);
-        allow create: if isOwner(request.resource.data.uid) && canReadPost(post(postId));
-        allow update: if canReadPost(post(postId)) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount']);
+        allow create: if isOwner(request.resource.data.uid) && canReadPost(post(postId)) && validComment(request.resource.data)
+          && request.resource.data.id == commentId && request.resource.data.replyCount == 0 && request.resource.data.get('deleted', false) == false;
+        allow update: if canReadPost(post(postId))
+          && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount'])
+              && request.resource.data.replyCount is int && request.resource.data.replyCount >= 0)
+            || ((isOwner(resource.data.uid) || isOwner(post(postId).uid))
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'deleted'])
+              && request.resource.data.content == '' && request.resource.data.deleted == true));
         allow delete: if isOwner(resource.data.uid) || isOwner(post(postId).uid);
         match /replies/{replyId} {
           allow read: if canReadPost(post(postId)) || isOwner(resource.data.uid);
-          allow create: if isOwner(request.resource.data.uid) && canReadPost(post(postId));
+          allow create: if isOwner(request.resource.data.uid) && canReadPost(post(postId)) && validComment(request.resource.data)
+            && request.resource.data.id == replyId && request.resource.data.commentId == commentId
+            && exists(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId))
+            && getAfter(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)).data.get('deleted', false) == false;
           allow delete: if isOwner(resource.data.uid) || isOwner(post(postId).uid)
             || isOwner(get(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)).data.uid);
         }

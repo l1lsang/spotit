@@ -1,28 +1,22 @@
-import { Heart, MessageCircle, Pencil, Share2, Trash2 } from 'lucide-react'
+import { Pencil, Share2, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { ReportButton } from '../components/moderation/ReportButton'
 import { MapView } from '../components/map/MapView'
 import { getExternalMapUrl } from '../lib/mapLocation'
-import { CommentList } from '../components/post/CommentList'
+import { PostInteractions } from '../components/post/PostInteractions'
 import { PostFormModal, type PostFormSubmitPayload } from '../components/post/PostFormModal'
 import { useAuth } from '../hooks/useAuth'
-import type { PostComment } from '../types/comment'
 import type { Post, PostFormInput } from '../types/post'
 import { formatDateKey, formatTimestamp } from '../lib/date'
-import { addComment, addReply, deleteComment, deleteReply, listComments } from '../services/commentService'
-import { getLikeStatus, togglePostLike } from '../services/likeService'
 import { deletePost, getPostById, updatePost } from '../services/postService'
 
 export function PostDetailPage() {
   const { postId = '' } = useParams()
   const navigate = useNavigate()
-  const { currentUser, profile, firebaseReady } = useAuth()
+  const { currentUser, firebaseReady } = useAuth()
   const [post, setPost] = useState<Post | null>(null)
-  const [comments, setComments] = useState<PostComment[]>([])
-  const [commentContent, setCommentContent] = useState('')
-  const [liked, setLiked] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -42,11 +36,6 @@ export function PostDetailPage() {
     try {
       const nextPost = await getPostById(postId, currentUser?.uid)
       setPost(nextPost)
-
-      if (nextPost) {
-        setComments(await listComments(nextPost.id))
-        setLiked(currentUser ? await getLikeStatus(nextPost.id, currentUser.uid) : false)
-      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '기록을 불러오지 못했습니다.')
     } finally {
@@ -57,65 +46,6 @@ export function PostDetailPage() {
   useEffect(() => {
     void loadDetail()
   }, [loadDetail])
-
-  async function handleToggleLike() {
-    if (!currentUser || !profile || !post) {
-      navigate('/login')
-      return
-    }
-
-    const nextLiked = await togglePostLike(
-      post.id,
-      { uid: currentUser.uid, nickname: profile.nickname, photoURL: profile.photoURL },
-      post.uid,
-      post.title,
-    )
-    setLiked(nextLiked)
-    setPost({
-      ...post,
-      likeCount: Math.max(0, post.likeCount + (nextLiked ? 1 : -1)),
-    })
-  }
-
-  async function handleAddComment(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    if (!currentUser || !profile || !post) {
-      navigate('/login')
-      return
-    }
-
-    if (!commentContent.trim()) {
-      return
-    }
-
-    await addComment(
-      post.id,
-      post.uid,
-      post.title,
-      { uid: currentUser.uid, nickname: profile.nickname, photoURL: profile.photoURL },
-      commentContent,
-    )
-    setCommentContent('')
-    await loadDetail()
-  }
-
-  async function handleAddReply(comment: PostComment, content: string) {
-    if (!currentUser || !profile || !post) {
-      navigate('/login')
-      return
-    }
-
-    await addReply(
-      post.id,
-      post.uid,
-      post.title,
-      comment,
-      { uid: currentUser.uid, nickname: profile.nickname, photoURL: profile.photoURL },
-      content,
-    )
-    await loadDetail()
-  }
 
   async function handleDeletePost() {
     if (!currentUser || !post || !window.confirm('이 기록을 삭제할까요?')) {
@@ -230,18 +160,6 @@ export function PostDetailPage() {
           <p className="detail-content">{post.content}</p>
 
           <div className="detail-actions">
-            <button
-              className={`button ${liked ? 'button-primary' : 'button-secondary'}`}
-              type="button"
-              onClick={handleToggleLike}
-            >
-              <Heart size={18} aria-hidden="true" fill={liked ? 'currentColor' : 'none'} />
-              좋아요 {post.likeCount}
-            </button>
-            <span className="comment-count">
-              <MessageCircle size={18} aria-hidden="true" />
-              댓글 {post.commentCount}
-            </span>
             <button className="button button-secondary" type="button" onClick={() => void handleSharePost()}>
               <Share2 size={17} aria-hidden="true" />
               핀 공유
@@ -263,44 +181,7 @@ export function PostDetailPage() {
           </div>
           {shareMessage && <p className="form-success compact-message">{shareMessage}</p>}
 
-          <section className="comments-section">
-            <h2>댓글</h2>
-            <CommentList
-              comments={comments}
-              currentUserUid={currentUser?.uid}
-              postOwnerUid={post.uid}
-              onReply={handleAddReply}
-              onDelete={(commentId) => {
-                if (!currentUser) {
-                  navigate('/login')
-                  return
-                }
-
-                void deleteComment(post.id, commentId, currentUser.uid, post.uid).then(loadDetail)
-              }}
-              onDeleteReply={(comment, reply) => {
-                if (!currentUser) {
-                  navigate('/login')
-                  return
-                }
-
-                void deleteReply(post.id, comment.id, reply.id, currentUser.uid, post.uid, comment.uid).then(loadDetail)
-              }}
-            />
-
-            <form className="comment-form" onSubmit={handleAddComment}>
-              <textarea
-                value={commentContent}
-                onChange={(event) => setCommentContent(event.target.value)}
-                placeholder={currentUser ? '댓글을 남겨보세요' : '로그인 후 댓글을 남길 수 있습니다'}
-                disabled={!currentUser}
-                rows={3}
-              />
-              <button className="button button-primary" type="submit" disabled={!currentUser}>
-                댓글 작성
-              </button>
-            </form>
-          </section>
+          <PostInteractions key={post.id} post={post} expanded />
         </section>
 
         <aside className="detail-aside">

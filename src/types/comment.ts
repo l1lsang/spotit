@@ -1,9 +1,13 @@
 import type { Timestamp } from 'firebase/firestore'
 
+export const COMMENT_MAX_LENGTH = 2000
+
 export interface PostComment {
   id: string
   uid: string
   authorNickname: string
+  authorPhotoURL?: string
+  deleted?: boolean
   content: string
   replyCount?: number
   replies: PostReply[]
@@ -15,6 +19,7 @@ export interface PostReply {
   commentId: string
   uid: string
   authorNickname: string
+  authorPhotoURL?: string
   content: string
   createdAt: Timestamp
 }

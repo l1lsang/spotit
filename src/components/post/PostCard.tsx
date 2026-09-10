@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDateKey } from '../../lib/date'
 import type { Post } from '../../types/post'
+import { PostInteractions } from './PostInteractions'
 
 interface PostCardProps {
   post: Post
@@ -61,6 +62,7 @@ export function PostCard({ post, showVisibility = false, actions }: PostCardProp
           </div>
         </div>
       </Link>
+      <PostInteractions key={post.id} post={post} />
       {post.groupId && <Link className="post-group-link" to={`/groups/${post.groupId}`}><UsersRound size={14} aria-hidden="true" />그룹 핀 모아보기</Link>}
       {actions && <div className="card-actions">{actions}</div>}
     </article>

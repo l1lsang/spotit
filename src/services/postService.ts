@@ -1,5 +1,6 @@
 import {
   collection,
+  collectionGroup,
   deleteDoc,
   doc,
   getDoc,
@@ -13,6 +14,7 @@ import {
   type DocumentData,
   type DocumentSnapshot,
   type QueryDocumentSnapshot,
+  type Unsubscribe,
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
 import { getProfilePinAccess, type ProfilePinAccess } from '../lib/profilePinAccess'
@@ -73,6 +75,49 @@ function sortPostsByCreatedAtDesc(posts: Post[]): Post[] {
 
     return right - left
   })
+}
+
+export function subscribeToLikedPosts(uid: string, onChange: (posts: Post[]) => void, onError: (error: Error) => void): Unsubscribe {
+  const db = requireDb()
+  let active = true
+  let orderedIds: string[] = []
+  const posts = new Map<string, Post | null>()
+  const subscriptions = new Map<string, Unsubscribe>()
+  const emit = () => {
+    if (active && orderedIds.every(id => posts.has(id))) {
+      onChange(orderedIds.map(id => posts.get(id)).filter((post): post is Post => Boolean(post)))
+    }
+  }
+  const stop = onSnapshot(query(collectionGroup(db, 'likes'), where('uid', '==', uid)), snapshot => {
+    if (!active) return
+    const likes = snapshot.docs.flatMap(like => {
+      const postRef = like.ref.parent.parent
+      if (!postRef || postRef.parent.path !== 'posts') return []
+      const createdAt = like.data().createdAt
+      return [{ id: postRef.id, likedAt: hasToMillis(createdAt) ? createdAt.toMillis() : 0 }]
+    }).sort((a, b) => b.likedAt - a.likedAt || a.id.localeCompare(b.id))
+    orderedIds = likes.map(like => like.id)
+    const ids = new Set(orderedIds)
+    subscriptions.forEach((unsubscribe, id) => {
+      if (!ids.has(id)) { unsubscribe(); subscriptions.delete(id); posts.delete(id) }
+    })
+    orderedIds.forEach(id => {
+      if (subscriptions.has(id)) return
+      subscriptions.set(id, onSnapshot(doc(db, 'posts', id), postSnapshot => {
+        if (!active || !subscriptions.has(id)) return
+        posts.set(id, toPost(postSnapshot))
+        emit()
+      }, error => {
+        if (!active || !subscriptions.has(id)) return
+        // A saved like must never reveal a deleted pin or bypass its current visibility.
+        posts.set(id, null)
+        emit()
+        if (error.code !== 'permission-denied') onError(error)
+      }))
+    })
+    emit()
+  }, error => { if (active) onError(error) })
+  return () => { active = false; stop(); subscriptions.forEach(unsubscribe => unsubscribe()); subscriptions.clear() }
 }
 
 function assertOwner(post: Post, uid: string): void {

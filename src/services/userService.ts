@@ -344,7 +344,7 @@ export async function deleteUserAccountData(uid: string): Promise<void> {
     if (parentPostRef && !myPostIds.has(parentPostRef.id)) {
       operations.push((batch) =>
         batch.update(parentPostRef, {
-          commentCount: increment(-(1 + ((commentDoc.data() as { replyCount?: number }).replyCount || 0))),
+          commentCount: increment(-((commentDoc.data().deleted ? 0 : 1) + ((commentDoc.data() as { replyCount?: number }).replyCount || 0))),
           updatedAt: serverTimestamp(),
         }),
       )

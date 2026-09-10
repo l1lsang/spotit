@@ -1,4 +1,4 @@
-import { Bell, BellRing, BellOff, CheckCheck, MessageCircle, UserPlus } from 'lucide-react'
+import { Bell, BellRing, BellOff, CheckCheck, CornerDownRight, Heart, MessageCircle, UserPlus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -18,11 +18,13 @@ import {
 import type { DaymarkNotification } from '../types/notification'
 
 function getNotificationIcon(type: DaymarkNotification['type']) {
+  if (type === 'like') return Heart
+  if (type === 'reply') return CornerDownRight
   if (type === 'follow' || type === 'follow_request') {
     return UserPlus
   }
 
-  if (type === 'chat' || type === 'comment' || type === 'reply') {
+  if (type === 'chat' || type === 'comment') {
     return MessageCircle
   }
 
@@ -69,11 +71,16 @@ export function NotificationsPage() {
       return
     }
 
-    if (!notification.readAt) {
-      await markNotificationAsRead(currentUser.uid, notification.id)
+    try {
+      if (!notification.readAt) await markNotificationAsRead(currentUser.uid, notification.id)
+    } catch {
+      setError('읽음 상태를 저장하지 못했습니다. 다시 시도해 주세요.')
     }
-
-    navigate(notification.type === 'follow_request' ? '/profile/settings' : notification.href)
+    const href = notification.postId && notification.replyId
+      ? `/posts/${notification.postId}#reply-${notification.replyId}`
+      : notification.postId && notification.commentId
+        ? `/posts/${notification.postId}#comment-${notification.commentId}` : notification.href
+    navigate(notification.type === 'follow_request' ? '/profile/settings' : href)
   }
 
   async function handleReadAll() {
@@ -81,7 +88,8 @@ export function NotificationsPage() {
       return
     }
 
-    await markAllNotificationsAsRead(currentUser.uid)
+    try { await markAllNotificationsAsRead(currentUser.uid) }
+    catch { setError('읽음 상태를 저장하지 못했습니다. 다시 시도해 주세요.') }
   }
 
   async function handleEnablePush() {
@@ -128,7 +136,7 @@ export function NotificationsPage() {
         <div>
           <p className="eyebrow">Notifications</p>
           <h1>알림</h1>
-          <p>채팅, 팔로우, 좋아요, 댓글 소식을 모아봅니다.</p>
+          <p>채팅, 팔로우, 좋아요, 댓글과 답글 소식을 모아봅니다.</p>
         </div>
         <button className="button button-secondary" type="button" onClick={() => void handleReadAll()}>
           <CheckCheck size={17} aria-hidden="true" />
@@ -149,7 +157,7 @@ export function NotificationsPage() {
                   ? 'Firebase Web Push 인증서 키가 필요합니다.'
                   : pushStatus === 'unsupported'
                     ? '이 브라우저는 웹 푸시를 지원하지 않습니다.'
-                    : '채팅, 팔로우, 댓글 알림을 휴대폰에서도 받아보세요.'}
+                    : '채팅, 팔로우, 좋아요, 댓글과 답글 알림을 휴대폰에서도 받아보세요.'}
           </p>
         </div>
         {pushStatus === 'granted' ? (

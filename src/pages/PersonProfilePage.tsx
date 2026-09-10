@@ -1,4 +1,4 @@
-import { ArrowLeft, Clock, Lock, MessageCircle, Settings, UserPlus, UserRoundCheck, X } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Clock, Heart, Lock, MessageCircle, Settings, UserPlus, UserRoundCheck, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -151,6 +151,12 @@ export function PersonProfile({ userId }: { userId: string }) {
         </>}
         {actionError && <p className="form-error" role="alert">{actionError}</p>}
       </article>}
+      {user && ownProfile && <section className="profile-activity" aria-labelledby="profile-activity-title">
+        <h2 id="profile-activity-title">내 활동</h2>
+        <Link className="profile-activity-link" to="/profile/likes">
+          <Heart size={19} aria-hidden="true" /><span>좋아요<small>좋아요한 핀 모아보기</small></span><ChevronRight size={18} aria-hidden="true" />
+        </Link>
+      </section>}
       {user && <ProfilePinAlbum ownerUid={user.uid} refreshKey={revision} />}
       {user && followListKind && <PersonFollowList user={user} kind={followListKind} returnTo={returnTo} onClose={() => setFollowListKind(null)} />}
     </PageContainer>

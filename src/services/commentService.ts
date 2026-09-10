@@ -1,236 +1,162 @@
 import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  increment,
-  orderBy,
-  query,
-  serverTimestamp,
-  writeBatch,
-  type DocumentData,
-  type QueryDocumentSnapshot,
+  collection, doc, getDocFromServer, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp,
+  type DocumentData, type QueryDocumentSnapshot, type Unsubscribe,
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
-import type { PostComment, PostReply } from '../types/comment'
+import { COMMENT_MAX_LENGTH, type PostComment, type PostReply } from '../types/comment'
 import type { NotificationActor } from '../types/notification'
-import { createNotification, createNotifications } from './notificationService'
-import { getPostById } from './postService'
-
-type CommentAuthor = NotificationActor
+import { queueNotification } from './notificationService'
 
 function toComment(snapshot: QueryDocumentSnapshot<DocumentData>): PostComment {
-  const data = snapshot.data() as Omit<PostComment, 'id'> & { id?: string }
-
-  return {
-    ...data,
-    id: data.id || snapshot.id,
-    replyCount: data.replyCount || 0,
-    replies: data.replies || [],
-  }
+  const data = snapshot.data() as Omit<PostComment, 'id' | 'replies'>
+  return { ...data, id: snapshot.id, replyCount: data.replyCount || 0, replies: [] }
 }
 
 function toReply(snapshot: QueryDocumentSnapshot<DocumentData>, commentId: string): PostReply {
-  const data = snapshot.data() as Omit<PostReply, 'id' | 'commentId'> & { id?: string; commentId?: string }
+  return { ...snapshot.data(), id: snapshot.id, commentId } as PostReply
+}
 
-  return {
-    ...data,
-    id: data.id || snapshot.id,
-    commentId: data.commentId || commentId,
-  }
+function checkedContent(content: string) {
+  const trimmed = content.trim()
+  if (!trimmed || trimmed.length > COMMENT_MAX_LENGTH) throw new Error(`댓글은 1~${COMMENT_MAX_LENGTH}자로 입력해 주세요.`)
+  return trimmed
 }
 
 export async function listComments(postId: string): Promise<PostComment[]> {
-  const commentsRef = collection(requireDb(), 'posts', postId, 'comments')
-  const snapshot = await getDocs(query(commentsRef, orderBy('createdAt', 'asc')))
-  const comments = snapshot.docs.map(toComment)
-  const commentsWithReplies = await Promise.all(
-    comments.map(async (comment) => {
-      const repliesSnapshot = await getDocs(
-        query(collection(requireDb(), 'posts', postId, 'comments', comment.id, 'replies'), orderBy('createdAt', 'asc')),
-      )
-
-      return {
-        ...comment,
-        replies: repliesSnapshot.docs.map((replyDoc) => toReply(replyDoc, comment.id)),
-      }
-    }),
-  )
-
-  return commentsWithReplies
+  const snapshot = await getDocs(query(collection(requireDb(), 'posts', postId, 'comments'), orderBy('createdAt', 'asc')))
+  return Promise.all(snapshot.docs.map(async commentDoc => {
+    const replies = await getDocs(query(collection(commentDoc.ref, 'replies'), orderBy('createdAt', 'asc')))
+    return { ...toComment(commentDoc), replies: replies.docs.map(reply => toReply(reply, commentDoc.id)) }
+  }))
 }
 
-export async function addComment(
-  postId: string,
-  postOwnerUid: string,
-  postTitle: string,
-  author: CommentAuthor,
-  content: string,
-): Promise<void> {
-  const trimmed = content.trim()
-
-  if (!trimmed) {
-    return
-  }
-
+// Reply listeners exist only while the thread is visible and stop with their parent.
+export function subscribeToComments(postId: string, onChange: (comments: PostComment[]) => void, onError: (error: Error) => void): Unsubscribe {
   const db = requireDb()
-  const commentRef = doc(collection(db, 'posts', postId, 'comments'))
-  const batch = writeBatch(db)
-
-  batch.set(commentRef, {
-    id: commentRef.id,
-    uid: author.uid,
-    authorNickname: author.nickname,
-    content: trimmed,
-    replyCount: 0,
-    createdAt: serverTimestamp(),
-  })
-  batch.update(doc(db, 'posts', postId), {
-    commentCount: increment(1),
-    updatedAt: serverTimestamp(),
-  })
-
-  await batch.commit()
-
-  await createNotification({
-    recipientUid: postOwnerUid,
-    actor: author,
-    type: 'comment',
-    title: '새 댓글',
-    message: `${author.nickname}님이 "${postTitle}"에 댓글을 남겼습니다.`,
-    href: `/posts/${postId}`,
-    postId,
-    commentId: commentRef.id,
-  })
+  let comments: PostComment[] = []
+  let active = true
+  const replies = new Map<string, PostReply[]>()
+  const subscriptions = new Map<string, Unsubscribe>()
+  const emit = () => {
+    if (active && comments.every(comment => replies.has(comment.id))) {
+      onChange(comments.map(comment => ({ ...comment, replies: replies.get(comment.id) || [] })))
+    }
+  }
+  const fail = (error: Error) => { if (active) onError(error) }
+  const stop = onSnapshot(query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc')), snapshot => {
+    if (!active) return
+    comments = snapshot.docs.map(toComment)
+    const ids = new Set(comments.map(comment => comment.id))
+    subscriptions.forEach((unsubscribe, id) => {
+      if (!ids.has(id)) { unsubscribe(); subscriptions.delete(id); replies.delete(id) }
+    })
+    comments.forEach(comment => {
+      if (subscriptions.has(comment.id)) return
+      subscriptions.set(comment.id, onSnapshot(
+        query(collection(db, 'posts', postId, 'comments', comment.id, 'replies'), orderBy('createdAt', 'asc')),
+        replySnapshot => {
+          if (!active || !subscriptions.has(comment.id)) return
+          replies.set(comment.id, replySnapshot.docs.map(reply => toReply(reply, comment.id)))
+          emit()
+        }, fail,
+      ))
+    })
+    emit()
+  }, fail)
+  return () => { active = false; stop(); subscriptions.forEach(unsubscribe => unsubscribe()); subscriptions.clear() }
 }
 
-export async function addReply(
-  postId: string,
-  postOwnerUid: string,
-  postTitle: string,
-  parentComment: Pick<PostComment, 'id' | 'uid' | 'authorNickname'>,
-  author: CommentAuthor,
-  content: string,
-): Promise<void> {
-  const trimmed = content.trim()
-
-  if (!trimmed) {
-    return
-  }
-
+export async function addComment(postId: string, author: NotificationActor, content: string): Promise<void> {
+  const trimmed = checkedContent(content)
   const db = requireDb()
-  const commentRef = doc(db, 'posts', postId, 'comments', parentComment.id)
-  const replyRef = doc(collection(db, 'posts', postId, 'comments', parentComment.id, 'replies'))
-  const batch = writeBatch(db)
-
-  batch.set(replyRef, {
-    id: replyRef.id,
-    commentId: parentComment.id,
-    uid: author.uid,
-    authorNickname: author.nickname,
-    content: trimmed,
-    createdAt: serverTimestamp(),
+  const postRef = doc(db, 'posts', postId)
+  const commentRef = doc(collection(postRef, 'comments'))
+  await runTransaction(db, async transaction => {
+    const snapshot = await transaction.get(postRef)
+    if (!snapshot.exists()) throw new Error('삭제되었거나 볼 수 없는 기록입니다.')
+    const post = snapshot.data()
+    transaction.set(commentRef, {
+      id: commentRef.id, uid: author.uid, authorNickname: author.nickname, authorPhotoURL: author.photoURL || '',
+      content: trimmed, replyCount: 0, createdAt: serverTimestamp(),
+    })
+    transaction.update(postRef, { commentCount: (post.commentCount || 0) + 1, updatedAt: serverTimestamp() })
+    queueNotification(transaction, {
+      recipientUid: post.uid, actor: author, type: 'comment', title: '새 댓글',
+      message: `${author.nickname}님이 "${post.title}"에 댓글을 남겼습니다.`,
+      href: `/posts/${postId}#comment-${commentRef.id}`, postId, commentId: commentRef.id,
+    })
   })
-  batch.update(commentRef, {
-    replyCount: increment(1),
-  })
-  batch.update(doc(db, 'posts', postId), {
-    commentCount: increment(1),
-    updatedAt: serverTimestamp(),
-  })
-
-  await batch.commit()
-
-  const recipients = new Set([parentComment.uid, postOwnerUid])
-
-  await createNotifications(
-    [...recipients].map((recipientUid) => ({
-      recipientUid,
-      actor: author,
-      type: 'reply',
-      title: recipientUid === parentComment.uid ? '내 댓글에 답글' : '새 답글',
-      message:
-        recipientUid === parentComment.uid
-          ? `${author.nickname}님이 내 댓글에 답글을 남겼습니다.`
-          : `${author.nickname}님이 "${postTitle}"에 답글을 남겼습니다.`,
-      href: `/posts/${postId}`,
-      postId,
-      commentId: parentComment.id,
-      replyId: replyRef.id,
-    })),
-  )
 }
 
-export async function deleteComment(
-  postId: string,
-  commentId: string,
-  requesterUid: string,
-  postOwnerUid: string,
-): Promise<void> {
+export async function addReply(postId: string, commentId: string, author: NotificationActor, content: string): Promise<void> {
+  const trimmed = checkedContent(content)
   const db = requireDb()
-  const commentRef = doc(db, 'posts', postId, 'comments', commentId)
-  const commentSnapshot = await getDoc(commentRef)
-
-  if (!commentSnapshot.exists()) {
-    return
-  }
-
-  const comment = commentSnapshot.data() as PostComment
-  const canDelete = comment.uid === requesterUid || postOwnerUid === requesterUid
-
-  if (!canDelete) {
-    throw new Error('댓글 작성자 또는 글 작성자만 삭제할 수 있습니다.')
-  }
-
-  const repliesSnapshot = await getDocs(collection(db, 'posts', postId, 'comments', commentId, 'replies'))
-  const batch = writeBatch(db)
-  repliesSnapshot.docs.forEach((replyDoc) => batch.delete(replyDoc.ref))
-  batch.delete(commentRef)
-  batch.update(doc(db, 'posts', postId), {
-    commentCount: increment(-(1 + repliesSnapshot.size)),
-    updatedAt: serverTimestamp(),
+  const postRef = doc(db, 'posts', postId)
+  const commentRef = doc(collection(postRef, 'comments'), commentId)
+  const replyRef = doc(collection(commentRef, 'replies'))
+  await runTransaction(db, async transaction => {
+    const postSnapshot = await transaction.get(postRef)
+    if (!postSnapshot.exists()) throw new Error('삭제되었거나 볼 수 없는 기록입니다.')
+    const commentSnapshot = await transaction.get(commentRef)
+    if (!commentSnapshot.exists() || commentSnapshot.data().deleted) throw new Error('삭제된 댓글에는 답글을 남길 수 없습니다.')
+    const post = postSnapshot.data()
+    const comment = commentSnapshot.data()
+    transaction.set(replyRef, {
+      id: replyRef.id, commentId, uid: author.uid, authorNickname: author.nickname, authorPhotoURL: author.photoURL || '',
+      content: trimmed, createdAt: serverTimestamp(),
+    })
+    transaction.update(commentRef, { replyCount: (comment.replyCount || 0) + 1 })
+    transaction.update(postRef, { commentCount: (post.commentCount || 0) + 1, updatedAt: serverTimestamp() })
+    new Set([comment.uid, post.uid]).forEach(recipientUid => queueNotification(transaction, {
+      recipientUid, actor: author, type: 'reply', title: recipientUid === comment.uid ? '내 댓글에 답글' : '새 답글',
+      message: recipientUid === comment.uid ? `${author.nickname}님이 내 댓글에 답글을 남겼습니다.`
+        : `${author.nickname}님이 "${post.title}"에 답글을 남겼습니다.`,
+      href: `/posts/${postId}#reply-${replyRef.id}`, postId, commentId, replyId: replyRef.id,
+    }))
   })
-
-  await batch.commit()
 }
 
-export async function deleteReply(
-  postId: string,
-  commentId: string,
-  replyId: string,
-  requesterUid: string,
-  postOwnerUid: string,
-  commentOwnerUid: string,
-): Promise<void> {
+export async function deleteComment(postId: string, commentId: string, requesterUid: string): Promise<void> {
   const db = requireDb()
-  const replyRef = doc(db, 'posts', postId, 'comments', commentId, 'replies', replyId)
-  const replySnapshot = await getDoc(replyRef)
-
-  if (!replySnapshot.exists()) {
-    return
-  }
-
-  const reply = replySnapshot.data() as PostReply
-  const canDelete = reply.uid === requesterUid || postOwnerUid === requesterUid || commentOwnerUid === requesterUid
-
-  if (!canDelete) {
-    throw new Error('답글 작성자, 댓글 작성자 또는 글 작성자만 삭제할 수 있습니다.')
-  }
-
-  const batch = writeBatch(db)
-
-  batch.delete(replyRef)
-  batch.update(doc(db, 'posts', postId, 'comments', commentId), {
-    replyCount: increment(-1),
+  const postRef = doc(db, 'posts', postId)
+  const commentRef = doc(collection(postRef, 'comments'), commentId)
+  await runTransaction(db, async transaction => {
+    const postSnapshot = await transaction.get(postRef)
+    const commentSnapshot = await transaction.get(commentRef)
+    if (!postSnapshot.exists() || !commentSnapshot.exists() || commentSnapshot.data().deleted) return
+    const comment = commentSnapshot.data()
+    const post = postSnapshot.data()
+    if (comment.uid !== requesterUid && post.uid !== requesterUid) throw new Error('댓글 작성자 또는 글 작성자만 삭제할 수 있습니다.')
+    // Retain existing replies and serialize against concurrent additions/deletions.
+    if (comment.replyCount > 0) transaction.update(commentRef, { content: '', deleted: true })
+    else transaction.delete(commentRef)
+    transaction.update(postRef, { commentCount: Math.max(0, (post.commentCount || 0) - 1), updatedAt: serverTimestamp() })
+  }).catch(async error => {
+    if (error.code !== 'permission-denied') throw error
+    // Rules may see a concurrent deletion before transaction preconditions are checked.
+    const latest = await getDocFromServer(commentRef)
+    if (latest.exists() && !latest.data().deleted) throw error
   })
-  batch.update(doc(db, 'posts', postId), {
-    commentCount: increment(-1),
-    updatedAt: serverTimestamp(),
-  })
-
-  await batch.commit()
 }
 
-export async function canReadComments(postId: string, viewerUid?: string): Promise<boolean> {
-  return Boolean(await getPostById(postId, viewerUid))
+export async function deleteReply(postId: string, commentId: string, replyId: string, requesterUid: string): Promise<void> {
+  const db = requireDb()
+  const postRef = doc(db, 'posts', postId)
+  const commentRef = doc(collection(postRef, 'comments'), commentId)
+  const replyRef = doc(collection(commentRef, 'replies'), replyId)
+  await runTransaction(db, async transaction => {
+    const postSnapshot = await transaction.get(postRef)
+    const commentSnapshot = await transaction.get(commentRef)
+    const replySnapshot = await transaction.get(replyRef)
+    if (!postSnapshot.exists() || !commentSnapshot.exists() || !replySnapshot.exists()) return
+    const post = postSnapshot.data()
+    const comment = commentSnapshot.data()
+    if (![replySnapshot.data().uid, post.uid, comment.uid].includes(requesterUid)) throw new Error('답글을 삭제할 권한이 없습니다.')
+    transaction.delete(replyRef)
+    transaction.update(commentRef, { replyCount: Math.max(0, (comment.replyCount || 0) - 1) })
+    transaction.update(postRef, { commentCount: Math.max(0, (post.commentCount || 0) - 1), updatedAt: serverTimestamp() })
+  }).catch(async error => {
+    if (error.code !== 'permission-denied') throw error
+    if ((await getDocFromServer(replyRef)).exists()) throw error
+  })
 }

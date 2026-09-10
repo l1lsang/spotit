@@ -13,11 +13,12 @@ import {
   type DocumentData,
   type QueryDocumentSnapshot,
   type Unsubscribe,
+  type DocumentReference,
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
 import type { DaymarkNotification, NotificationActor, NotificationType } from '../types/notification'
 
-interface CreateNotificationInput {
+export interface CreateNotificationInput {
   recipientUid: string
   actor: NotificationActor
   type: NotificationType
@@ -63,7 +64,8 @@ function sortNotificationsDesc(notifications: DaymarkNotification[]): DaymarkNot
   })
 }
 
-export async function createNotification(input: CreateNotificationInput): Promise<void> {
+// Keep the notification in the same atomic write as its action.
+export function queueNotification(writer: { set: (ref: DocumentReference, data: DocumentData) => unknown }, input: CreateNotificationInput): void {
   if (input.recipientUid === input.actor.uid) {
     return
   }
@@ -71,25 +73,30 @@ export async function createNotification(input: CreateNotificationInput): Promis
   const db = requireDb()
   const notificationRef = doc(collection(db, 'users', input.recipientUid, 'notifications'))
 
-  await writeBatch(db)
-    .set(notificationRef, {
-      id: notificationRef.id,
-      recipientUid: input.recipientUid,
-      actorUid: input.actor.uid,
-      actorNickname: input.actor.nickname,
-      actorPhotoURL: input.actor.photoURL || '',
-      type: input.type,
-      title: input.title,
-      message: input.message,
-      href: input.href,
-      postId: input.postId || '',
-      chatId: input.chatId || '',
-      commentId: input.commentId || '',
-      replyId: input.replyId || '',
-      readAt: null,
-      createdAt: serverTimestamp(),
-    })
-    .commit()
+  writer.set(notificationRef, {
+    id: notificationRef.id,
+    recipientUid: input.recipientUid,
+    actorUid: input.actor.uid,
+    actorNickname: input.actor.nickname,
+    actorPhotoURL: input.actor.photoURL || '',
+    type: input.type,
+    title: input.title,
+    message: input.message,
+    href: input.href,
+    postId: input.postId || '',
+    chatId: input.chatId || '',
+    commentId: input.commentId || '',
+    replyId: input.replyId || '',
+    readAt: null,
+    createdAt: serverTimestamp(),
+  })
+}
+
+export async function createNotification(input: CreateNotificationInput): Promise<void> {
+  if (input.recipientUid === input.actor.uid) return
+  const batch = writeBatch(requireDb())
+  queueNotification(batch, input)
+  await batch.commit()
 }
 
 export async function createNotifications(inputs: CreateNotificationInput[]): Promise<void> {
@@ -102,27 +109,7 @@ export async function createNotifications(inputs: CreateNotificationInput[]): Pr
   const db = requireDb()
   const batch = writeBatch(db)
 
-  validInputs.forEach((input) => {
-    const notificationRef = doc(collection(db, 'users', input.recipientUid, 'notifications'))
-
-    batch.set(notificationRef, {
-      id: notificationRef.id,
-      recipientUid: input.recipientUid,
-      actorUid: input.actor.uid,
-      actorNickname: input.actor.nickname,
-      actorPhotoURL: input.actor.photoURL || '',
-      type: input.type,
-      title: input.title,
-      message: input.message,
-      href: input.href,
-      postId: input.postId || '',
-      chatId: input.chatId || '',
-      commentId: input.commentId || '',
-      replyId: input.replyId || '',
-      readAt: null,
-      createdAt: serverTimestamp(),
-    })
-  })
+  validInputs.forEach((input) => queueNotification(batch, input))
 
   await batch.commit()
 }

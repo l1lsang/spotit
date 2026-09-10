@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { formatDateKey } from '../../lib/date'
 import { getExternalMapUrl } from '../../lib/mapLocation'
 import type { Post } from '../../types/post'
+import { PostInteractions } from '../post/PostInteractions'
 
 interface MapPostPreviewProps {
   post: Post
@@ -55,6 +56,7 @@ export function MapPostPreview({ post, onClose, onBack }: MapPostPreviewProps) {
         </span>
       </div>
       {shareMessage && <p role="status">{shareMessage}</p>}
+      <PostInteractions key={post.id} post={post} />
       <div className="preview-actions">
         <Link className="button button-primary" to={`/posts/${post.id}`}>
           상세보기

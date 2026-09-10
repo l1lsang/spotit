@@ -8,6 +8,7 @@ import { ChatRoomPage } from '../pages/ChatRoomPage'
 import { FeedPage } from '../pages/FeedPage'
 import { LandingPage } from '../pages/LandingPage'
 import { LoginPage } from '../pages/LoginPage'
+import { LikedPostsPage } from '../pages/LikedPostsPage'
 import { MapPage } from '../pages/MapPage'
 import { MyPostsPage } from '../pages/MyPostsPage'
 import { NotificationsPage } from '../pages/NotificationsPage'
@@ -133,6 +134,7 @@ export function AppRouter() {
             }
           />
           <Route path="/profile/settings" element={<ProtectedRoute><ProfileSettingsPage /></ProtectedRoute>} />
+          <Route path="/profile/likes" element={<ProtectedRoute><LikedPostsPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </OnboardingGuard>
