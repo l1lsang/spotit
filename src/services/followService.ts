@@ -8,6 +8,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
+import { invalidateAppReads } from '../lib/readCache'
 import type { FollowEdge, FollowRequest } from '../types/follow'
 import type { DaymarkUser } from '../types/user'
 import { createNotification } from './notificationService'
@@ -80,6 +81,7 @@ async function createFollowRelationship(currentUser: FollowPerson, targetUser: F
   })
 
   await batch.commit()
+  invalidateAppReads()
 }
 
 export async function followUser(currentUser: FollowPerson, targetUser: FollowPerson): Promise<FollowActionResult> {
@@ -112,6 +114,7 @@ export async function followUser(currentUser: FollowPerson, targetUser: FollowPe
       })
 
       await batch.commit()
+      invalidateAppReads()
 
       await createNotification({
         recipientUid: targetUser.uid,
@@ -131,6 +134,7 @@ export async function followUser(currentUser: FollowPerson, targetUser: FollowPe
     batch.delete(requestRef)
     batch.delete(sentRequestRef)
     await batch.commit()
+    invalidateAppReads()
   }
 
   await createFollowRelationship(currentUser, targetUser)
@@ -155,6 +159,7 @@ export async function cancelFollowRequest(currentUid: string, targetUid: string)
   batch.delete(doc(db, 'users', currentUid, 'sentFollowRequests', targetUid))
 
   await batch.commit()
+  invalidateAppReads()
 }
 
 export async function acceptFollowRequest(owner: FollowPerson, requester: FollowRequest): Promise<void> {
@@ -193,6 +198,7 @@ export async function acceptFollowRequest(owner: FollowPerson, requester: Follow
   batch.delete(sentRequestRef)
 
   await batch.commit()
+  invalidateAppReads()
 
   await createNotification({
     recipientUid: requester.uid,
@@ -231,6 +237,7 @@ export async function unfollowUser(currentUid: string, targetUid: string): Promi
   })
 
   await batch.commit()
+  invalidateAppReads()
 }
 
 export async function removeFollower(ownerUid: string, followerUid: string): Promise<void> {

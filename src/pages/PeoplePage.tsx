@@ -1,3 +1,4 @@
+import { invalidateAppReads } from '../lib/readCache'
 import { RefreshCw, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -45,7 +46,7 @@ export function PeoplePage() {
           <h1>사람 찾기</h1>
           <p>프로필을 눌러 친구의 소개를 보고 소통해 보세요.</p>
         </div>
-        <button className="button button-secondary" type="button" disabled={loading} onClick={() => setRevision(value => value + 1)}>
+        <button className="button button-secondary" type="button" disabled={loading} onClick={() => { invalidateAppReads(); setRevision(value => value + 1) }}>
           <RefreshCw size={17} aria-hidden="true" />새로고침
         </button>
       </section>

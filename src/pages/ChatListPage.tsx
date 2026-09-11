@@ -1,3 +1,4 @@
+import { invalidateAppReads } from '../lib/readCache'
 import { MessageCircle, Plus, RefreshCw, Search, UsersRound, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -258,7 +259,7 @@ export function ChatListPage() {
                 {usersError && (
                   <div>
                     <p className="form-error" role="alert">{usersError}</p>
-                    <button className="button button-secondary" type="button" onClick={() => setUsersRevision((value) => value + 1)}>
+                    <button className="button button-secondary" type="button" onClick={() => { invalidateAppReads(); setUsersRevision((value) => value + 1) }}>
                       다시 불러오기
                     </button>
                   </div>

@@ -17,6 +17,7 @@ import {
   type WriteBatch,
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
+import { appReadCache, invalidateAppReads } from '../lib/readCache'
 import { getSignupRequirementsError, SIGNUP_POLICY_VERSION, type SignupRequirements } from '../lib/signupRequirements'
 import { BIO_MAX_LENGTH, NICKNAME_MAX_LENGTH, createRandomUsername, getUsernameError, normalizeUsername } from '../lib/userProfile'
 import type { DaymarkUser } from '../types/user'
@@ -29,14 +30,12 @@ export function getFallbackNickname(user: Pick<FirebaseUser, 'displayName'>): st
   return user.displayName?.trim() || '스팟잇 사용자'
 }
 
-export async function getUserProfile(uid: string): Promise<DaymarkUser | null> {
-  const snapshot = await getDoc(doc(requireDb(), 'users', uid))
-
-  if (!snapshot.exists()) {
-    return null
+export async function getUserProfile(uid: string, fresh = false): Promise<DaymarkUser | null> {
+  const load = async () => {
+    const snapshot = await getDoc(doc(requireDb(), 'users', uid))
+    return snapshot.exists() ? snapshot.data() as DaymarkUser : null
   }
-
-  return snapshot.data() as DaymarkUser
+  return fresh ? load() : appReadCache.read(`profile:${uid}`, load, 60_000)
 }
 
 export async function isUsernameAvailable(value: string, uid?: string): Promise<boolean> {
@@ -80,7 +79,7 @@ export async function upsertUserProfile(user: FirebaseUser): Promise<DaymarkUser
       }
 
       const profile = snapshot.data() as DaymarkUser
-      if (profile.username || profile.onboardingComplete === false) return true
+      if (profile.username || profile.onboardingComplete === false) return profile
 
       const username = createRandomUsername()
       const usernameRef = doc(db, 'usernames', `@${username}`)
@@ -95,6 +94,7 @@ export async function upsertUserProfile(user: FirebaseUser): Promise<DaymarkUser
       return true
     })
 
+    if (typeof migrated === 'object') return migrated
     if (migrated) {
       return (await getDoc(userRef)).data() as DaymarkUser
     }
@@ -162,6 +162,7 @@ export async function updateUserProfileDetails(uid: string, details: UserProfile
     })
     if (previousRef && previousSnapshot?.data()?.uid === uid) transaction.delete(previousRef)
   })
+  invalidateAppReads()
 }
 
 export async function updateUserNickname(uid: string, nickname: string): Promise<void> {
@@ -169,6 +170,7 @@ export async function updateUserNickname(uid: string, nickname: string): Promise
     nickname: nickname.trim(),
     updatedAt: serverTimestamp(),
   })
+  invalidateAppReads()
 }
 
 export async function updateUserPhotoURL(uid: string, photoURL: string): Promise<void> {
@@ -176,6 +178,7 @@ export async function updateUserPhotoURL(uid: string, photoURL: string): Promise
     photoURL,
     updatedAt: serverTimestamp(),
   })
+  invalidateAppReads()
 }
 
 export async function updateUserPrivacy(uid: string, isPrivate: boolean): Promise<void> {
@@ -183,6 +186,7 @@ export async function updateUserPrivacy(uid: string, isPrivate: boolean): Promis
     isPrivate,
     updatedAt: serverTimestamp(),
   })
+  invalidateAppReads()
 }
 
 export async function saveUserPinTheme(uid: string, theme: PinTheme): Promise<void> {
@@ -204,13 +208,15 @@ export async function saveUserPinTheme(uid: string, theme: PinTheme): Promise<vo
       updatedAt: serverTimestamp(),
     })
   })
+  invalidateAppReads()
 }
 
 export async function listUsers(): Promise<DaymarkUser[]> {
-  const snapshot = await getDocs(collection(requireDb(), 'users'))
-
-  return snapshot.docs.map((userDoc) => userDoc.data() as DaymarkUser)
-    .filter((user) => user.onboardingComplete !== false)
+  return appReadCache.read('users', async () => {
+    const snapshot = await getDocs(collection(requireDb(), 'users'))
+    return snapshot.docs.map((userDoc) => userDoc.data() as DaymarkUser)
+      .filter((user) => user.onboardingComplete !== false)
+  })
 }
 
 async function commitBatchOperations(db: Firestore, operations: BatchOperation[]): Promise<void> {
@@ -441,4 +447,5 @@ export async function deleteUserAccountData(uid: string): Promise<void> {
     transaction.delete(doc(db, 'users', uid, 'private', 'locationConsent'))
     transaction.delete(userRef)
   })
+  invalidateAppReads()
 }

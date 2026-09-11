@@ -12,6 +12,7 @@ import { auth, isFirebaseConfigured, requireDb } from '../lib/firebase'
 import { upsertUserProfile } from '../services/userService'
 import type { DaymarkUser } from '../types/user'
 import { AuthContext } from './authContextCore'
+import { invalidateAppReads } from '../lib/readCache'
 
 export function AuthProvider({ children }: PropsWithChildren): ReactElement {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: PropsWithChildren): ReactElement {
     let revision = 0
     let unsubscribeProfile: (() => void) | undefined
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      invalidateAppReads()
       const currentRevision = ++revision
       unsubscribeProfile?.()
       setProfile(null)
@@ -56,8 +58,10 @@ export function AuthProvider({ children }: PropsWithChildren): ReactElement {
 
       setLoading(true)
       try {
-        await upsertUserProfile(user)
+        const nextProfile = await upsertUserProfile(user)
         if (!active || currentRevision !== revision) return
+        setProfile(nextProfile)
+        setLoading(false)
         unsubscribeProfile = onSnapshot(doc(requireDb(), 'users', user.uid), (snapshot) => {
           if (!active || currentRevision !== revision) return
           setProfile(snapshot.exists() ? snapshot.data() as DaymarkUser : null)

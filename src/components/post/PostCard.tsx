@@ -18,7 +18,7 @@ export function PostCard({ post, showVisibility = false, actions }: PostCardProp
     <article className="post-card">
       <Link className="post-card-link" to={`/posts/${post.id}`} aria-label={`${post.title} 상세보기`}>
         {post.photoUrls[0] ? (
-          <img className="post-thumbnail" src={post.photoUrls[0]} alt={post.title} loading="lazy" />
+          <img className="post-thumbnail" src={post.photoThumbnailUrls?.[0] || post.photoUrls[0]} alt={post.title} loading="lazy" decoding="async" />
         ) : (
           <div className="post-thumbnail placeholder-thumbnail">
             <MapPin size={28} aria-hidden="true" />

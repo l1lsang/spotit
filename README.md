@@ -83,6 +83,8 @@ VITE_GOOGLE_MAPS_MAP_ID=
 
 사용자 이름을 포함한 2단계 가입, Google 로그인, 기존 사용자 일괄 적용과 필요한 보안 규칙은 [계정 기능 설정](docs/account-setup.md)을 참고합니다.
 
+**좋아요 목록에 필요한 인덱스:** `/profile/likes`는 `likes` 컬렉션 그룹에서 본인의 `uid`로 조회합니다. `firestore.indexes.json`에 정의된 `likes.uid`의 `COLLECTION_GROUP` 오름차순 인덱스가 운영 서버에서도 `READY` 상태여야 합니다. 웹 앱 배포나 `firestore:rules` 배포만으로는 인덱스가 적용되지 않습니다. `firebase deploy --only firestore:indexes --project naran-235a6`로 반영하고 준비 완료 후 목록을 새로고침합니다. 인덱스가 없으면 좋아요 저장은 성공해도 목록 조회가 `FAILED_PRECONDITION`으로 실패합니다. [Firebase 인덱스 관리 문서](https://firebase.google.com/docs/firestore/query-data/indexing)
+
 1. Firebase Console에서 Web 앱을 생성합니다.
 2. Authentication에서 이메일/비밀번호 로그인을 활성화합니다.
 3. Firestore Database와 Storage를 생성합니다.

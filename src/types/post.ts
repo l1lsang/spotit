@@ -72,6 +72,7 @@ export interface Post {
   pinColor: string
   pinThemeId?: string
   photoUrls: string[]
+  photoThumbnailUrls?: string[]
   groupId?: string
   likeCount: number
   commentCount: number

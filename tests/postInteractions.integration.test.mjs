@@ -26,9 +26,16 @@ async function client(nickname) {
   firestore.connectFirestoreEmulator(db, '127.0.0.1', 8181)
   const { user } = await signInAnonymously(auth)
   const modules = new Map()
+  const reads = { queries: 0, documents: 0 }
+  const measuredFirestore = { ...firestore, getDocs: async (...args) => {
+    reads.queries++
+    const snapshot = await firestore.getDocs(...args)
+    reads.documents += snapshot.size
+    return snapshot
+  } }
   async function load(id) {
     if (modules.has(id)) return modules.get(id)
-    const exports = id === 'firebase/firestore' ? firestore : id === 'firebase/storage' ? storageSdk
+    const exports = id === 'firebase/firestore' ? measuredFirestore : id === 'firebase/storage' ? storageSdk
       : id === resolve(root, 'src/lib/firebase.ts') ? { requireDb: () => db, requireStorage: () => { throw new Error('No uploads in these tests') } } : null
     const module = exports ? new SyntheticModule(Object.keys(exports), function () {
       for (const [name, value] of Object.entries(exports)) this.setExport(name, value)
@@ -50,12 +57,61 @@ async function client(nickname) {
   await users.updateUserProfileDetails(user.uid, {
     username: crypto.randomUUID().replaceAll('-', '').slice(0, 25), nickname, bio: '',
   }, { birthDate: '2000-01-01', termsAccepted: true, privacyAccepted: true, locationAccepted: true })
-  return { db, uid: user.uid, actor: { uid: user.uid, nickname, photoURL: '' }, service,
+  return { db, reads, uid: user.uid, actor: { uid: user.uid, nickname, photoURL: '' }, service,
     comments: await service('comment'), likes: await service('like'), notifications: await service('notification') }
 }
 
 before(async () => {
   [owner, commenter, replier, outsider] = await Promise.all(['핀 작성자', '댓글 작성자', '답글 작성자', '다른 사용자'].map(client))
+})
+
+test('batched feed pages honor follower rules, preserve equal-time ordering and invalidate after unfollow', { timeout: 60000 }, async () => {
+  const [viewer, ...authors] = await Promise.all(['페이지 뷰어', '저자 1', '저자 2', '저자 3', '저자 4', '저자 5', '저자 6'].map(client))
+  const follow = await viewer.service('follow')
+  for (const author of authors) await follow.followUser(viewer.actor, author.actor)
+  const expected = []
+  for (const author of [viewer, ...authors]) {
+    const batch = firestore.writeBatch(author.db)
+    for (const visibility of ['public', 'followers', 'private']) {
+      const ref = firestore.doc(firestore.collection(author.db, 'posts'))
+      batch.set(ref, {
+        uid: author.uid, authorNickname: author.actor.nickname, title: visibility, content: '같은 시간',
+        lat: 37.5, lng: 127, visibility, photoUrls: [], pinColor: '#356f68',
+        createdAt: new firestore.Timestamp(1000, 123), updatedAt: firestore.serverTimestamp(),
+      })
+      if (author === viewer || visibility !== 'private') expected.push(ref.id)
+    }
+    await batch.commit()
+  }
+  const posts = await viewer.service('post')
+  const before = { ...viewer.reads }
+  const first = await posts.getVisiblePostPage(viewer.uid, null, 4)
+  assert.equal(viewer.reads.queries - before.queries, 4, 'one following query and three bounded author queries')
+  assert.ok(viewer.reads.documents - before.documents <= 6 + 3 * 5)
+  const afterFirst = { ...viewer.reads }
+  assert.deepEqual(await posts.getVisiblePostPage(viewer.uid, null, 4), first)
+  assert.deepEqual(viewer.reads, afterFirst, 'returning to a fresh page performs no additional read')
+  let cursor = first.nextCursor
+  const actual = first.posts.map(post => post.id)
+  while (cursor) {
+    const page = await posts.getVisiblePostPage(viewer.uid, cursor, 4)
+    assert.ok(page.posts.length <= 4)
+    actual.push(...page.posts.map(post => post.id))
+    cursor = page.nextCursor
+  }
+  assert.deepEqual(actual, expected.sort().reverse())
+  assert.deepEqual(await posts.getVisiblePosts(viewer.uid, 0), [])
+  assert.equal((await posts.getVisiblePosts(viewer.uid, Infinity)).length, expected.length)
+  assert.equal((await posts.getNearbyVisiblePosts(viewer.uid, { lat: 37.5, lng: 127 }, 1, 5)).length, 5)
+  assert.deepEqual(await posts.getNearbyVisiblePosts(viewer.uid, { lat: 0, lng: 0 }, 1), [])
+  const removed = authors[0]
+  await follow.unfollowUser(viewer.uid, removed.uid)
+  const refreshed = await posts.getVisiblePostPage(viewer.uid, null, 80)
+  assert.ok(refreshed.posts.every(post => post.uid !== removed.uid))
+  assert.equal(refreshed.posts.length, expected.length - 2)
+  await assert.rejects(firestore.getDocs(firestore.query(firestore.collection(viewer.db, 'posts'),
+    firestore.where('uid', 'in', [removed.uid, authors[1].uid]), firestore.where('visibility', 'in', ['public', 'followers']),
+    firestore.orderBy('createdAt', 'desc'), firestore.limit(4))), denied)
 })
 
 async function pin(visibility = 'public', extra = {}) {

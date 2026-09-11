@@ -27,6 +27,7 @@ async function loadModule(path, dependencies = {}) {
 }
 
 const access = await loadModule('../src/lib/profilePinAccess.ts')
+const readCache = await loadModule('../src/lib/readCache.ts')
 const { PinAlbumGrid } = await loadModule('../src/components/profile/PinAlbumGrid.tsx', {
   'react/jsx-runtime': jsxRuntime, 'react-router-dom': router, 'lucide-react': icons,
 })
@@ -42,6 +43,7 @@ async function service({ owner = { uid: 'owner', isPrivate: false }, following =
   const unexpected = () => { throw new Error('Unexpected read or mutation') }
   const api = await loadModule('../src/services/postService.ts', {
     'firebase/firestore': {
+      collectionGroup: unexpected, documentId: unexpected, orderBy: unexpected, limit: unexpected, startAfter: unexpected,
       collection: (_db, path) => path,
       where: (field, operator, value) => ({ field, operator, value }),
       query: (path, ...constraints) => ({ path, constraints }),
@@ -55,6 +57,7 @@ async function service({ owner = { uid: 'owner', isPrivate: false }, following =
       deleteDoc: unexpected, doc: unexpected, getDoc: unexpected, serverTimestamp: unexpected, setDoc: unexpected, updateDoc: unexpected, onSnapshot: unexpected,
     },
     '../lib/firebase': { requireDb: () => ({}) },
+    '../lib/readCache': readCache,
     '../lib/profilePinAccess': access,
     '../types/post': { normalizePinColor: color => color || 'teal' },
     './followService': {
@@ -66,7 +69,7 @@ async function service({ owner = { uid: 'owner', isPrivate: false }, following =
         return following
       },
     },
-    './storageService': { uploadPostPhotos: unexpected },
+    './storageService': { uploadPostPhotosWithThumbnails: unexpected },
     './userService': { getUserProfile: async uid => { reads.profiles++; assert.equal(uid, 'owner'); return owner } },
   })
   return { ...api, reads }
@@ -151,4 +154,14 @@ test('album tiles link to pin details and include pins without photos', () => {
   assert.match(html, /aria-label="나만 보기"/)
   assert.match(html, /aria-label="전체 공개"/)
   assert.doesNotMatch(render(posts), /class="pin-album-visibility"/)
+})
+
+test('album tiles request thumbnails when present and retain legacy photo URLs', () => {
+  const html = render([
+    { ...pin('new', 'public'), photoUrls: ['/large.webp'], photoThumbnailUrls: ['/small.webp'] },
+    { ...pin('old', 'public'), photoUrls: ['/legacy.jpg'] },
+  ])
+  assert.match(html, /src="\/small.webp"/)
+  assert.match(html, /src="\/legacy.jpg"/)
+  assert.doesNotMatch(html, /src="\/large.webp"/)
 })

@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:performance": "node --experimental-strip-types --test tests/performance.test.mjs",
     "test:comment-mentions": "node --experimental-strip-types --experimental-vm-modules --test tests/commentMentions.test.mjs",
     "test:post-interactions": "firebase emulators:exec --config firebase.pin-themes.json --only auth,firestore --project demo-spotit-pins \"node --experimental-vm-modules --test tests/postInteractions.integration.test.mjs\"",
     "test:group-navigation": "node --experimental-strip-types --experimental-vm-modules --test tests/groupNavigation.test.mjs",

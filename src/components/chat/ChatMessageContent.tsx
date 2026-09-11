@@ -64,7 +64,7 @@ export function ChatMessageContent({ message, chatId, canReport, pinned = false,
         {pinned && <small className="message-pinned-label"><Pin size={12} aria-hidden="true" />고정됨</small>}
         {message.photoUrl && (
           <a className="message-photo-link" href={message.photoUrl} target="_blank" rel="noreferrer" draggable={false}>
-            <img className="message-photo" src={message.photoUrl} alt={message.photoName || '채팅 사진'} draggable={false} />
+            <img loading="lazy" decoding="async" className="message-photo" src={message.photoUrl} alt={message.photoName || '채팅 사진'} draggable={false} />
           </a>
         )}
         {message.photoUrl && canReport && <button className="message-photo-report" type="button" onClick={() => setView('photo-report')}>

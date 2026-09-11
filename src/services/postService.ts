@@ -3,20 +3,27 @@ import {
   collectionGroup,
   deleteDoc,
   doc,
+  documentId,
   getDoc,
   getDocs,
   onSnapshot,
+  orderBy,
+  limit,
   query,
   serverTimestamp,
   setDoc,
+  startAfter,
   updateDoc,
   where,
   type DocumentData,
   type DocumentSnapshot,
   type QueryDocumentSnapshot,
   type Unsubscribe,
+  type QueryConstraint,
+  type Timestamp,
 } from 'firebase/firestore'
 import { requireDb } from '../lib/firebase'
+import { appReadCache, invalidateAppReads } from '../lib/readCache'
 import { getProfilePinAccess, type ProfilePinAccess } from '../lib/profilePinAccess'
 import type { LatLng } from '../lib/kakaoMap'
 import type { GroupVisibility } from '../types/group'
@@ -26,7 +33,7 @@ import {
   type PostFormInput,
 } from '../types/post'
 import { getFollowingIds, isFollowing } from './followService'
-import { uploadPostPhotos } from './storageService'
+import { uploadPostPhotosWithThumbnails } from './storageService'
 import { getUserProfile } from './userService'
 
 interface AuthorInfo {
@@ -130,10 +137,6 @@ function normalizeVisibility(visibility: Post['visibility']): Post['visibility']
   return visibility === 'public' ? 'public' : visibility
 }
 
-function canFollowerSee(post: Post): boolean {
-  return post.visibility === 'followers' || post.visibility === 'public'
-}
-
 function distanceKm(from: LatLng, to: LatLng): number {
   const earthRadiusKm = 6371
   const latDelta = ((to.lat - from.lat) * Math.PI) / 180
@@ -147,17 +150,48 @@ function distanceKm(from: LatLng, to: LatLng): number {
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-async function getPostsByAuthor(uid: string, viewerUid: string): Promise<Post[]> {
-  const postsRef = collection(requireDb(), 'posts')
-  const postsQuery = uid === viewerUid
-    ? query(postsRef, where('uid', '==', uid))
-    : query(postsRef, where('uid', '==', uid), where('visibility', 'in', ['followers', 'public']))
-  const snapshot = await getDocs(postsQuery)
+export interface PostPageCursor { createdAt: Timestamp; id: string }
+export interface VisiblePostPage { posts: Post[]; nextCursor: PostPageCursor | null }
 
-  return snapshot.docs
-    .map(toPost)
-    .filter((post): post is Post => Boolean(post))
-    .filter((post) => uid === viewerUid || canFollowerSee(post))
+// Use five authors per query to leave room for account and follower rule reads.
+// A global timestamp + ID cursor keeps ties stable across all author batches.
+export async function getVisiblePostPage(uid: string, cursor: PostPageCursor | null = null, pageSize = 24): Promise<VisiblePostPage> {
+  const count = Math.max(1, Math.min(80, Number.isFinite(pageSize) ? Math.floor(pageSize) : 80))
+  const key = JSON.stringify(['feed', uid, cursor?.createdAt.seconds, cursor?.createdAt.nanoseconds, cursor?.id, count])
+  return appReadCache.read(key, async () => {
+    const followingIds = await appReadCache.read(`following:${uid}`, () => getFollowingIds(uid))
+    const authors = [...new Set(followingIds)].filter(id => id !== uid)
+    const scopes: QueryConstraint[][] = [[where('uid', '==', uid)]]
+    for (let index = 0; index < authors.length; index += 5) {
+      scopes.push([where('uid', 'in', authors.slice(index, index + 5)), where('visibility', 'in', ['followers', 'public'])])
+    }
+    const snapshots: QueryDocumentSnapshot<DocumentData>[] = []
+    let nextScope = 0
+    await Promise.all(Array.from({ length: Math.min(4, scopes.length) }, async () => {
+      while (nextScope < scopes.length) {
+        const scope = scopes[nextScope++]
+        const snapshot = await getDocs(query(collection(requireDb(), 'posts'), ...scope,
+          orderBy('createdAt', 'desc'), orderBy(documentId(), 'desc'),
+          ...(cursor ? [startAfter(cursor.createdAt, cursor.id)] : []), limit(count + 1)))
+        snapshots.push(...snapshot.docs)
+      }
+    }))
+    snapshots.sort((a, b) => {
+      const left = a.data().createdAt as Timestamp
+      const right = b.data().createdAt as Timestamp
+      return right.seconds - left.seconds || right.nanoseconds - left.nanoseconds || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0)
+    })
+    const page = snapshots.slice(0, count)
+    const last = page.at(-1)
+    return {
+      posts: page.map(toPost).filter((post): post is Post => Boolean(post)),
+      nextCursor: snapshots.length > count && last ? { createdAt: last.data().createdAt as Timestamp, id: last.id } : null,
+    }
+  })
+}
+
+export function filterNearbyPosts(posts: Post[], center: LatLng, radiusKm: number): Post[] {
+  return posts.filter(post => distanceKm(center, { lat: post.lat, lng: post.lng }) <= radiusKm)
 }
 
 export async function createPost(
@@ -169,7 +203,7 @@ export async function createPost(
   const groupId = input.groupId || ''
   const visibility = await getGroupPostVisibility(groupId, input.visibility, author.uid)
   const postRef = doc(collection(db, 'posts'))
-  const photoUrls = files.length > 0 ? await uploadPostPhotos(author.uid, postRef.id, files) : []
+  const photos = files.length > 0 ? await uploadPostPhotosWithThumbnails(author.uid, postRef.id, files) : { photoUrls: [], photoThumbnailUrls: [] }
 
   await setDoc(postRef, {
     id: postRef.id,
@@ -179,13 +213,14 @@ export async function createPost(
     groupId,
     visibility,
     pinColor: normalizePinColor(input.pinColor),
-    photoUrls,
+    ...photos,
     likeCount: 0,
     commentCount: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
 
+  invalidateAppReads()
   return postRef.id
 }
 
@@ -212,28 +247,15 @@ export function subscribeGroupPosts(groupId: string, onChange: (posts: Post[]) =
 }
 
 export async function getVisiblePosts(uid?: string, maxCount = 80): Promise<Post[]> {
-  const posts = new Map<string, Post>()
-
-  if (!uid) {
-    return []
-  }
-
-  const followingIds = await getFollowingIds(uid)
-  const authorIds = [uid, ...followingIds]
-  const authorPosts = await Promise.all(
-    authorIds.map((authorUid) => getPostsByAuthor(authorUid, uid)),
-  )
-
-  authorPosts.flat().forEach((post) => {
-    if (post.uid === uid || canFollowerSee(post)) {
-      posts.set(post.id, {
-        ...post,
-        visibility: normalizeVisibility(post.visibility),
-      })
-    }
-  })
-
-  return sortPostsByCreatedAtDesc([...posts.values()]).slice(0, maxCount)
+  if (!uid || maxCount <= 0 || Number.isNaN(maxCount)) return []
+  const posts: Post[] = []
+  let cursor: PostPageCursor | null = null
+  do {
+    const page = await getVisiblePostPage(uid, cursor, Math.min(80, maxCount - posts.length))
+    posts.push(...page.posts)
+    cursor = page.nextCursor
+  } while (cursor && posts.length < maxCount)
+  return posts.slice(0, maxCount)
 }
 
 export async function getNearbyVisiblePosts(
@@ -242,11 +264,15 @@ export async function getNearbyVisiblePosts(
   radiusKm: number,
   maxCount = 80,
 ): Promise<Post[]> {
-  const posts = await getVisiblePosts(uid, Infinity)
-
-  return posts
-    .filter((post) => distanceKm(center, { lat: post.lat, lng: post.lng }) <= radiusKm)
-    .slice(0, maxCount)
+  if (!uid || maxCount <= 0 || Number.isNaN(maxCount)) return []
+  const posts: Post[] = []
+  let cursor: PostPageCursor | null = null
+  do {
+    const page = await getVisiblePostPage(uid, cursor)
+    posts.push(...filterNearbyPosts(page.posts, center, radiusKm))
+    cursor = page.nextCursor
+  } while (cursor && posts.length < maxCount)
+  return posts.slice(0, maxCount)
 }
 
 export async function getUserPosts(uid: string): Promise<Post[]> {
@@ -260,7 +286,7 @@ export async function getProfilePosts(ownerUid: string, viewerUid?: string): Pro
   if (!viewerUid) return { posts: [], access: 'locked' }
   if (ownerUid === viewerUid) return { posts: await getUserPosts(ownerUid), access: 'owner' }
 
-  const [owner, followsOwner] = await Promise.all([getUserProfile(ownerUid), isFollowing(viewerUid, ownerUid)])
+  const [owner, followsOwner] = await Promise.all([getUserProfile(ownerUid, true), isFollowing(viewerUid, ownerUid)])
   if (!owner || owner.onboardingComplete === false) return { posts: [], access: 'locked' }
   const access = getProfilePinAccess(ownerUid, viewerUid, Boolean(owner.isPrivate), followsOwner)
   if (access === 'locked') return { posts: [], access }
@@ -328,17 +354,18 @@ export async function updatePost(
 
   const groupId = input.groupId ?? post.groupId ?? ''
   const visibility = await getGroupPostVisibility(groupId, input.visibility, uid, post)
-  const uploadedPhotoUrls =
-    files.length > 0 ? await uploadPostPhotos(uid, postId, files) : []
+  const uploadedPhotos = files.length > 0 ? await uploadPostPhotosWithThumbnails(uid, postId, files) : { photoUrls: [], photoThumbnailUrls: [] }
 
   await updateDoc(doc(requireDb(), 'posts', postId), {
     ...input,
     groupId,
     visibility,
     pinColor: normalizePinColor(input.pinColor),
-    photoUrls: [...existingPhotoUrls, ...uploadedPhotoUrls],
+    photoUrls: [...existingPhotoUrls, ...uploadedPhotos.photoUrls],
+    photoThumbnailUrls: [...existingPhotoUrls.map(url => post.photoThumbnailUrls?.[post.photoUrls.indexOf(url)] || url), ...uploadedPhotos.photoThumbnailUrls],
     updatedAt: serverTimestamp(),
   })
+  invalidateAppReads()
 }
 
 export async function deletePost(postId: string, uid: string): Promise<void> {
@@ -350,4 +377,5 @@ export async function deletePost(postId: string, uid: string): Promise<void> {
 
   assertOwner(post, uid)
   await deleteDoc(doc(requireDb(), 'posts', postId))
+  invalidateAppReads()
 }

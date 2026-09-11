@@ -36,6 +36,7 @@ function checkedContent(content: string) {
 export async function listComments(postId: string): Promise<PostComment[]> {
   const snapshot = await getDocs(query(collection(requireDb(), 'posts', postId, 'comments'), orderBy('createdAt', 'asc')))
   return Promise.all(snapshot.docs.map(async commentDoc => {
+    if (commentDoc.data().replyCount === 0) return toComment(commentDoc)
     const replies = await getDocs(query(collection(commentDoc.ref, 'replies'), orderBy('createdAt', 'asc')))
     return { ...toComment(commentDoc), replies: replies.docs.map(reply => toReply(reply, commentDoc.id)) }
   }))
@@ -57,11 +58,14 @@ export function subscribeToComments(postId: string, onChange: (comments: PostCom
   const stop = onSnapshot(query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc')), snapshot => {
     if (!active) return
     comments = snapshot.docs.map(toComment)
-    const ids = new Set(comments.map(comment => comment.id))
+    const commentIds = new Set(comments.map(comment => comment.id))
+    replies.forEach((_items, id) => { if (!commentIds.has(id)) replies.delete(id) })
+    const ids = new Set(snapshot.docs.filter(item => item.data().replyCount !== 0).map(item => item.id))
     subscriptions.forEach((unsubscribe, id) => {
       if (!ids.has(id)) { unsubscribe(); subscriptions.delete(id); replies.delete(id) }
     })
     comments.forEach(comment => {
+      if (!ids.has(comment.id)) { replies.set(comment.id, []); return }
       if (subscriptions.has(comment.id)) return
       subscriptions.set(comment.id, onSnapshot(
         query(collection(db, 'posts', postId, 'comments', comment.id, 'replies'), orderBy('createdAt', 'asc')),

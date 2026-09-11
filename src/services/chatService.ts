@@ -4,7 +4,6 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -23,6 +22,7 @@ import type { ChatMessage, ChatParticipant, DaymarkChat } from '../types/chat'
 import type { NotificationActor } from '../types/notification'
 import type { DaymarkUser } from '../types/user'
 import { createNotifications } from './notificationService'
+import { listUsers } from './userService'
 
 type ChatPerson = Pick<DaymarkUser, 'uid' | 'nickname' | 'photoURL'>
 
@@ -218,12 +218,10 @@ export async function getChatInviteCandidates(chatId: string): Promise<DaymarkUs
     return []
   }
 
-  const snapshot = await getDocs(collection(db, 'users'))
+  const users = await listUsers()
   const participantIds = new Set(chat.participantIds)
 
-  return snapshot.docs
-    .map((userDoc) => userDoc.data() as DaymarkUser)
-    .filter((user) => !participantIds.has(user.uid))
+  return users.filter((user) => !participantIds.has(user.uid))
 }
 
 export async function getChatById(chatId: string, viewerUid: string): Promise<DaymarkChat | null> {

@@ -2,6 +2,7 @@ import { Heart, MessageCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { useLiveVisibility } from '../../hooks/useLiveVisibility'
 import { subscribeToLikeStatus, subscribeToPostReactions, togglePostLike } from '../../services/likeService'
 import type { Post } from '../../types/post'
 import { CommentThread } from './CommentThread'
@@ -19,13 +20,14 @@ export function PostInteractions({ post, expanded = false }: { post: Post; expan
   const [revision, setRevision] = useState(0)
   const pending = useRef(false)
   const uid = currentUser?.uid
+  const { ref, live } = useLiveVisibility(expanded || open)
 
   useEffect(() => {
     setReady(false)
     setLiked(false)
     setAvailable(true)
     setError('')
-    if (!firebaseReady || !uid) return
+    if (!firebaseReady || !uid || !live) return
     const fail = () => { setAvailable(false); setError('반응을 불러오지 못했습니다. 기록이 삭제되었거나 접근 권한이 변경되었을 수 있습니다.') }
     const stopCounts = subscribeToPostReactions(post.id, next => {
       if (!next) { setAvailable(false); setError('삭제된 기록입니다.'); return }
@@ -33,7 +35,7 @@ export function PostInteractions({ post, expanded = false }: { post: Post; expan
     }, fail)
     const stopLike = subscribeToLikeStatus(post.id, uid, next => { setLiked(next); setReady(true) }, fail)
     return () => { stopCounts(); stopLike() }
-  }, [post.id, uid, firebaseReady, revision])
+  }, [post.id, uid, firebaseReady, revision, live])
 
   async function toggleLike() {
     if (!currentUser || !profile) { navigate('/login'); return }
@@ -48,7 +50,7 @@ export function PostInteractions({ post, expanded = false }: { post: Post; expan
     } finally { pending.current = false; setBusy(false) }
   }
 
-  return <div className="post-interactions">
+  return <div ref={ref} className="post-interactions">
     <div className="post-reaction-actions" aria-label={`${post.title} 반응`}>
       <button className={`post-reaction-button ${liked ? 'is-liked' : ''}`} type="button" aria-pressed={liked}
         aria-label={`${liked ? '좋아요 취소' : '좋아요'} ${counts.likeCount}개`} aria-busy={busy}
