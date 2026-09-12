@@ -10,7 +10,8 @@ export const SEOUL_CITY_HALL: LatLng = {
 
 export function useCurrentLocation() {
   const ensureLocationConsent = useLocationConsent()
-  const [location, setLocation] = useState<LatLng>(SEOUL_CITY_HALL)
+  // The default map center is not a confirmed device location.
+  const [location, setLocation] = useState<LatLng | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -19,16 +20,17 @@ export function useCurrentLocation() {
     try {
       if (!await ensureLocationConsent(promptForConsent)) {
         setError(promptForConsent ? '현재 위치는 로그인 후 위치기반서비스 이용약관에 동의하면 사용할 수 있습니다.' : '')
-        setLocation(SEOUL_CITY_HALL)
+        setLocation(null)
         return SEOUL_CITY_HALL
       }
     } catch {
       setError('위치 동의 내역을 확인하지 못했습니다. 다시 시도해 주세요.')
+      setLocation(null)
       return SEOUL_CITY_HALL
     }
     if (!navigator.geolocation) {
       setError('브라우저에서 현재 위치를 지원하지 않아 서울 시청 근처로 표시합니다.')
-      setLocation(SEOUL_CITY_HALL)
+      setLocation(null)
       return SEOUL_CITY_HALL
     }
 
@@ -39,6 +41,7 @@ export function useCurrentLocation() {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           if (auth?.currentUser?.uid !== requestUid) {
+            setLocation(null)
             setLoading(false)
             resolve(SEOUL_CITY_HALL)
             return
@@ -53,7 +56,7 @@ export function useCurrentLocation() {
         },
         () => {
           setError('위치 권한이 거부되어 서울 시청 근처로 표시합니다.')
-          setLocation(SEOUL_CITY_HALL)
+          setLocation(null)
           setLoading(false)
           resolve(SEOUL_CITY_HALL)
         },

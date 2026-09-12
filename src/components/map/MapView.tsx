@@ -9,6 +9,7 @@ interface MapViewProps {
   center: LatLng
   posts: Post[]
   provider?: MapProvider
+  currentLocation?: LatLng | null
   selectedLocation?: LatLng | null
   selectedPostId?: string
   onMapClick: (location: LatLng) => void
@@ -25,7 +26,7 @@ export function MapView(props: MapViewProps) {
 }
 
 function ProviderMapView({
-  center, posts, provider, selectedLocation = null, selectedPostId,
+  center, posts, provider, currentLocation = null, selectedLocation = null, selectedPostId,
   onMapClick, onMarkerClick, onClusterClick, currentUserUid, pinThemes, className = '',
 }: MapViewProps & { provider: MapProvider }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -104,6 +105,17 @@ function ProviderMapView({
     content.setAttribute('aria-label', '새 기록을 남길 위치')
     return driver.addMarker(selectedLocation, content, true)
   }, [selectedLocation, status])
+
+  useEffect(() => {
+    const driver = driverRef.current
+    if (status !== 'ready' || !driver || !currentLocation || !isValidLocation(currentLocation)) return
+    const content = document.createElement('div')
+    content.className = 'map-current-location'
+    content.setAttribute('role', 'img')
+    content.setAttribute('aria-label', '내 현재 위치')
+    content.title = '내 현재 위치'
+    return driver.addMarker(currentLocation, content, true)
+  }, [currentLocation, status])
 
   return (
     <section className={`location-map ${className}`} aria-label="장소 기록 지도" data-map-provider={provider}>

@@ -110,7 +110,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   const canCreatePin = !groupId || Boolean(selectedGroup && joined && !groupState.loading && !groupState.error)
   const toolbarRef = useRef<HTMLDivElement>(null)
   const mapShellRef = useRef<HTMLDivElement>(null)
-  const { loading: locationLoading, error: locationError, requestLocation } = useCurrentLocation()
+  const { location: currentLocation, loading: locationLoading, error: locationError, requestLocation } = useCurrentLocation()
   const [center, setCenter] = useState<LatLng>(SEOUL_CITY_HALL)
   const [initialLocationReady, setInitialLocationReady] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<LatLng | null>(null)
@@ -205,8 +205,8 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   useEffect(() => {
     let active = true
 
-    // A group opens at its first pin; a pending device location must not move it away again.
-    if (groupId) { setInitialLocationReady(true); return }
+    // Group maps can load their pins while the device location is being checked.
+    if (groupId) setInitialLocationReady(true)
 
     async function centerOnCurrentLocation() {
       const nextLocation = await requestLocation(false)
@@ -215,7 +215,8 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
         return
       }
 
-      setCenter(nextLocation)
+      // Keep the group map centered on its pins when the device location arrives.
+      if (!groupId) setCenter(nextLocation)
       setInitialLocationReady(true)
     }
 
@@ -455,6 +456,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
             center={center}
             provider={provider}
             posts={visiblePosts}
+            currentLocation={currentLocation}
             selectedLocation={selectedLocation}
             selectedPostId={visibleSelectedPost?.id}
             onMapClick={handleMapClick}
