@@ -647,77 +647,9 @@ img {
 }
 
 .landing-map-art {
-  position: relative;
-  min-height: 520px;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, transparent 0 35%, color-mix(in srgb, var(--primary) 14%, transparent) 35% 36%, transparent 36%),
-    linear-gradient(0deg, transparent 0 48%, color-mix(in srgb, var(--coral) 16%, transparent) 48% 49%, transparent 49%),
-    var(--paper);
-  box-shadow: var(--shadow);
-}
-
-.map-grid-lines {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px);
-  background-size: 58px 58px;
-}
-
-.pin {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  width: 54px;
-  height: 54px;
-  border: 6px solid var(--paper);
-  border-radius: 999px;
-  color: var(--paper);
-  background: var(--coral);
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--ink) 18%, transparent);
-}
-
-.pin-one {
-  top: 22%;
-  left: 23%;
-}
-
-.pin-two {
-  right: 18%;
-  top: 36%;
-  background: var(--primary);
-}
-
-.pin-three {
-  bottom: 24%;
-  left: 42%;
-  background: var(--olive);
-}
-
-.landing-map-art article {
-  position: absolute;
-  right: 28px;
-  bottom: 28px;
-  max-width: 300px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--paper) 95%, transparent);
-  box-shadow: var(--shadow);
-}
-
-.landing-map-art strong,
-.landing-map-art small {
   display: block;
-}
-
-.landing-map-art small {
-  margin-top: 7px;
-  color: var(--light);
+  width: 100%;
+  height: auto;
 }
 
 .auth-page {
@@ -3759,10 +3691,6 @@ body.chat-room-active .message-form:focus-within {
 
   .landing-content {
     grid-template-columns: 1fr;
-  }
-
-  .landing-map-art {
-    min-height: 360px;
   }
 
   .map-toolbar {

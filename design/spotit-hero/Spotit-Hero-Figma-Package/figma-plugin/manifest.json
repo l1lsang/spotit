@@ -1,0 +1,9 @@
+{
+  "name": "Spotit · 장소에 남긴 순간",
+  "id": "spotit-editable-hero-20260912",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": { "allowedDomains": ["none"] }
+}

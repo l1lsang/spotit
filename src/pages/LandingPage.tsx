@@ -1,5 +1,6 @@
-import { ArrowRight, MapPin } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { LandingHero } from '../components/landing/LandingHero'
 import { useAuth } from '../hooks/useAuth'
 import { PolicyFooter } from '../components/layout/PolicyFooter'
 
@@ -27,22 +28,7 @@ export function LandingPage() {
           <PolicyFooter />
         </div>
 
-        <div className="landing-map-art" aria-label="지도 위 장소 기록 예시">
-          <div className="map-grid-lines" />
-          <span className="pin pin-one">
-            <MapPin size={28} aria-hidden="true" />
-          </span>
-          <span className="pin pin-two">
-            <MapPin size={24} aria-hidden="true" />
-          </span>
-          <span className="pin pin-three">
-            <MapPin size={22} aria-hidden="true" />
-          </span>
-          <article>
-            <strong>햇살 좋았던 점심 산책</strong>
-            <small>서울시청 앞 광장 · 2026.05.24</small>
-          </article>
-        </div>
+        <LandingHero />
       </section>
     </main>
   )
