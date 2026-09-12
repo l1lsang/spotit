@@ -62,6 +62,7 @@ export function createMapDriver(
   const google = getGoogleMaps()
   const map = new google.Map(container, {
     center, zoom: 15, mapId: googleMapId, mapTypeControl: false, streetViewControl: false,
+    disableDefaultUI: true,
     tilt: 0, heading: 0,
     gestureHandling: 'greedy',
   })
