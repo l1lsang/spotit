@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
-import { formatTimestamp } from '../lib/date'
 import { createGroupChat, getOtherParticipant, subscribeToMyChats } from '../services/chatService'
 import { listUsers } from '../services/userService'
 import type { DaymarkChat } from '../types/chat'
@@ -157,7 +156,7 @@ export function ChatListPage() {
           </Link>
         </div>
       ) : (
-        <div className="chat-list">
+        <ul className="chat-list" aria-label="채팅 목록" role="list">
           {chats.map((chat) => {
             const other = currentUser ? getOtherParticipant(chat, currentUser.uid) : null
             const unread = currentUser ? isUnreadChat(chat, currentUser.uid) : false
@@ -172,28 +171,27 @@ export function ChatListPage() {
               : lastMessage || '새 대화를 시작해 보세요.'
 
             return (
-              <Link className={`chat-row ${unread ? 'unread' : ''}`} to={`/chats/${chat.id}`} key={chat.id}>
-                {isGroup ? (
-                  <span className="profile-avatar small group-avatar">
-                    <UsersRound size={22} aria-hidden="true" />
+              <li key={chat.id}>
+                <Link className={`chat-row ${unread ? 'unread' : ''}`} to={`/chats/${chat.id}`}>
+                  {isGroup ? (
+                    <span className="profile-avatar small group-avatar">
+                      <UsersRound size={22} aria-hidden="true" />
+                    </span>
+                  ) : other?.photoURL ? (
+                    <img className="chat-avatar" src={other.photoURL} alt={`${other.nickname} 프로필`} />
+                  ) : (
+                    <span className="profile-avatar small">{other?.nickname.slice(0, 1) || 'D'}</span>
+                  )}
+                  <span className="chat-row-main">
+                    <strong>{chatTitle}</strong>
+                    <small>{chatSubtitle}</small>
                   </span>
-                ) : other?.photoURL ? (
-                  <img className="chat-avatar" src={other.photoURL} alt={`${other.nickname} 프로필`} />
-                ) : (
-                  <span className="profile-avatar small">{other?.nickname.slice(0, 1) || 'D'}</span>
-                )}
-                <span className="chat-row-main">
-                  <strong>{chatTitle}</strong>
-                  <small>{chatSubtitle}</small>
-                </span>
-                <span className="chat-row-side">
-                  <time>{formatTimestamp(chat.lastMessageAt || chat.updatedAt)}</time>
-                  {unread && <i aria-label="읽지 않은 메시지" />}
-                </span>
-              </Link>
+                  {unread && <span className="chat-unread-dot" role="img" aria-label="읽지 않은 메시지" />}
+                </Link>
+              </li>
             )
           })}
-        </div>
+        </ul>
       )}
 
       {isGroupModalOpen && (
