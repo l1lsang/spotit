@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createInstallGuidePreference, getInstallPlatform, INSTALL_GUIDE_SEEN_KEY } from '../src/lib/installGuide.ts'
+import { createInstallGuidePreference, INSTALL_GUIDE_SEEN_KEY } from '../src/lib/installGuide.ts'
 
 function storage(initial = {}) {
   const values = new Map(Object.entries(initial))
@@ -34,17 +34,4 @@ test('storage quota errors still preserve the in-memory dismissal', () => {
   const preference = createInstallGuidePreference(() => saved)
   preference.remember()
   assert.equal(preference.hasSeen(), true)
-})
-
-test('iPhone and iPadOS desktop user agents receive iOS instructions', () => {
-  assert.equal(getInstallPlatform('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) CriOS/130.0 Mobile Safari/604.1', 5), 'ios')
-  assert.equal(getInstallPlatform('Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) Version/18.0 Safari/604.1', 5), 'ios')
-  assert.equal(getInstallPlatform('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) Version/18.0 Safari/605.1.15', 5), 'ios')
-})
-
-test('Android, Mac Safari and desktop Chromium receive their matching installation paths', () => {
-  assert.equal(getInstallPlatform('Mozilla/5.0 (Linux; Android 15) Chrome/130.0 Mobile Safari/537.36', 5), 'android')
-  assert.equal(getInstallPlatform('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) Version/18.0 Safari/605.1.15', 0), 'mac-safari')
-  assert.equal(getInstallPlatform('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) Chrome/130.0 Safari/537.36', 0), 'desktop')
-  assert.equal(getInstallPlatform('Mozilla/5.0 (Windows NT 10.0) Chrome/130.0 Safari/537.36 Edg/130.0', 0), 'desktop')
 })

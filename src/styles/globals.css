@@ -334,15 +334,12 @@ img {
   padding: 0 13px;
 }
 
-.install-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 2px; }
-.install-actions .install-action { flex: 1; width: auto; min-height: 42px; font-size: 0.82rem; }
-.install-dismiss { flex: 1; min-height: 42px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
+.install-actions { grid-column: 1 / -1; display: grid; gap: 8px; margin-top: 2px; }
+.install-actions .install-action { width: 100%; min-height: 44px; padding-block: 10px; flex-wrap: wrap; font-size: 0.82rem; }
+.install-coming-soon { font-size: 0.72rem; font-weight: 400; }
+.install-dismiss { display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
 .install-dismiss:hover { background: var(--surface); }
-.install-guide { grid-column: 1 / -1; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
-.install-guide ol { display: grid; gap: 8px; margin: 0; padding-left: 19px; font-size: 0.8rem; line-height: 1.7; }
-.install-guide > p { margin-top: 12px; font-size: 0.73rem; }
-.install-guide .form-error { color: var(--danger); margin: 0 0 12px; }
-.install-prompt button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.install-prompt :is(button, a):focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 .permission-backdrop {
   position: fixed;
