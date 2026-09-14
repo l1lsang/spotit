@@ -699,14 +699,10 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
               }
             }}>
             <div className="map-record-heading">
-              {selectedPlace ? (
+              {selectedPlace && (
                 <p>
                   <strong>{selectedPlace.placeName}</strong>
                   <span>{selectedPlace.address || '주소 정보 없음'}</span>
-                </p>
-              ) : (
-                <p>
-                  선택한 좌표 {selectedLocation.lat.toFixed(5)}, {selectedLocation.lng.toFixed(5)}
                 </p>
               )}
               <button className="button-icon ghost map-record-close" type="button"
