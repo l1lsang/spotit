@@ -23,8 +23,8 @@ export function ForegroundPushListener() {
       const href = payload.data?.href || '/notifications'
       const notification = new Notification(title, {
         body,
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
+        icon: '/icon-192.png?v=20260914',
+        badge: '/favicon.png',
         data: { href },
       })
 

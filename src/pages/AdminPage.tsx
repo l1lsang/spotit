@@ -52,7 +52,7 @@ export function AdminPage() {
     <main className="admin-login-page">
       <Link className="admin-back" to="/map"><ArrowLeft size={16} aria-hidden="true" />스팟잇으로 돌아가기</Link>
       <section className="admin-login-card" aria-labelledby="admin-login-heading">
-        <img src="/logo.png" alt="스팟잇" width="64" height="64" />
+        <img src="/splash-mark.png" alt="스팟잇" width="64" height="64" />
         <p className="eyebrow">SPOTIT ADMIN</p>
         <h1 id="admin-login-heading">스팟잇 관리실</h1>
         <p>더 안전하고 즐거운 장소 기록을 위해.</p>
@@ -89,7 +89,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => Pr
     { label: '전체 채팅방', value: stats.chats, detail: '1:1 · 단체 채팅방', icon: MessageCircle },
     { label: '미처리 접수', value: stats.openCases, detail: '신고 · 문의 · 자동 검토', icon: Flag },
   ] : []
-  return <div className="admin-shell"><aside className="admin-sidebar"><Link className="admin-brand" to="/admin"><img src="/logo.png" width="38" height="38" alt="스팟잇" /><div><strong>스팟잇</strong><small>관리자 페이지</small></div></Link><nav aria-label="관리 메뉴">
+  return <div className="admin-shell"><aside className="admin-sidebar"><Link className="admin-brand" to="/admin"><img src="/splash-mark.png" width="38" height="38" alt="스팟잇" /><div><strong>스팟잇</strong><small>관리자 페이지</small></div></Link><nav aria-label="관리 메뉴">
     <button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}><LayoutDashboard size={18} />통계</button>
     <button className={tab === 'cases' ? 'active' : ''} onClick={() => setTab('cases')}><Flag size={18} />신고·문의{stats ? <span>{stats.openCases}</span> : null}</button>
     <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}><Users size={18} />유저 관리</button>

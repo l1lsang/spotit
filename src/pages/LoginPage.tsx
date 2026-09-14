@@ -5,6 +5,7 @@ import { FirebaseNotice } from '../components/layout/FirebaseNotice'
 import { PolicyFooter } from '../components/layout/PolicyFooter'
 import { GoogleSignInNotice } from '../components/layout/GoogleSignInNotice'
 import { GoogleLogo } from '../components/layout/GoogleLogo'
+import { BrandLogo } from '../components/layout/BrandLogo'
 import { useAuth } from '../hooks/useAuth'
 import { loginWithEmail, loginWithGoogle, loginWithKakao, sendPasswordReset } from '../services/authService'
 
@@ -114,7 +115,7 @@ export function LoginPage() {
     <main className="auth-page">
       <section className="auth-panel">
         <Link className="brand-lockup auth-brand" to="/">
-          <img className="brand-logo" src="/logo.png" alt="스팟잇" />
+          <BrandLogo />
         </Link>
 
         <FirebaseNotice />

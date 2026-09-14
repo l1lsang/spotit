@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { isMapSection } from '../../lib/groupNavigation'
 import { useAuth } from '../../hooks/useAuth'
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications'
+import { BrandLogo } from './BrandLogo'
 
 export function Header() {
   const { pathname } = useLocation()
@@ -12,7 +13,7 @@ export function Header() {
   return (
     <header className="site-header">
       <Link className="brand-lockup" to="/map" aria-label="스팟잇 지도 홈">
-        <img className="brand-logo" src="/logo.png" alt="스팟잇" />
+        <BrandLogo />
       </Link>
 
       <nav className="header-nav" aria-label="주요 메뉴">

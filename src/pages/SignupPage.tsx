@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, AtSign, Camera, Check, Crop, KeyRound, Mail, Use
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { FirebaseNotice } from '../components/layout/FirebaseNotice'
+import { BrandLogo } from '../components/layout/BrandLogo'
 import { PolicyFooter } from '../components/layout/PolicyFooter'
 import { SignupRequirementsFields } from '../components/layout/SignupRequirementsFields'
 import { ImageEditorModal } from '../components/image/ImageEditorModal'
@@ -143,7 +144,7 @@ export function SignupPage() {
     <main className="auth-page signup-page">
       <section className="auth-panel signup-panel" aria-labelledby="signup-title">
         <Link className="brand-lockup auth-brand" to="/">
-          <img className="brand-logo" src="/logo.png" alt="스팟잇" />
+          <BrandLogo />
         </Link>
         <FirebaseNotice />
 

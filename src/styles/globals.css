@@ -162,18 +162,25 @@ img {
 }
 
 .brand-logo {
-  width: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   height: 42px;
-  object-fit: contain;
-  object-position: left center;
+  flex-shrink: 0;
 }
 
-.site-header .brand-logo {
+.brand-symbol {
+  width: auto;
+  height: 42px;
   flex-shrink: 0;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--paper);
-  object-position: center;
+  object-fit: contain;
+}
+
+.brand-wordmark {
+  width: 96px;
+  height: auto;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .brand-lockup strong {
@@ -630,8 +637,9 @@ img {
   width: min(1120px, 100%);
 }
 
-.landing-copy h1 {
-  font-size: clamp(3.2rem, 9vw, 7rem);
+.landing-wordmark {
+  width: clamp(220px, 28vw, 340px);
+  height: auto;
 }
 
 .landing-subtitle {

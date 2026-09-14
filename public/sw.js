@@ -1,5 +1,10 @@
-const CACHE_NAME = 'spotit-shell-v3'
-const APP_SHELL = ['/', '/map', '/manifest.webmanifest', '/logo.png', '/icon-192.png', '/icon-512.png']
+const CACHE_NAME = 'spotit-shell-v4'
+const APP_SHELL = [
+  '/', '/map', '/manifest.webmanifest',
+  '/brand-symbol.png', '/brand-wordmark.png', '/splash-mark.png',
+  '/app-icon.png', '/favicon.png',
+  '/icon-192.png?v=20260914', '/icon-512.png?v=20260914',
+]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -62,8 +67,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      icon: '/icon-192.png?v=20260914',
+      badge: '/favicon.png',
       tag: data.notificationId ? `spotit-${data.notificationId}` : 'spotit-notification',
       data: { href },
     }),
