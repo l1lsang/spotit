@@ -48,7 +48,7 @@ declare global {
 const googleMapKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim()
 export const googleMapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID?.trim() || 'DEMO_MAP_ID'
 export const isGoogleMapConfigured = Boolean(googleMapKey)
-export const googleMapConfigMessage = '해외 지도가 아직 준비되지 않았습니다. 잠시 후 다시 이용해 주세요.'
+export const googleMapConfigMessage = '지도가 아직 준비되지 않았습니다. 잠시 후 다시 이용해 주세요.'
 
 export function loadGoogleMapSdk(): Promise<void> {
   if (window.google?.maps?.importLibrary) return Promise.resolve()
@@ -103,6 +103,5 @@ export async function searchGooglePlacesByKeyword(keyword: string, center: LatLn
     name: place.displayName || keyword,
     address: place.formattedAddress || '',
     location: { lat: place.location.lat(), lng: place.location.lng() },
-    provider: 'google' as const,
   }] : [])
 }

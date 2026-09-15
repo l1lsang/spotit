@@ -1,4 +1,4 @@
-import { Compass, Layers, LocateFixed, MapPin, Plus, Search, SendHorizonal, X } from 'lucide-react'
+import { Compass, LocateFixed, MapPin, Plus, Search, SendHorizonal, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { GroupJoinButton } from '../components/group/GroupJoinButton'
@@ -11,7 +11,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useGroups } from '../hooks/useGroups'
 import { getGroupMapUrl } from '../lib/groupNavigation'
 import { SEOUL_CITY_HALL, useCurrentLocation } from '../hooks/useCurrentLocation'
-import { getMapProvider, type LatLng, type MapProvider, type PlaceSearchResult } from '../lib/mapLocation'
+import type { LatLng, PlaceSearchResult } from '../lib/mapLocation'
 import { searchPlaces } from '../lib/placeSearch'
 import {
   createLivePlaceStatus,
@@ -118,8 +118,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   const [posts, setPosts] = useState<Post[]>([])
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [clusterPosts, setClusterPosts] = useState<Post[]>([])
-  const [providerOverride, setProviderOverride] = useState<MapProvider | 'auto'>('auto')
-  const provider = providerOverride === 'auto' ? getMapProvider(center) : providerOverride
   const searchRequestRef = useRef(0)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [loadingPosts, setLoadingPosts] = useState(false)
@@ -254,7 +252,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
 
   async function handleUseCurrentLocation() {
     const nextLocation = await requestLocation()
-    setProviderOverride('auto')
     setSelectedPost(null)
     setClusterPosts([])
     setSelectedLocation(null)
@@ -285,7 +282,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   }
 
   function handleSelectPost(post: Post) {
-    setProviderOverride('auto')
     setSelectedPost(post)
     setSelectedLocation(null)
     setSelectedPlace(null)
@@ -324,7 +320,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
     setPlaceSearchMessage('')
 
     try {
-      const results = await searchPlaces(placeQuery, center, provider)
+      const results = await searchPlaces(placeQuery, center)
       if (requestId !== searchRequestRef.current) return
       setPlaceResults(results)
       setPlaceSearchMessage(results.length === 0 ? '검색 결과가 없습니다.' : '')
@@ -340,7 +336,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   function handleSelectPlace(place: PlaceSearchResult) {
     const location = place.location
     setClusterPosts([])
-    setProviderOverride(place.provider)
 
     setCenter(location)
     setSelectedLocation(location)
@@ -454,7 +449,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
         {initialLocationReady ? (
           <MapView
             center={center}
-            provider={provider}
             posts={visiblePosts}
             currentLocation={currentLocation}
             selectedLocation={selectedLocation}
@@ -562,7 +556,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
                 <button key={place.id} type="button" onClick={() => handleSelectPlace(place)}>
                   <strong>{place.name}</strong>
                   <span>{place.address}</span>
-                  {place.distanceMeters !== undefined && <small>{place.distanceMeters.toLocaleString()}m</small>}
                 </button>
               ))
             )}
@@ -728,20 +721,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
         />}
 
         <div className="map-bottom-controls" role="group" aria-label="지도 도구">
-          <label className="map-control-icon map-provider-control" title={`지도 선택 · ${providerOverride === 'auto' ? '자동 · ' : ''}${provider === 'kakao' ? '카카오맵' : 'Google Maps'}`}>
-            <Layers size={21} aria-hidden="true" />
-            <select className="map-provider-icon-select" aria-label="지도 제공자 선택" value={providerOverride} onChange={(event) => {
-              setProviderOverride(event.target.value as MapProvider | 'auto')
-              searchRequestRef.current += 1
-              setSearchingPlaces(false)
-              setPlaceResults([])
-              setPlaceSearchMessage('')
-            }}>
-              <option value="auto">자동 · {getMapProvider(center) === 'kakao' ? '카카오맵' : 'Google Maps'}</option>
-              <option value="kakao">카카오맵</option>
-              <option value="google">Google Maps</option>
-            </select>
-          </label>
           <button className={`map-control-icon${locationLoading ? ' is-locating' : ''}`} type="button" onClick={handleUseCurrentLocation} disabled={locationLoading}
             aria-label={locationLoading ? '현재 위치 확인 중' : '현재 위치로 이동'} aria-busy={locationLoading} title="현재 위치로 이동">
             <LocateFixed size={21} aria-hidden="true" />

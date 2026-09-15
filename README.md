@@ -2,7 +2,7 @@
 
 글로벌 이름은 **Daymark**입니다. 오늘 내가 있었던 장소를 지도 위에 핀으로 남기고, 사진과 메모를 기록하며 팔로우 관계 안에서 공유하는 지도 기반 SNS MVP입니다.
 
-운영 주소는 **https://spotitmap.kr**입니다. 카카오 지도·로그인과 Firebase의 도메인 등록 방법은 [운영 도메인 설정](docs/domain-setup.md)을 참고합니다.
+운영 주소는 **https://spotitmap.kr**입니다. Google Maps, 카카오 로그인과 Firebase의 도메인 등록 방법은 [운영 도메인 설정](docs/domain-setup.md)을 참고합니다.
 
 ## 실행 방법
 
@@ -72,12 +72,11 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 VITE_FIREBASE_MESSAGING_VAPID_KEY=
 VITE_FIREBASE_KAKAO_PROVIDER_ID=oidc.kakao
-VITE_KAKAO_MAP_JS_KEY=
 VITE_GOOGLE_MAPS_API_KEY=
 VITE_GOOGLE_MAPS_MAP_ID=
 ```
 
-환경변수가 비어 있으면 앱은 죽지 않고 Firebase 또는 Kakao Map 설정 안내를 표시합니다.
+환경변수가 비어 있으면 앱은 죽지 않고 Firebase 또는 Google Maps 준비 안내를 표시합니다.
 
 ## Firebase 설정
 
@@ -103,28 +102,20 @@ Firebase Auth는 Kakao를 기본 provider로 제공하지 않으므로 커스텀
 
 Firebase OIDC는 Authentication with Identity Platform이 활성화된 프로젝트에서 사용할 수 있습니다. 서비스 도메인을 바꾸면 Authentication > Settings > Authorized domains에 `spotitmap.kr`를 추가합니다. 기존 Firebase `authDomain`과 OIDC 콜백 주소는 유지합니다. 구체적인 값은 [운영 도메인 설정](docs/domain-setup.md#카카오-로그인-firebase-oidc)을 참고합니다.
 
-## Kakao Map API 설정
-
-1. Kakao Developers에서 JavaScript 앱 키를 발급합니다.
-2. 앱 > 플랫폼 키 > 사용할 JavaScript 키 > JavaScript SDK 도메인에 `https://spotitmap.kr`와 로컬 개발 주소(`http://localhost:5173`)를 등록합니다.
-3. `.env`의 `VITE_KAKAO_MAP_JS_KEY`에 JavaScript 키를 입력합니다.
-
-Kakao Map SDK 로드와 타입 래퍼는 `src/lib/kakaoMap.ts`, 공통 지도 렌더링은 `src/components/map/MapView.tsx`에 분리되어 있습니다.
-
-## Google Maps 및 국내외 지도 전환
+## Google Maps 지도와 장소 검색
 
 1. Google Cloud 프로젝트에서 결제 계정을 연결하고 **Maps JavaScript API**, **Places API (New)**를 활성화합니다.
 2. 웹 API 키를 `.env`의 `VITE_GOOGLE_MAPS_API_KEY`에 입력합니다. 웹사이트(HTTP referrer) 제한에 로컬 개발 주소와 배포 도메인을 등록하고 위 API들로 키 사용 범위를 제한합니다.
 3. JavaScript 지도 ID를 생성해 `VITE_GOOGLE_MAPS_MAP_ID`에 입력합니다. 로컬 테스트에서는 비워두면 `DEMO_MAP_ID`를 사용합니다.
 4. 개발 서버를 재시작합니다. 배포 시에도 같은 환경변수를 설정하고 다시 빌드합니다.
 
-지도는 브라우저 현재 위치와 선택한 핀의 좌표를 기준으로 한국에서는 카카오맵, 해외에서는 Google Maps를 사용합니다. IP 국가 조회는 하지 않습니다. 한국 서비스 영역 판별은 본토와 주요 도서의 근사 영역이며 행정 경계 판별용이 아닙니다. 위치 권한을 사용할 수 없으면 서울 시청에서 시작하며, 상단 지도 선택에서 Google Maps로 바꾸고 해외 장소를 검색할 수 있습니다. 현재 위치 버튼은 자동 선택으로 돌아갑니다.
+국내외 지도, 게시글 상세 지도와 외부 지도 링크는 모두 Google Maps를 사용합니다. 위치 권한을 사용할 수 없으면 서울 시청에서 시작하며, 장소 검색으로 국내외 어디든 이동할 수 있습니다. 현재 위치 버튼은 기기의 위치를 중심으로 이동합니다.
 
-해외 검색은 Places API (New)를 사용합니다. 카카오 장소 검색 결과가 없고 Google 키가 설정되어 있으면 Google 검색도 시도합니다. Google 검색 결과는 Google 지도에서 표시하며, 기존 카카오 장소 ID는 유지하고 Google 장소 ID에는 `google:` 접두사를 붙입니다.
+모든 장소 검색은 Places API (New)를 사용합니다. Google 장소 ID에는 `google:` 접두사를 붙입니다. 기존 기록의 좌표와 장소 ID는 변경하지 않으므로 저장된 핀은 같은 위치에 표시됩니다. 실시간 리뷰는 장소 ID별로 조회하므로 기존 카카오 장소 ID의 리뷰가 Google 장소 검색 결과에 자동 통합되지는 않습니다.
 
-두 지도 모두 화면에서 겹친 핀을 총 개수로 묶습니다(예: 핀 2개 = `+2`). 클릭하면 장소·주소·작성자 목록이 열리고 항목을 선택하면 해당 좌표로 이동합니다. 지도를 확대하면 떨어진 핀은 분리됩니다. 기존 팔로우/비공개 접근 범위는 그대로 적용됩니다.
+화면에서 겹친 핀을 총 개수로 묶습니다(예: 핀 2개 = `+2`). 클릭하면 장소·주소·작성자 목록이 열리고 항목을 선택하면 해당 좌표로 이동합니다. 지도를 확대하면 떨어진 핀은 분리됩니다. 기존 팔로우/비공개 접근 범위는 그대로 적용됩니다.
 
-지도 영역·좌표 유효성·핀 겹침 회귀 테스트: Node.js 22.6 이상에서 `npm run test:maps`를 실행합니다.
+좌표 유효성·핀 겹침·Google 지도 링크와 장소 검색 회귀 테스트: Node.js 22.6 이상에서 `npm run test:maps`를 실행합니다.
 
 공식 설정 문서: [Google 지도 로드](https://developers.google.com/maps/documentation/javascript/load-maps-js-api), [고급 마커와 지도 ID](https://developers.google.com/maps/documentation/javascript/advanced-markers/start), [장소 검색](https://developers.google.com/maps/documentation/javascript/place-search).
 
@@ -283,6 +274,6 @@ Firebase Cloud Messaging -> 휴대폰/PWA 푸시 전송
 - `src/services`: Auth, User, Follow, Chat, Post, Comment, Like, Storage 서비스
 - `src/contexts/AuthContext.tsx`: 로그인 상태 관리
 - `src/lib/firebase.ts`: Firebase 초기화 단일 진입점
-- `src/lib/kakaoMap.ts`: 웹 Kakao Map SDK 래퍼
+- `src/lib/googleMap.ts`: 웹 Google Maps SDK와 Places 검색 래퍼
 
-Expo 앱에서는 `types`와 Firebase `services`를 공유하고, Kakao Map 웹 컴포넌트만 네이티브 지도 컴포넌트로 교체하는 방식으로 확장할 수 있습니다.
+Expo 앱에서는 `types`와 Firebase `services`를 공유하고, Google Maps 웹 컴포넌트를 네이티브 지도 컴포넌트로 교체하는 방식으로 확장할 수 있습니다.

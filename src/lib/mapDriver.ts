@@ -1,7 +1,6 @@
 import { getGoogleMaps, googleMapId, loadGoogleMapSdk } from './googleMap'
-import { getKakaoMaps, loadKakaoMapSdk, type KakaoEventHandler } from './kakaoMap'
 import type { MapPoint } from './mapClusters'
-import type { LatLng, MapProvider } from './mapLocation'
+import type { LatLng } from './mapLocation'
 
 export interface MapDriver {
   setCenter: (location: LatLng) => void
@@ -13,8 +12,7 @@ export interface MapDriver {
   destroy: () => void
 }
 
-export async function prepareMapSdk(provider: MapProvider): Promise<void> {
-  if (provider === 'kakao') return loadKakaoMapSdk()
+export async function prepareMapSdk(): Promise<void> {
   await loadGoogleMapSdk()
   const google = getGoogleMaps()
   await Promise.all([google.importLibrary('maps'), google.importLibrary('marker')])
@@ -22,43 +20,10 @@ export async function prepareMapSdk(provider: MapProvider): Promise<void> {
 
 // Creation is synchronous after loading, so an unmounted view never creates a map.
 export function createMapDriver(
-  provider: MapProvider,
   container: HTMLElement,
   center: LatLng,
   onClick: (location: LatLng) => void,
 ): MapDriver {
-  if (provider === 'kakao') {
-    const kakao = getKakaoMaps()
-    const toLatLng = (location: LatLng) => new kakao.LatLng(location.lat, location.lng)
-    const map = new kakao.Map(container, { center: toLatLng(center), level: 4 })
-    const click: KakaoEventHandler = (event) => {
-      if (event?.latLng) onClick({ lat: event.latLng.getLat(), lng: event.latLng.getLng() })
-    }
-    kakao.event.addListener(map, 'click', click)
-    return {
-      setCenter: (location) => map.setCenter(toLatLng(location)),
-      project: (location) => map.getProjection().pointFromCoords(toLatLng(location)),
-      addMarker: (location, content, selected) => {
-        const overlay = new kakao.CustomOverlay({
-          position: toLatLng(location), content, xAnchor: 0.5, yAnchor: 1,
-          clickable: true, zIndex: selected ? 10 : 1,
-        })
-        overlay.setMap(map)
-        return () => overlay.setMap(null)
-      },
-      onIdle: (handler) => {
-        kakao.event.addListener(map, 'idle', handler)
-        return () => kakao.event.removeListener(map, 'idle', handler)
-      },
-      preventMapClick: () => kakao.event.preventMap(),
-      resize: () => map.relayout(),
-      destroy: () => {
-        kakao.event.removeListener(map, 'click', click)
-        container.replaceChildren()
-      },
-    }
-  }
-
   const google = getGoogleMaps()
   const map = new google.Map(container, {
     center, zoom: 15, mapId: googleMapId, mapTypeControl: false, streetViewControl: false,

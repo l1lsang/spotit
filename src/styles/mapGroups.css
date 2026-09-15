@@ -18,8 +18,7 @@
 .map-bottom-controls { position: absolute; right: 18px; bottom: var(--map-controls-bottom, 18px); z-index: 9; display: flex; gap: 10px; }
 .map-control-icon { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 46px; height: 46px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: color-mix(in srgb, var(--paper) 98%, transparent); color: var(--ink); box-shadow: 0 3px 12px color-mix(in srgb, var(--ink) 10.2%, transparent); cursor: pointer; }
 .map-control-icon:hover { background: var(--primary-soft); color: var(--primary); }
-.map-control-icon:focus-visible, .map-provider-control:focus-within { outline: 2px solid var(--primary); outline-offset: 3px; }
-.map-provider-icon-select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font: inherit; }
+.map-control-icon:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .map-control-icon.is-locating { color: var(--primary); }
 .map-control-icon.is-locating svg { animation: map-location-pulse 1s ease-in-out infinite; }
 .map-with-groups .map-preview, .map-with-groups .map-floating, .map-with-groups .map-side-panel { bottom: calc(var(--map-controls-bottom, 18px) + 62px); }

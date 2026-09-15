@@ -1,7 +1,7 @@
 import { Save, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { getTodayDateKey } from '../../lib/date'
-import type { LatLng } from '../../lib/kakaoMap'
+import type { LatLng } from '../../lib/mapLocation'
 import { isValidLocation } from '../../lib/mapLocation'
 import { useAuth } from '../../hooks/useAuth'
 import { useGroups } from '../../hooks/useGroups'

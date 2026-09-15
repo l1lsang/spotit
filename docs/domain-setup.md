@@ -4,23 +4,24 @@
 
 코드에는 `index.html`의 canonical·공유 미리보기·구조화 데이터, `public/robots.txt`, `public/sitemap.xml`에 운영 주소를 지정합니다. 게시글 공유는 현재 접속 주소를 사용하고, PWA와 푸시 알림은 상대 경로를 사용하므로 별도의 호스트 변경이 필요하지 않습니다.
 
-## 카카오 지도와 장소 검색
+## Google 지도와 장소 검색
 
-1. [Kakao Developers](https://developers.kakao.com/)에서 현재 서비스에 사용하는 앱을 선택합니다.
-2. **앱 > 플랫폼 키 > JavaScript 키**에서 배포 환경의 `VITE_KAKAO_MAP_JS_KEY`와 같은 키를 선택합니다.
-3. **JavaScript SDK 도메인**에 아래 주소를 추가하고 저장합니다. `/map` 같은 경로는 붙이지 않습니다.
+1. [Google Cloud Console](https://console.cloud.google.com/)에서 지도용 프로젝트에 결제 계정을 연결하고 **Maps JavaScript API**, **Places API (New)**를 활성화합니다.
+2. **APIs & Services > Credentials**에서 `VITE_GOOGLE_MAPS_API_KEY`로 사용하는 API 키를 선택합니다. 애플리케이션 제한은 **웹사이트(HTTP referrer)**로 설정합니다.
+3. 허용 웹사이트에 아래 주소를 추가합니다.
 
    ```text
    https://spotitmap.kr
-   http://localhost:5173
+   https://spotitmap.kr/*
+   http://localhost:5173/*
    ```
 
-4. `www.spotitmap.kr`에서도 앱을 직접 제공한다면 `https://www.spotitmap.kr`도 추가합니다. 로컬에서 다른 포트나 `127.0.0.1`을 사용하면 해당 개발 주소도 등록합니다.
-5. 같은 카카오 앱과 키를 계속 사용하면 키를 재발급할 필요는 없습니다. 키를 변경한 경우에만 `.env`와 배포 환경의 `VITE_KAKAO_MAP_JS_KEY`를 함께 수정하고 다시 빌드·배포합니다.
+4. `www.spotitmap.kr`에서도 앱을 직접 제공한다면 `https://www.spotitmap.kr`와 `https://www.spotitmap.kr/*`도 추가합니다. 로컬에서 다른 포트나 `127.0.0.1`을 사용하면 해당 개발 주소도 등록합니다. API 제한은 **Maps JavaScript API**, **Places API (New)**로 설정합니다.
+5. JavaScript 지도 ID를 생성해 `.env`와 배포 환경의 `VITE_GOOGLE_MAPS_MAP_ID`에 설정합니다. `VITE_GOOGLE_MAPS_API_KEY`도 함께 설정한 뒤 개발 서버를 재시작하거나 다시 빌드·배포합니다. 로컬 테스트에서 지도 ID가 비어 있으면 `DEMO_MAP_ID`를 사용합니다.
 
-현재 지도와 장소 검색은 같은 JavaScript 지도 SDK 키를 사용합니다. REST API 키를 `VITE_KAKAO_MAP_JS_KEY`에 넣지 않습니다. 카카오의 **제품 링크 관리 > 웹 도메인**은 카카오톡 공유 등의 링크용 설정이며, 지도용 JavaScript SDK 도메인 등록은 별도로 필요합니다.
+국내외 지도와 장소 검색은 같은 Google Maps API 키를 사용합니다. 카카오 지도 SDK와 지도용 JavaScript 키는 사용하지 않습니다. 카카오 로그인 설정은 아래 항목에서 별도로 관리합니다.
 
-공식 안내: [카카오 지도 시작하기](https://apis.map.kakao.com/web/guide/), [개편된 메뉴 위치](https://developers.kakao.com/docs/ko/getting-started/app-key-migration).
+공식 안내: [Google 지도 로드](https://developers.google.com/maps/documentation/javascript/load-maps-js-api), [고급 마커와 지도 ID](https://developers.google.com/maps/documentation/javascript/advanced-markers/start), [장소 검색](https://developers.google.com/maps/documentation/javascript/place-search), [API 키 제한](https://developers.google.com/maps/api-security-best-practices).
 
 ## 카카오 로그인 (Firebase OIDC)
 

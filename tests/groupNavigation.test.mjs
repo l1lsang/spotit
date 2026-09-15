@@ -123,6 +123,8 @@ test('group homes send members and visitors to the same scoped map without an em
 
 test('map entry icon, group selector, and pin destination follow the selected route', () => {
   let html = render(MapPage, '/map')
+  assert.doesNotMatch(html, /지도 제공자 선택|카카오맵/)
+  assert.match(html, /aria-label="현재 위치로 이동"/)
   assert.match(html, /aria-label="그룹 페이지 열기"[^>]*href="\/groups"/)
   assert.match(html, /내 지도 · 나와 팔로잉/)
   assert.match(html, /내 산책 그룹/)

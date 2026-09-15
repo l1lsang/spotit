@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { clusterPosts } from '../../lib/mapClusters'
 import { createMapDriver, prepareMapSdk, type MapDriver } from '../../lib/mapDriver'
-import { getMapProvider, isValidLocation, type LatLng, type MapProvider } from '../../lib/mapLocation'
+import { isValidLocation, type LatLng } from '../../lib/mapLocation'
 import type { PinTheme, Post } from '../../types/post'
 import { createPostMarkerContent } from './PostMarker'
 
 interface MapViewProps {
   center: LatLng
   posts: Post[]
-  provider?: MapProvider
   currentLocation?: LatLng | null
   selectedLocation?: LatLng | null
   selectedPostId?: string
@@ -20,15 +19,10 @@ interface MapViewProps {
   className?: string
 }
 
-export function MapView(props: MapViewProps) {
-  const provider = props.provider ?? getMapProvider(props.center)
-  return <ProviderMapView key={provider} {...props} provider={provider} />
-}
-
-function ProviderMapView({
-  center, posts, provider, currentLocation = null, selectedLocation = null, selectedPostId,
+export function MapView({
+  center, posts, currentLocation = null, selectedLocation = null, selectedPostId,
   onMapClick, onMarkerClick, onClusterClick, currentUserUid, pinThemes, className = '',
-}: MapViewProps & { provider: MapProvider }) {
+}: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const driverRef = useRef<MapDriver | null>(null)
   const latestRef = useRef({ center, onMapClick, onMarkerClick, onClusterClick })
@@ -46,9 +40,9 @@ function ProviderMapView({
     let observer: ResizeObserver | undefined
     setStatus('loading')
     setMessage('')
-    prepareMapSdk(provider).then(() => {
+    prepareMapSdk().then(() => {
       if (canceled || !containerRef.current) return
-      driver = createMapDriver(provider, containerRef.current, latestRef.current.center,
+      driver = createMapDriver(containerRef.current, latestRef.current.center,
         (location) => latestRef.current.onMapClick(location))
       driverRef.current = driver
       observer = new ResizeObserver(() => driver?.resize())
@@ -65,7 +59,7 @@ function ProviderMapView({
       driver?.destroy()
       driverRef.current = null
     }
-  }, [provider, attempt])
+  }, [attempt])
 
   useEffect(() => {
     const location = { lat: center.lat, lng: center.lng }
@@ -118,7 +112,7 @@ function ProviderMapView({
   }, [currentLocation, status])
 
   return (
-    <section className={`location-map ${className}`} aria-label="장소 기록 지도" data-map-provider={provider}>
+    <section className={`location-map ${className}`} aria-label="장소 기록 지도" data-map-provider="google">
       <div ref={containerRef} className="map-canvas" />
       {status !== 'ready' && (
         <div className="map-state" role="status">

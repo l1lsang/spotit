@@ -1,13 +1,18 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getMapProvider, getExternalMapUrl, isValidLocation } from '../src/lib/mapLocation.ts'
+import { getExternalMapUrl, isValidLocation } from '../src/lib/mapLocation.ts'
 import { clusterPosts } from '../src/lib/mapClusters.ts'
 
-test('Korean cities and islands use Kakao; overseas and neighboring Japan use Google', () => {
+test('Korean cities, islands and overseas pins all open Google Maps at their exact coordinates', () => {
   const korea = [[37.5665, 126.978], [35.1796, 129.0756], [33.4996, 126.5312], [37.4845, 130.9057], [37.2411, 131.8675], [37.966, 124.63]]
   const overseas = [[35.6762, 139.6503], [34.7, 129.45], [34.2, 129.29], [35.1, 129.6], [48.8566, 2.3522], [40.7128, -74.006], [-33.8688, 151.2093], [39.0392, 125.7625]]
-  for (const [lat, lng] of korea) assert.equal(getMapProvider({ lat, lng }), 'kakao', `${lat},${lng}`)
-  for (const [lat, lng] of overseas) assert.equal(getMapProvider({ lat, lng }), 'google', `${lat},${lng}`)
+  for (const [lat, lng] of [...korea, ...overseas, [0, 0], [-90, -180], [90, 180]]) {
+    const url = new URL(getExternalMapUrl({ lat, lng }))
+    assert.equal(url.origin, 'https://www.google.com')
+    assert.equal(url.pathname, '/maps/search/')
+    assert.equal(url.searchParams.get('api'), '1')
+    assert.equal(url.searchParams.get('query'), `${lat},${lng}`)
+  }
 })
 
 test('equator and prime meridian are valid; malformed coordinates are rejected', () => {
@@ -43,13 +48,4 @@ test('invalid coordinates never reach SDK projection', () => {
   const groups = clusterPosts(posts, (location) => { assert.ok(isValidLocation(location)); return project(location) })
   assert.deepEqual(groups[0].posts.map((item) => item.id), ['valid'])
   assert.deepEqual(clusterPosts([], project), [])
-})
-
-test('external map links carry the exact pin coordinates and safely encode names', () => {
-  const domestic = getExternalMapUrl({ lat: 37.5, lng: 127 }, '카페 / & #')
-  assert.ok(domestic.startsWith('https://map.kakao.com/link/map/'))
-  assert.ok(domestic.includes(encodeURIComponent('카페 / & #')))
-  assert.ok(domestic.endsWith(',37.5,127'))
-  const abroad = new URL(getExternalMapUrl({ lat: 48.85, lng: 2.35 }, 'Paris'))
-  assert.equal(abroad.searchParams.get('query'), '48.85,2.35')
 })

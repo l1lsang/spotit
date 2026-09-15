@@ -25,7 +25,7 @@ import {
 import { requireDb } from '../lib/firebase'
 import { appReadCache, invalidateAppReads } from '../lib/readCache'
 import { getProfilePinAccess, type ProfilePinAccess } from '../lib/profilePinAccess'
-import type { LatLng } from '../lib/kakaoMap'
+import type { LatLng } from '../lib/mapLocation'
 import type { GroupVisibility } from '../types/group'
 import {
   normalizePinColor,

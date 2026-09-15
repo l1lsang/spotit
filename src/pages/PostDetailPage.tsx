@@ -190,7 +190,7 @@ export function PostDetailPage() {
             <small>
               좌표 {post.lat.toFixed(5)}, {post.lng.toFixed(5)}
             </small>
-            <a className="preview-map-link" href={getExternalMapUrl(post, post.placeName)} target="_blank" rel="noopener noreferrer">지도에서 위치 열기</a>
+            <a className="preview-map-link" href={getExternalMapUrl(post)} target="_blank" rel="noopener noreferrer">지도에서 위치 열기</a>
           </div>
           <MapView
             className="mini-map"

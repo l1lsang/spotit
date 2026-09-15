@@ -42,7 +42,7 @@ export function MapPostPreview({ post, onClose, onBack }: MapPostPreviewProps) {
       </p>
       <p className="preview-address">{post.address || '주소가 등록되지 않은 위치입니다.'}</p>
       <p className="preview-coordinates">{post.lat.toFixed(5)}, {post.lng.toFixed(5)}</p>
-      <a className="preview-map-link" href={getExternalMapUrl(post, post.placeName)} target="_blank" rel="noopener noreferrer">
+      <a className="preview-map-link" href={getExternalMapUrl(post)} target="_blank" rel="noopener noreferrer">
         <ExternalLink size={14} aria-hidden="true" />지도에서 위치 열기
       </a>
       <div className="preview-meta">

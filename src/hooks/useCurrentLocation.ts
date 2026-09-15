@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import type { LatLng } from '../lib/kakaoMap'
+import type { LatLng } from '../lib/mapLocation'
 import { useLocationConsent } from '../contexts/locationConsentCore'
 import { auth } from '../lib/firebase'
 
