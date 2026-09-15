@@ -2,7 +2,7 @@ const CACHE_NAME = 'spotit-shell-v5'
 const APP_SHELL = [
   '/', '/map', '/manifest.webmanifest',
   '/logo.svg', '/logo-reversed.svg', '/brand-wordmark.png',
-  '/logo-32.png', '/logo-64.png', '/logo-512.png',
+  '/logo-32.png', '/logo-64.png', '/logo-192.png', '/logo-512.png', '/logo-badge.png',
 ]
 
 self.addEventListener('install', (event) => {
@@ -67,7 +67,7 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(title, {
       body,
       icon: '/logo-512.png',
-      badge: '/logo-reversed.svg',
+      badge: '/logo-badge.png',
       tag: data.notificationId ? `spotit-${data.notificationId}` : 'spotit-notification',
       data: { href },
     }),

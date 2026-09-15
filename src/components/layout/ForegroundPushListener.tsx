@@ -24,7 +24,7 @@ export function ForegroundPushListener() {
       const notification = new Notification(title, {
         body,
         icon: '/logo-512.png',
-        badge: '/logo-reversed.svg',
+        badge: '/logo-badge.png',
         data: { href },
       })
 
