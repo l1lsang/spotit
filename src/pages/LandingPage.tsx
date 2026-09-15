@@ -12,7 +12,10 @@ export function LandingPage() {
     <main className="landing-page">
       <section className="landing-content">
         <div className="landing-copy">
-          <h1><img className="landing-wordmark" src="/brand-wordmark.png" alt="스팟잇" width="1668" height="529" /></h1>
+          <h1>
+            <img className="landing-logo" src="/logo.svg" alt="" width="1024" height="1024" />
+            <img className="landing-wordmark" src="/brand-wordmark.png" alt="스팟잇" width="1668" height="529" />
+          </h1>
           <p className="landing-subtitle">
             사진과 글로 남긴 오늘이, 나만의 지도가 됩니다
           </p>

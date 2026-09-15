@@ -183,6 +183,10 @@ img {
   object-fit: contain;
 }
 
+.brand-logo-main .brand-symbol {
+  border-radius: 8px;
+}
+
 .brand-lockup strong {
   display: block;
   font-size: 1.03rem;
@@ -632,6 +636,13 @@ img {
   align-items: center;
   gap: clamp(28px, 7vw, 90px);
   width: min(1120px, 100%);
+}
+
+.landing-logo {
+  width: clamp(72px, 8vw, 96px);
+  height: auto;
+  margin-bottom: 20px;
+  border-radius: 18px;
 }
 
 .landing-wordmark {

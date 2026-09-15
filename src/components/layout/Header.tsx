@@ -13,7 +13,7 @@ export function Header() {
   return (
     <header className="site-header">
       <Link className="brand-lockup" to="/map" aria-label="스팟잇 지도 홈">
-        <BrandLogo />
+        <BrandLogo variant="reversed" />
       </Link>
 
       <nav className="header-nav" aria-label="주요 메뉴">

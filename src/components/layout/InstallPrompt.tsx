@@ -62,7 +62,7 @@ export function InstallPrompt() {
     <button className="button-icon ghost install-close" type="button" onClick={dismiss} aria-label="설치 안내 닫기">
       <X size={17} aria-hidden="true" />
     </button>
-    <img src="/icon-192.png?v=20260914" alt="" aria-hidden="true" />
+    <img src="/logo-512.png" alt="" aria-hidden="true" width="512" height="512" />
     <div className="install-copy">
       <strong id="install-prompt-title">스팟잇을 앱으로 만나보세요</strong>
       <p>안드로이드·iOS 앱을 설치하거나 브라우저에서 이용할 수 있어요.</p>
