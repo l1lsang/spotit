@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { FirebaseNotice } from '../components/layout/FirebaseNotice'
 import { BrandLogo } from '../components/layout/BrandLogo'
+import { AuthVisual } from '../components/layout/AuthVisual'
 import { PolicyFooter } from '../components/layout/PolicyFooter'
 import { SignupRequirementsFields } from '../components/layout/SignupRequirementsFields'
 import { ImageEditorModal } from '../components/image/ImageEditorModal'
@@ -142,6 +143,7 @@ export function SignupPage() {
 
   return (
     <main className="auth-page signup-page">
+      <AuthVisual />
       <section className="auth-panel signup-panel" aria-labelledby="signup-title">
         <Link className="brand-lockup auth-brand" to="/">
           <BrandLogo />
@@ -158,7 +160,6 @@ export function SignupPage() {
         </ol>
 
         <div className="auth-heading">
-          <p className="eyebrow">{step === 'account' ? 'Create account' : 'Make it yours'}</p>
           <h1 id="signup-title" ref={headingRef} tabIndex={-1}>
             {step === 'account' ? '나만의 이름으로 시작해요' : '프로필을 꾸며보세요'}
           </h1>

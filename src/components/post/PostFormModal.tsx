@@ -135,8 +135,7 @@ export function PostFormModal({
       <section className="modal" role="dialog" aria-modal="true" aria-labelledby="post-form-title">
         <div className="modal-header">
           <div>
-            <p className="eyebrow">{mode === 'create' ? '새 장소 기록' : '기록 수정'}</p>
-            <h2 id="post-form-title">오늘의 장소를 남겨요</h2>
+            <h2 id="post-form-title">{mode === 'create' ? '오늘의 장소를 남겨요' : '장소 기록 수정'}</h2>
           </div>
           <button className="button-icon" type="button" onClick={onClose} aria-label="닫기">
             <X size={20} aria-hidden="true" />

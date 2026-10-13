@@ -38,10 +38,10 @@ export function PostCard({ post, showVisibility = false, actions }: PostCardProp
                   <UsersRound size={13} aria-hidden="true" />
                 )}
                 {post.visibility === 'private'
-                  ? 'private'
+                  ? '나만 보기'
                   : post.visibility === 'public'
-                    ? 'public'
-                    : post.visibility === 'group' ? '그룹 멤버' : 'followers'}
+                    ? '전체 공개'
+                    : post.visibility === 'group' ? '그룹 멤버' : '팔로워'}
               </span>
             )}
           </div>

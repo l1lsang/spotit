@@ -1,4 +1,5 @@
-import { LocateFixed, RefreshCw, Search, X } from 'lucide-react'
+import { ArrowRight, LocateFixed, MapPin, RefreshCw, Search, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { PageContainer } from '../components/layout/PageContainer'
 import { PostCard } from '../components/post/PostCard'
@@ -98,12 +99,12 @@ export function FeedPage() {
   const waitingForLocation = !initialLocationReady || locationLoading
 
   return (
-    <PageContainer className="content-page">
+    <PageContainer className="content-page feed-page">
       <section className="page-heading">
         <div>
           <p className="eyebrow">Recent daymarks</p>
           <h1>피드</h1>
-          <p>내 위치 근처의 내 기록과 팔로우한 사람들의 기록만 모아봅니다.</p>
+          <p>나와 팔로우한 사람들이 남긴, 가까운 장소의 이야기.</p>
         </div>
         <div className="feed-controls" role="group" aria-label="피드 위치와 반경 설정">
           <label>
@@ -137,7 +138,12 @@ export function FeedPage() {
       </section>}
 
       {(error || locationError) && <p className="form-error">{error || locationError}</p>}
-      {!currentUser && <p className="empty-text">로그인하면 팔로우한 사람들의 인근 기록을 볼 수 있습니다.</p>}
+      {!currentUser && <div className="empty-state feed-welcome">
+        <MapPin size={32} aria-hidden="true" />
+        <h2>어떤 하루를 보내고 있나요?</h2>
+        <p>로그인하면 내 기록과 팔로우한 사람들의<br />가까운 장소 이야기를 모아볼 수 있어요.</p>
+        <Link className="button button-primary" to="/login" state={{ from: '/feed' }}>로그인하고 둘러보기 <ArrowRight size={16} aria-hidden="true" /></Link>
+      </div>}
       {waitingForLocation && <p className="empty-text">현재 위치를 확인하는 중입니다.</p>}
       {loading && <p className="empty-text">기록을 불러오는 중입니다.</p>}
 

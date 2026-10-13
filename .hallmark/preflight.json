@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-14",
+  "scope": "app",
+  "framework": "React 19 / Vite 8 / TypeScript",
+  "source": "https://github.com/Nutlope/hallmark",
+  "existingFonts": "Inter/system fallback in src/styles/globals.css:1; no web font was loaded",
+  "existingPalette": "cream, teal, coral, olive in src/styles/globals.css:10",
+  "motion": "CSS only; no motion library",
+  "preserved": ["brand assets", "local photographs", "routes", "data flows", "user pin colors"],
+  "introduced": ["Pretendard Variable", "tokens.css", "photo journal landing", "shared visual system", "responsive navigation"]
+}

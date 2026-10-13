@@ -16,6 +16,7 @@ export function Header() {
         <BrandLogo variant="reversed" />
       </Link>
 
+      <span className="header-tagline">오늘, 이곳.</span>
       <nav className="header-nav" aria-label="주요 메뉴">
         <Link to="/map" className={isMapSection(pathname) ? 'active' : undefined} aria-current={isMapSection(pathname) ? 'page' : undefined}>지도</Link>
         <NavLink to="/feed">피드</NavLink>

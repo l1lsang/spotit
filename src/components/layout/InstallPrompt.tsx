@@ -1,4 +1,4 @@
-﻿import { Download, Globe, X } from 'lucide-react'
+import { ArrowUpRight, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { createInstallGuidePreference, INSTALL_GUIDE_SEEN_KEY } from '../../lib/installGuide'
@@ -64,21 +64,19 @@ export function InstallPrompt() {
     </button>
     <img src="/logo-512.png" alt="" aria-hidden="true" width="512" height="512" />
     <div className="install-copy">
-      <strong id="install-prompt-title">스팟잇을 앱으로 만나보세요</strong>
-      <p>안드로이드·iOS 앱을 설치하거나 브라우저에서 이용할 수 있어요.</p>
+      <strong id="install-prompt-title">다음 산책도, 스팟잇과 함께.</strong>
+      <p>앱에서 오늘의 장소를 간편하게 남겨보세요.</p>
     </div>
     <div className="install-actions">
       {appStores.map(({ name, url }) => url
         ? <a key={name} className="button button-primary install-action" href={url} target="_blank" rel="noopener noreferrer" onClick={dismiss}>
-          <Download size={16} aria-hidden="true" />
-          {name} 앱 설치하기
+          {name} 앱 <ArrowUpRight size={16} aria-hidden="true" />
         </a>
         : <button key={name} className="button button-primary install-action" type="button" disabled>
-          <Download size={16} aria-hidden="true" />
-          {name} 앱 설치하기 <span className="install-coming-soon">출시 준비 중</span>
+          {name} 앱 <ArrowUpRight size={16} aria-hidden="true" /> <span className="install-coming-soon">준비 중</span>
         </button>)}
       <button className="install-dismiss" type="button" onClick={dismiss}>
-        <Globe size={16} aria-hidden="true" />브라우저에서 열기
+        웹에서 계속하기
       </button>
     </div>
   </aside>

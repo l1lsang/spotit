@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
 import licenses from '../data/openSourceLicenses.json'
+import pretendardLicense from '../data/pretendard-license.txt?raw'
 import '../styles/licenses.css'
 
 const scopeLabels: Record<string, string> = {
@@ -10,8 +11,13 @@ const scopeLabels: Record<string, string> = {
   server: '서버',
   development: '개발 도구',
 }
-const licenseTexts: Record<string, string> = licenses.texts
+const licenseTexts: Record<string, string> = { ...licenses.texts, 'pretendard-ofl': pretendardLicense }
 type LicensePackage = typeof licenses.packages[number]
+const packages: LicensePackage[] = [...licenses.packages, {
+  name: 'Pretendard Variable', version: '1.3.9', license: 'OFL-1.1', integrity: '',
+  scopes: ['app'], direct: true, repository: 'https://github.com/orioncactus/pretendard',
+  documents: [{ title: 'SIL Open Font License 1.1', textId: 'pretendard-ofl', source: 'https://github.com/orioncactus/pretendard/blob/v1.3.9/LICENSE' }],
+}].sort((a, b) => a.name.localeCompare(b.name))
 
 function LicenseItem({ entry }: { entry: LicensePackage }) {
   const [expanded, setExpanded] = useState(false)
@@ -59,7 +65,7 @@ export function OpenSourceLicensesPage() {
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState('all')
   const keyword = query.trim().toLowerCase()
-  const filteredPackages = licenses.packages.filter(entry => (
+  const filteredPackages = packages.filter(entry => (
     (scope === 'all' || entry.scopes.includes(scope))
     && `${entry.name} ${entry.version} ${entry.license}`.toLowerCase().includes(keyword)
   ))
@@ -98,7 +104,7 @@ export function OpenSourceLicensesPage() {
         </label>
       </div>
       <p className="license-count" role="status">
-        전체 {licenses.packages.length}개 중 {filteredPackages.length}개
+        전체 {packages.length}개 중 {filteredPackages.length}개
       </p>
       {filteredPackages.length ? (
         <div className="license-list">

@@ -6,6 +6,7 @@ import { PolicyFooter } from '../components/layout/PolicyFooter'
 import { GoogleSignInNotice } from '../components/layout/GoogleSignInNotice'
 import { GoogleLogo } from '../components/layout/GoogleLogo'
 import { BrandLogo } from '../components/layout/BrandLogo'
+import { AuthVisual } from '../components/layout/AuthVisual'
 import { useAuth } from '../hooks/useAuth'
 import { loginWithEmail, loginWithGoogle, loginWithKakao, sendPasswordReset } from '../services/authService'
 
@@ -113,6 +114,7 @@ export function LoginPage() {
 
   return (
     <main className="auth-page">
+      <AuthVisual />
       <section className="auth-panel">
         <Link className="brand-lockup auth-brand" to="/">
           <BrandLogo />
@@ -121,8 +123,7 @@ export function LoginPage() {
         <FirebaseNotice />
 
         <div className="auth-heading">
-          <p className="eyebrow">Welcome back</p>
-          <h1>로그인</h1>
+          <h1>다시 만나 반가워요.</h1>
           <p>내 장소 기록을 이어서 남겨보세요.</p>
         </div>
 
@@ -131,7 +132,7 @@ export function LoginPage() {
             <span>이메일</span>
             <Mail size={18} aria-hidden="true" />
             <input
-              type="email"
+              type="email" autoComplete="email"
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -143,7 +144,7 @@ export function LoginPage() {
             <span>비밀번호</span>
             <KeyRound size={18} aria-hidden="true" />
             <input
-              type="password"
+              type="password" autoComplete="current-password"
               required
               minLength={6}
               value={password}

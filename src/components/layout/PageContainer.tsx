@@ -23,9 +23,10 @@ export function PageContainer({
 }: PropsWithChildren<PageContainerProps>) {
   return (
     <div className={`app-shell ${hideBottomNav ? 'app-shell-no-bottom-nav' : ''} ${fillViewport ? 'app-shell-viewport' : ''}`}>
+      <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
       {!hideHeader && <Header />}
       {!hideFirebaseNotice && <FirebaseNotice />}
-      <main className={`${fullBleed ? 'page page-full' : 'page'} ${className}`}>{children}</main>
+      <main id="main-content" tabIndex={-1} className={`${fullBleed ? 'page page-full' : 'page'} ${className}`}>{children}</main>
       {!hideBottomNav && <BottomNav />}
     </div>
   )
