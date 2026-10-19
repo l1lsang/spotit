@@ -46,15 +46,16 @@ export function PeoplePage() {
           <h1>사람 찾기</h1>
           <p>프로필을 눌러 친구의 소개를 보고 소통해 보세요.</p>
         </div>
-        <button className="button button-secondary" type="button" disabled={loading} onClick={() => { invalidateAppReads(); setRevision(value => value + 1) }}>
-          <RefreshCw size={17} aria-hidden="true" />새로고침
-        </button>
       </section>
       <label className="people-search">
         <Search size={18} aria-hidden="true" />
         <input {...inputProps} placeholder="사용자 이름 또는 닉네임 검색" aria-label="사용자 검색" />
       </label>
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {error && <div className="form-error" role="alert"><p>{error}</p>
+        <button className="button button-secondary" type="button" disabled={loading} onClick={() => { invalidateAppReads(); setRevision(value => value + 1) }}>
+          <RefreshCw size={17} aria-hidden="true" />다시 시도
+        </button>
+      </div>}
       {loading && <p className="empty-text" role="status">사람들을 불러오는 중입니다.</p>}
       {!loading && !error && filteredUsers.length === 0 && <p className="empty-text">검색된 사용자가 없습니다.</p>}
       {!loading && filteredUsers.length > 0 && (

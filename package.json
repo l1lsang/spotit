@@ -26,6 +26,7 @@
     "test:profiles": "node --experimental-vm-modules --test tests/profiles.test.mjs",
     "test:maps": "node --experimental-strip-types --experimental-vm-modules --test tests/maps.test.mjs tests/googleMaps.test.mjs",
     "dev": "vite",
+    "dev:design": "node scripts/design-preview.mjs",
     "licenses:generate": "node scripts/generate-open-source-licenses.mjs",
     "licenses:check": "node scripts/generate-open-source-licenses.mjs --check",
     "test:licenses": "node --test tests/licenseManifest.test.mjs",

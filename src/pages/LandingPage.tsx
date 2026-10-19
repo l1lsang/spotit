@@ -33,11 +33,11 @@ export function LandingPage() {
         <section className="landing-closing" aria-label="스팟잇 소개">
           <p>흘러가는 하루를,<br />다시 찾을 수 있는 장소로.</p>
           <div><p>지도에 핀을 남기고, 사진과 이야기를 더해보세요.<br />혼자 간직하거나 팔로우한 사람들과 나눌 수 있어요.</p>
-            <Link to="/map" className="text-link">지도를 펼쳐보기 <ArrowUpRight size={17} aria-hidden="true" /></Link>
+            <Link to="/map" className="text-link">지도로 바로가기 <ArrowUpRight size={17} aria-hidden="true" /></Link>
           </div>
         </section>
       </main>
-      <footer className="landing-footer"><span>스팟잇 · 오늘, 이곳</span><PolicyFooter /></footer>
+      <footer className="landing-footer"><span>스팟잇</span><PolicyFooter showCredit={false} /></footer>
     </div>
   )
 }

@@ -26,12 +26,11 @@ export function LikedPostsPage() {
   return <PageContainer className="content-page liked-posts-page">
     <Link className="liked-posts-back" to="/profile"><ArrowLeft size={17} aria-hidden="true" />내 활동으로</Link>
     <section className="page-heading">
-      <div><p className="eyebrow">내 활동</p><h1>좋아요</h1><p>좋아요를 누른 핀을 최근 순으로 모았어요.</p></div>
-      <button className="button-icon subtle" type="button" disabled={loading} onClick={() => setRevision(value => value + 1)} aria-label="좋아요한 핀 새로고침">
-        <RefreshCw size={18} aria-hidden="true" />
-      </button>
+      <div><h1>좋아요</h1></div>
     </section>
-    {error && <p className="form-error" role="alert">{error}</p>}
+    {error && <div className="form-error" role="alert"><p>{error}</p>
+      <button className="button button-secondary" type="button" disabled={loading} onClick={() => setRevision(value => value + 1)}><RefreshCw size={18} aria-hidden="true" />다시 시도</button>
+    </div>}
     {loading && <p className="empty-text" role="status">좋아요한 핀을 불러오는 중입니다.</p>}
     {!loading && !error && (posts.length ? <>
       <p className="liked-posts-count" role="status">좋아요한 핀 {posts.length}개</p>

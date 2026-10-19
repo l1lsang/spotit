@@ -1,4 +1,3 @@
-import { Pencil, Share2, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -6,6 +5,7 @@ import { ReportButton } from '../components/moderation/ReportButton'
 import { MapView } from '../components/map/MapView'
 import { getExternalMapUrl } from '../lib/mapLocation'
 import { PostInteractions } from '../components/post/PostInteractions'
+import { PostActionsMenu } from '../components/post/PostActionsMenu'
 import { PostFormModal, type PostFormSubmitPayload } from '../components/post/PostFormModal'
 import { useAuth } from '../hooks/useAuth'
 import type { Post, PostFormInput } from '../types/post'
@@ -21,6 +21,8 @@ export function PostDetailPage() {
   const [error, setError] = useState('')
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [shareMessage, setShareMessage] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [actionError, setActionError] = useState('')
 
   const isOwner = Boolean(currentUser && post?.uid === currentUser.uid)
 
@@ -48,12 +50,20 @@ export function PostDetailPage() {
   }, [loadDetail])
 
   async function handleDeletePost() {
-    if (!currentUser || !post || !window.confirm('이 기록을 삭제할까요?')) {
+    if (!currentUser || !post || !isOwner || deleting || !window.confirm('이 기록을 삭제할까요?')) {
       return
     }
 
-    await deletePost(post.id, currentUser.uid)
-    navigate('/my')
+    setDeleting(true)
+    setActionError('')
+    try {
+      await deletePost(post.id, currentUser.uid)
+      navigate('/my')
+    } catch (deleteError) {
+      setActionError(deleteError instanceof Error ? deleteError.message : '기록을 삭제하지 못했습니다. 다시 시도해 주세요.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   async function handleSharePost() {
@@ -130,16 +140,19 @@ export function PostDetailPage() {
   }
 
   return (
-    <PageContainer className="content-page">
+    <PageContainer className="content-page post-detail-page">
       <article className="detail-layout">
         <section className="detail-main">
           <div className="detail-heading">
             {post.groupId && <Link className="pill" to={`/groups/${post.groupId}`}>이 핀의 그룹 둘러보기 →</Link>}
-            <p className="eyebrow">{formatDateKey(post.dateKey)}</p>
-            <h1>{post.title}</h1>
-            <p>
-              {post.placeName} · {post.authorNickname}
-            </p>
+            <div className="detail-title-row">
+              <div className="detail-title">
+                <p className="eyebrow">{formatDateKey(post.dateKey)}</p>
+                <h1>{post.title}</h1>
+              </div>
+              <PostActionsMenu key={post.id} post={post} isOwner={isOwner} canReport={Boolean(currentUser) && !isOwner}
+                busy={deleting} onEdit={() => setIsEditOpen(true)} onShare={() => void handleSharePost()} onDelete={() => void handleDeletePost()} />
+            </div>
           </div>
 
           {post.photoUrls.length > 0 && (
@@ -159,26 +172,8 @@ export function PostDetailPage() {
 
           <p className="detail-content">{post.content}</p>
 
-          <div className="detail-actions">
-            <button className="button-icon subtle share-icon-button" type="button" onClick={() => void handleSharePost()} aria-label="핀 공유" title="핀 공유">
-              <Share2 size={19} aria-hidden="true" />
-            </button>
-            {isOwner && (
-              <>
-                <button className="button button-secondary" type="button" onClick={() => setIsEditOpen(true)}>
-                  <Pencil size={17} aria-hidden="true" />
-                  수정
-                </button>
-                <button className="button button-danger" type="button" onClick={handleDeletePost}>
-                  <Trash2 size={17} aria-hidden="true" />
-                  삭제
-                </button>
-              </>
-            )}
-            {currentUser && !isOwner && <ReportButton target={{ kind: 'pin', targetId: post.id, label: post.title }} label="핀 신고" />}
-            {currentUser && !isOwner && <ReportButton target={{ kind: 'user', targetId: post.uid, label: post.authorNickname }} label="작성자 신고" />}
-          </div>
-          {shareMessage && <p className="form-success compact-message">{shareMessage}</p>}
+          {actionError && <p className="form-error compact-message" role="alert">{actionError}</p>}
+          {shareMessage && <p className="form-success compact-message" role="status">{shareMessage}</p>}
 
           <PostInteractions key={post.id} post={post} expanded />
         </section>

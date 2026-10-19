@@ -1,0 +1,60 @@
+{
+  "posts": [
+    {
+      "id": "walk",
+      "uid": "design-viewer",
+      "authorNickname": "소연",
+      "title": "산책하던 중에 찍은 사진",
+      "content": "햇살이 좋아서 평소보다 조금 더 걸었다. 다음 주에도 이 길로 와야지.",
+      "placeName": "성북천",
+      "address": "서울특별시",
+      "lat": 37.566535,
+      "lng": 126.9779692,
+      "dateKey": "2026-10-14",
+      "visibility": "public",
+      "pinColor": "#356f68",
+      "photoUrls": ["/src/assets/landing/walk.webp"],
+      "likeCount": 3,
+      "commentCount": 0
+    },
+    {
+      "id": "cafe",
+      "uid": "person-0",
+      "authorNickname": "지민",
+      "title": "예쁜 카페 발견",
+      "content": "골목 안쪽에서 발견한 조용한 카페. 창가 자리가 특히 좋았다.",
+      "placeName": "성신여대입구",
+      "address": "서울특별시",
+      "lat": 37.568535,
+      "lng": 126.9779692,
+      "dateKey": "2026-10-14",
+      "visibility": "public",
+      "pinColor": "#356f68",
+      "photoUrls": ["/src/assets/landing/cafe.webp"],
+      "likeCount": 4,
+      "commentCount": 0
+    },
+    {
+      "id": "sunset",
+      "uid": "person-1",
+      "authorNickname": "수현",
+      "title": "해가 질 때까지",
+      "content": "강바람이 시원해서 해가 질 때까지 앉아 있었다.",
+      "placeName": "한강공원",
+      "address": "서울특별시",
+      "lat": 37.570535,
+      "lng": 126.9779692,
+      "dateKey": "2026-10-14",
+      "visibility": "public",
+      "pinColor": "#356f68",
+      "photoUrls": ["/src/assets/landing/sunset.webp"],
+      "likeCount": 5,
+      "commentCount": 0
+    }
+  ],
+  "groups": [
+    { "id": "group-0", "name": "동네 산책 기록", "description": "", "visibility": "public", "memberCount": 12 },
+    { "id": "group-1", "name": "커피 한 잔의 여유", "description": "다시 가고 싶은 동네 카페와 작은 가게들.", "visibility": "public", "memberCount": 13 },
+    { "id": "group-2", "name": "주말의 서울", "description": "가까운 곳에서 찾는 주말의 즐거움.", "visibility": "public", "memberCount": 14 }
+  ]
+}

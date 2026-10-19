@@ -67,9 +67,6 @@ export function ChatMessageContent({ message, chatId, canReport, pinned = false,
             <img loading="lazy" decoding="async" className="message-photo" src={message.photoUrl} alt={message.photoName || '채팅 사진'} draggable={false} />
           </a>
         )}
-        {message.photoUrl && canReport && <button className="message-photo-report" type="button" onClick={() => setView('photo-report')}>
-          <Flag size={13} aria-hidden="true" />사진 신고
-        </button>}
         {message.content && <p className="message-bubble">{message.content}</p>}
       </div>
       {canOpenMenu && view === 'actions' && (

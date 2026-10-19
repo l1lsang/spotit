@@ -55,14 +55,15 @@ function GroupHome({ groupId }: { groupId: string }) {
   if (error || !group || !canReadPins) return <PageContainer className="content-page"><div className="empty-state"><h1>{error ? '그룹을 불러오지 못했어요' : '가입이 필요하거나 찾을 수 없는 그룹이에요'}</h1>{error ? <p role="alert">{error}</p> : <><p>비공개 그룹은 초대코드로 가입한 뒤 볼 수 있어요.</p><GroupJoinButton groupId={groupId} visibility="private" joined={false} /></>}{error && <button className="button button-secondary" type="button" onClick={retry}>다시 시도</button>}<Link className="button button-primary" to="/groups">그룹 둘러보기</Link></div></PageContainer>
 
   return (
-    <PageContainer className="content-page groups-page">
+    <PageContainer className="content-page groups-page group-detail-page">
       <Link className="group-back" to="/groups"><ArrowLeft size={17} aria-hidden="true" />그룹 둘러보기</Link>
       <section className="group-home-heading">
         <div className="group-home-title">
           <span className="group-symbol">{visibility === 'private' ? <Lock size={30} aria-hidden="true" /> : <Compass size={30} aria-hidden="true" />}</span>
-          <div><p className="eyebrow">{visibility === 'private' ? '비공개 그룹 · 멤버만 볼 수 있어요 · 초대코드로 가입' : '공개 그룹 · 누구나 바로 가입'}</p><h1>{group.name}</h1></div>
+          <div className="group-title-copy"><p className="eyebrow">{visibility === 'private' ? '비공개 그룹' : '공개 그룹'}</p><h1>{group.name}</h1></div>
+          <button className="button-icon button-icon-round share-icon-button" type="button" onClick={() => void shareGroup()} aria-label="그룹 공유" title="그룹 공유"><Share2 size={19} aria-hidden="true" /></button>
         </div>
-        <p className="group-description">{group.description || '함께 발견한 좋은 장소들을 이곳에 모아요.'}</p>
+        <p className="group-description">{group.description}</p>
         <div className="group-home-footer">
           <div className="group-stats">
             <span><UsersRound size={16} aria-hidden="true" />멤버 {group.memberCount}명</span>
@@ -70,7 +71,6 @@ function GroupHome({ groupId }: { groupId: string }) {
             {group.ownerUid === uid && <span className="pill">내가 만든 그룹</span>}
           </div>
           <div className="group-home-actions">
-            <button className="button-icon subtle share-icon-button" type="button" onClick={() => void shareGroup()} aria-label="그룹 공유" title="그룹 공유"><Share2 size={19} aria-hidden="true" /></button>
             <GroupJoinButton groupId={groupId} visibility={group.visibility} joined={joined} allowLeave />
           </div>
         </div>

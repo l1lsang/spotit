@@ -132,7 +132,7 @@ export function NotificationsPage() {
   }
 
   return (
-    <PageContainer className="content-page">
+    <PageContainer className="content-page notifications-page">
       <section className="page-heading">
         <div>
           <p className="eyebrow">Notifications</p>

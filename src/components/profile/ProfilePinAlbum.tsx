@@ -31,7 +31,7 @@ export function ProfilePinAlbum({ ownerUid, refreshKey = 0 }: { ownerUid: string
       <h2 id="profile-pin-album-title"><Grid3X3 size={18} aria-hidden="true" />{ownAlbum ? '내 핀' : '핀'}
         {album && album.access !== 'locked' && <span>{album.posts.length}</span>}
       </h2>
-      <button className="button-icon subtle" type="button" disabled={loading} onClick={() => setRevision(value => value + 1)} aria-label="핀 앨범 새로고침"><RefreshCw size={17} aria-hidden="true" /></button>
+      <button className={`button-icon subtle${ownAlbum ? '' : ' button-icon-round'}`} type="button" disabled={loading} onClick={() => setRevision(value => value + 1)} aria-label="핀 앨범 새로고침"><RefreshCw size={17} aria-hidden="true" /></button>
     </div>
     {loading && <p className="pin-album-state" role="status">핀을 불러오는 중입니다.</p>}
     {error && <div className="pin-album-state" role="alert"><p>{error}</p>

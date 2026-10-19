@@ -175,7 +175,7 @@ export function LoginPage() {
 
         <button
           className="button google-button wide"
-          aria-describedby="google-signin-notice"
+          aria-describedby={error ? 'google-signin-notice' : undefined}
           type="button"
           disabled={!firebaseReady || submitting}
           onClick={handleGoogleLogin}
@@ -183,7 +183,7 @@ export function LoginPage() {
           <GoogleLogo />
           {socialProvider === 'google' ? '구글 로그인 중' : '구글로 로그인하기'}
         </button>
-        <GoogleSignInNotice />
+        {error && <GoogleSignInNotice />}
 
         <button
           className="button kakao-button wide"
@@ -200,7 +200,7 @@ export function LoginPage() {
         <p className="auth-switch">
           계정이 없다면 <Link to="/signup">회원가입</Link>
         </p>
-        <PolicyFooter newTab />
+        <PolicyFooter newTab showCredit={false} />
       </section>
     </main>
   )

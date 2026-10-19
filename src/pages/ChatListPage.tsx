@@ -129,13 +129,8 @@ export function ChatListPage() {
         <div>
           <p className="eyebrow">Messages</p>
           <h1>채팅</h1>
-          <p>팔로우한 사람들과 장소 이야기를 이어가세요.</p>
         </div>
         <div className="page-actions">
-          <button className="button button-secondary" type="button" onClick={() => setRefreshKey((key) => key + 1)}>
-            <RefreshCw size={17} aria-hidden="true" />
-            새로고침
-          </button>
           <button className="button button-primary" type="button" disabled={!firebaseReady || !profile} onClick={handleOpenGroupModal}>
             <Plus size={17} aria-hidden="true" />
             단체방
@@ -143,7 +138,9 @@ export function ChatListPage() {
         </div>
       </section>
 
-      {error && <p className="form-error">{error}</p>}
+      {error && <div className="form-error" role="alert"><p>{error}</p>
+        <button className="button button-secondary" type="button" onClick={() => setRefreshKey(key => key + 1)}><RefreshCw size={17} aria-hidden="true" />다시 시도</button>
+      </div>}
 
       {chats.length === 0 ? (
         <div className="empty-state">
