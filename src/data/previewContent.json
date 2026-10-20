@@ -53,8 +53,26 @@
     }
   ],
   "groups": [
-    { "id": "group-0", "name": "동네 산책 기록", "description": "", "visibility": "public", "memberCount": 12 },
-    { "id": "group-1", "name": "커피 한 잔의 여유", "description": "다시 가고 싶은 동네 카페와 작은 가게들.", "visibility": "public", "memberCount": 13 },
-    { "id": "group-2", "name": "주말의 서울", "description": "가까운 곳에서 찾는 주말의 즐거움.", "visibility": "public", "memberCount": 14 }
+    {
+      "id": "group-0",
+      "name": "동네 산책 기록",
+      "description": "햇살 좋은 날, 성북천을 따라 걸으며 남긴 산책 기록.",
+      "visibility": "public",
+      "memberCount": 12
+    },
+    {
+      "id": "group-1",
+      "name": "커피 한 잔의 여유",
+      "description": "성신여대입구 골목에서 발견한 조용한 카페와 창가 자리의 여유.",
+      "visibility": "public",
+      "memberCount": 13
+    },
+    {
+      "id": "group-2",
+      "name": "한강의 노을",
+      "description": "시원한 강바람을 맞으며 해 질 때까지 머문 한강공원의 기록.",
+      "visibility": "public",
+      "memberCount": 14
+    }
   ]
 }
