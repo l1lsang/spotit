@@ -266,8 +266,8 @@ export function ChatListPage() {
                       {searchKeyword ? '검색 결과가 없습니다. 다른 닉네임이나 사용자 이름을 입력해 보세요.' : '초대할 수 있는 사람이 없습니다.'}
                     </p>
                   )}
-                  {!usersLoading && !usersError && filteredUsers.map((user) => (
-                    <label className={`invite-row${selectedUserIds.has(user.uid) ? ' is-selected' : ''}`} key={user.uid}>
+                  {!usersLoading && !usersError && <ul className="invite-candidates" aria-label="초대할 친구">{filteredUsers.map((user) => (
+                    <li key={user.uid}><label className={`invite-row${selectedUserIds.has(user.uid) ? ' is-selected' : ''}`}>
                       <input
                         type="checkbox"
                         checked={selectedUserIds.has(user.uid)}
@@ -282,8 +282,8 @@ export function ChatListPage() {
                         <strong>{user.nickname}</strong>
                         {user.username && <small>@{user.username}</small>}
                       </span>
-                    </label>
-                  ))}
+                    </label></li>
+                  ))}</ul>}
                 </div>
               </fieldset>
 

@@ -1,58 +1,91 @@
-[
-  {
-    "date": "2026-10-14",
-    "scope": "app",
-    "macrostructure": "Photographic / Workbench / Long Document",
-    "theme": "Spotit",
-    "designSystem": "design.md",
-    "enrichment": "Existing local place photography, manually selected",
-    "brief": "Reduce generic AI-style decoration across the Korean place-journaling app; preserve its brand and behavior.",
-    "critique": {
-      "philosophy": 4,
-      "hierarchy": 4,
-      "execution": 4,
-      "specificity": 4,
-      "restraint": 5,
-      "variety": 4
+﻿[
+    {
+        "date":  "2026-10-20",
+        "scope":  "app",
+        "macrostructure":  "Workbench",
+        "theme":  "Spotit",
+        "designSystem":  "design.md",
+        "enrichment":  "none",
+        "brief":  "Unify place pins and live reviews; replace nested cards with quiet semantic lists.",
+        "critique":  {
+                         "philosophy":  4,
+                         "hierarchy":  4,
+                         "execution":  4,
+                         "specificity":  4,
+                         "restraint":  5,
+                         "variety":  4
+                     },
+        "review":  {
+                       "widths":  [
+                                      320,
+                                      375,
+                                      414,
+                                      768,
+                                      1440
+                                  ],
+                       "checks":  "Build, src ESLint, 35 focused tests; isolated browser flows, responsive dialogs, keyboard menu, and error recovery",
+                       "limits":  "Browser fixtures replace map rendering and backend writes."
+                   }
     },
-    "review": {
-      "genre": "modern-minimal",
-      "notes": [
-        "Photography and real user records lead the visual hierarchy.",
-        "Marketing illustration replaced by a manually selected photo journal.",
-        "Compact app controls retain existing navigation and functional states.",
-        "Existing product layouts, provider branding and user pin colors are intentionally preserved."
-      ],
-      "browserValidation": {
-        "publicRouteViewportPairs": 35,
-        "authenticatedFixtureRouteViewportPairs": 65,
-        "widths": [
-          320,
-          375,
-          414,
-          768,
-          1440
-        ],
-        "extraLandingWidths": [
-          1280,
-          1920
-        ]
-      },
-      "interactionChecks": [
-        "Photo picker mouse and keyboard",
-        "Landing navigation",
-        "Install prompt dismissal persistence",
-        "Group filter and dialog",
-        "People search",
-        "Post edit dialog at mobile and desktop widths",
-        "Guest feed login link",
-        "Font license disclosure"
-      ],
-      "contrast": "Five principal text/surface token pairs measured; all exceed 4.5:1.",
-      "limits": [
-        "Authenticated screens use isolated browser fixtures; no production data writes or full live-auth integration test.",
-        "Repository-wide lint has an existing no-explicit-any error in ignored design/spotit-hero/plugin-globals.d.ts."
-      ]
+    {
+        "value":  [
+                      {
+                          "date":  "2026-10-14",
+                          "scope":  "app",
+                          "macrostructure":  "Photographic / Workbench / Long Document",
+                          "theme":  "Spotit",
+                          "designSystem":  "design.md",
+                          "enrichment":  "Existing local place photography, manually selected",
+                          "brief":  "Reduce generic AI-style decoration across the Korean place-journaling app; preserve its brand and behavior.",
+                          "critique":  {
+                                           "philosophy":  4,
+                                           "hierarchy":  4,
+                                           "execution":  4,
+                                           "specificity":  4,
+                                           "restraint":  5,
+                                           "variety":  4
+                                       },
+                          "review":  {
+                                         "genre":  "modern-minimal",
+                                         "notes":  [
+                                                       "Photography and real user records lead the visual hierarchy.",
+                                                       "Marketing illustration replaced by a manually selected photo journal.",
+                                                       "Compact app controls retain existing navigation and functional states.",
+                                                       "Existing product layouts, provider branding and user pin colors are intentionally preserved."
+                                                   ],
+                                         "browserValidation":  {
+                                                                   "publicRouteViewportPairs":  35,
+                                                                   "authenticatedFixtureRouteViewportPairs":  65,
+                                                                   "widths":  [
+                                                                                  320,
+                                                                                  375,
+                                                                                  414,
+                                                                                  768,
+                                                                                  1440
+                                                                              ],
+                                                                   "extraLandingWidths":  [
+                                                                                              1280,
+                                                                                              1920
+                                                                                          ]
+                                                               },
+                                         "interactionChecks":  [
+                                                                   "Photo picker mouse and keyboard",
+                                                                   "Landing navigation",
+                                                                   "Install prompt dismissal persistence",
+                                                                   "Group filter and dialog",
+                                                                   "People search",
+                                                                   "Post edit dialog at mobile and desktop widths",
+                                                                   "Guest feed login link",
+                                                                   "Font license disclosure"
+                                                               ],
+                                         "contrast":  "Five principal text/surface token pairs measured; all exceed 4.5:1.",
+                                         "limits":  [
+                                                        "Authenticated screens use isolated browser fixtures; no production data writes or full live-auth integration test.",
+                                                        "Repository-wide lint has an existing no-explicit-any error in ignored design/spotit-hero/plugin-globals.d.ts."
+                                                    ]
+                                     }
+                      }
+                  ],
+        "Count":  1
     }
-  }
 ]

@@ -19,15 +19,15 @@ export function PinColorPicker({ value, onChange, disabled = false }: PinColorPi
       <span id={`${id}-label`}>색상</span>
       <small>마음에 드는 색을 골라보세요</small>
     </div>
-    <div className="pin-color-swatches" role="group" aria-label="추천 색상">
-      {PIN_COLOR_PALETTE.map(item => <button key={item.color} type="button" className="pin-palette-swatch"
+    <ul className="pin-color-swatches" aria-label="추천 색상">
+      {PIN_COLOR_PALETTE.map(item => <li key={item.color}><button type="button" className="pin-palette-swatch"
         style={{ backgroundColor: item.color }} disabled={disabled} aria-pressed={color === item.color}
         aria-label={`${item.name} ${item.color.toUpperCase()}`} title={`${item.name} · ${item.color.toUpperCase()}`}
         onClick={() => onChange(item.color.toUpperCase())}>
         {color === item.color && <Check size={18} strokeWidth={3} aria-hidden="true" />}
-      </button>)}
-    </div>
-    <div className="pin-color-preview" style={{ backgroundColor: `${previewColor}12`, borderColor: `${previewColor}30` }}>
+      </button></li>)}
+    </ul>
+    <div className="pin-color-preview">
       <span className="pin-color-preview-icon" style={{ backgroundColor: previewColor }} aria-hidden="true"><MapPin size={23} /></span>
       <div><strong>{color ? preset?.name || '나만의 색상' : '색상 확인'}</strong><small>{color ? color.toUpperCase() : '올바른 코드를 입력해 주세요'}</small></div>
       <label className="pin-custom-color" title="색상 직접 선택">

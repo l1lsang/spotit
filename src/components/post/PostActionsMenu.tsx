@@ -19,7 +19,7 @@ export function PostActionsMenu({ post, isOwner, canReport, busy, onEdit, onShar
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null)
   const container = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
-  const menu = useRef<HTMLDivElement>(null)
+  const menu = useRef<HTMLUListElement>(null)
   const menuId = useId()
   const initialFocus = useRef<'first' | 'last'>('first')
 
@@ -45,7 +45,7 @@ export function PostActionsMenu({ post, isOwner, canReport, busy, onEdit, onShar
     action()
   }
 
-  function handleMenuKey(event: KeyboardEvent<HTMLDivElement>) {
+  function handleMenuKey(event: KeyboardEvent<HTMLUListElement>) {
     if (event.key === 'Tab') {
       setOpen(false)
       return
@@ -85,15 +85,15 @@ export function PostActionsMenu({ post, isOwner, canReport, busy, onEdit, onShar
         }}>
         <img src="/icons/post-more.svg" alt="" aria-hidden="true" />
       </button>
-      {open && <div className="post-actions-list" ref={menu} id={menuId} role="menu" aria-label="기록 메뉴" onKeyDown={handleMenuKey}>
-        {isOwner && <button type="button" role="menuitem" tabIndex={-1} onClick={() => select(onEdit)}><Pencil size={18} aria-hidden="true" />수정</button>}
-        <button type="button" role="menuitem" tabIndex={-1} onClick={() => select(onShare)}><Share2 size={18} aria-hidden="true" />공유</button>
-        {isOwner && <button className="post-action-danger" type="button" role="menuitem" tabIndex={-1} onClick={() => select(onDelete)}><Trash2 size={18} aria-hidden="true" />삭제</button>}
+      {open && <ul className="post-actions-list" ref={menu} id={menuId} role="menu" aria-label="기록 메뉴" onKeyDown={handleMenuKey}>
+        {isOwner && <li role="none"><button type="button" role="menuitem" tabIndex={-1} onClick={() => select(onEdit)}><Pencil size={18} aria-hidden="true" />수정</button></li>}
+        <li role="none"><button type="button" role="menuitem" tabIndex={-1} onClick={() => select(onShare)}><Share2 size={18} aria-hidden="true" />공유</button></li>
+        {isOwner && <li role="none"><button className="post-action-danger" type="button" role="menuitem" tabIndex={-1} onClick={() => select(onDelete)}><Trash2 size={18} aria-hidden="true" />삭제</button></li>}
         {canReport && <>
-          <button type="button" role="menuitem" tabIndex={-1} onClick={() => select(() => setReportTarget({ kind: 'pin', targetId: post.id, label: post.title }))}><Flag size={18} aria-hidden="true" />핀 신고</button>
-          <button type="button" role="menuitem" tabIndex={-1} onClick={() => select(() => setReportTarget({ kind: 'user', targetId: post.uid, label: post.authorNickname }))}><ShieldAlert size={18} aria-hidden="true" />작성자 신고</button>
+          <li role="none"><button type="button" role="menuitem" tabIndex={-1} onClick={() => select(() => setReportTarget({ kind: 'pin', targetId: post.id, label: post.title }))}><Flag size={18} aria-hidden="true" />핀 신고</button></li>
+          <li role="none"><button type="button" role="menuitem" tabIndex={-1} onClick={() => select(() => setReportTarget({ kind: 'user', targetId: post.uid, label: post.authorNickname }))}><ShieldAlert size={18} aria-hidden="true" />작성자 신고</button></li>
         </>}
-      </div>}
+      </ul>}
     </div>
     {reportTarget && <ReportDialog target={reportTarget} onClose={() => {
       setReportTarget(null)

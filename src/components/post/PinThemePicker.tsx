@@ -29,10 +29,9 @@ export function PinThemePicker({ value, onChange }: PinThemePickerProps) {
       {value && !editingTheme && (
         <PinColorPicker value={color} onChange={pinColor => onChange?.({ pinColor, pinThemeId: '' })} />
       )}
-      <div className="pin-group-palette">
+      <ul className="pin-group-palette" aria-label="내 핀 테마 목록">
         {themes.map((theme) => (
-          <button
-            key={theme.id}
+          <li key={theme.id}><button
             className={`color-swatch-button ${value?.pinThemeId === theme.id ? 'active' : ''}`}
             type="button"
             aria-pressed={value ? value.pinThemeId === theme.id : undefined}
@@ -41,12 +40,12 @@ export function PinThemePicker({ value, onChange }: PinThemePickerProps) {
           >
             <i style={{ backgroundColor: theme.color }} aria-hidden="true" />
             {theme.name}
-          </button>
+          </button></li>
         ))}
-        <button className="color-swatch-button pin-theme-add" type="button" disabled={!currentUser} onClick={() => setEditingTheme({ id: crypto.randomUUID(), name: '', color: parsePinColorCode(color) || DEFAULT_POST_PIN_COLOR })}>
+        <li><button className="color-swatch-button pin-theme-add" type="button" disabled={!currentUser} onClick={() => setEditingTheme({ id: crypto.randomUUID(), name: '', color: parsePinColorCode(color) || DEFAULT_POST_PIN_COLOR })}>
           <Plus size={14} aria-hidden="true" />핀 테마 추가
-        </button>
-      </div>
+        </button></li>
+      </ul>
       {themes.length === 0 && <small className="field-help">이름과 색상을 정해 나만의 핀 테마를 추가해 보세요.</small>}
       {!value && themes.length > 0 && <small className="field-help">테마를 누르면 이름과 색상을 바꿀 수 있어요.</small>}
       {editingTheme && currentUser && (

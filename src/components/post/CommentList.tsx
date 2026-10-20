@@ -52,14 +52,14 @@ export function CommentList({ comments, currentUserUid, postOwnerUid, postId, an
         const isReplying = !comment.deleted && replyingTo === comment.id
         return <li key={comment.id} className="comment-item" id={rowId('comment', comment.id)} tabIndex={-1}>
           <div className="comment-main">
-            <div className="comment-heading">
+            <header className="comment-heading">
               {comment.deleted ? <span className="comment-deleted">삭제된 댓글</span> : <CommentAuthor author={comment} />}
               <time>{formatTimestamp(comment.createdAt)}</time>
               {canDelete && <button className="text-action comment-delete" type="button" disabled={busy}
                 onClick={() => void run(() => onDelete(comment.id))} aria-label={`${comment.authorNickname}님의 댓글 삭제`}>
                 <Trash2 size={15} aria-hidden="true" />
               </button>}
-            </div>
+            </header>
             <p className={comment.deleted ? 'comment-deleted' : undefined}>{comment.deleted ? '삭제된 댓글입니다.' : <CommentContent content={comment.content} mentions={comment.mentions} />}</p>
             {!comment.deleted && <div className="comment-actions">
               <button className="text-action" type="button" disabled={!currentUserUid || busy} aria-expanded={isReplying}
@@ -73,13 +73,13 @@ export function CommentList({ comments, currentUserUid, postOwnerUid, postId, an
                 return <li className="reply-item" key={reply.id} id={rowId('reply', reply.id)} tabIndex={-1}>
                   <CornerDownRight className="reply-indent" size={16} aria-hidden="true" />
                   <div className="comment-main">
-                    <div className="comment-heading">
+                    <header className="comment-heading">
                       <CommentAuthor author={reply} /><time>{formatTimestamp(reply.createdAt)}</time>
                       {canDeleteReply && <button className="text-action comment-delete" type="button" disabled={busy}
                         onClick={() => void run(() => onDeleteReply(comment, reply))} aria-label={`${reply.authorNickname}님의 답글 삭제`}>
                         <Trash2 size={15} aria-hidden="true" />
                       </button>}
-                    </div>
+                    </header>
                     <p><CommentContent content={reply.content} mentions={reply.mentions} /></p>
                   </div>
                 </li>

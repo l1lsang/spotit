@@ -34,7 +34,7 @@ export function LikedPostsPage() {
     {loading && <p className="empty-text" role="status">좋아요한 핀을 불러오는 중입니다.</p>}
     {!loading && !error && (posts.length ? <>
       <p className="liked-posts-count" role="status">좋아요한 핀 {posts.length}개</p>
-      <div className="post-grid">{posts.map(post => <PostCard key={post.id} post={post} showVisibility={post.uid === uid} />)}</div>
+      <ul className="post-grid" aria-label="좋아요한 기록 목록">{posts.map(post => <li key={post.id}><PostCard post={post} showVisibility={post.uid === uid} /></li>)}</ul>
     </> : <div className="empty-state">
       <Heart size={28} aria-hidden="true" /><h2>아직 좋아요한 핀이 없습니다.</h2>
       <p>피드나 지도에서 마음에 드는 핀에 좋아요를 눌러보세요.</p>

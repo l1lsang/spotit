@@ -184,15 +184,14 @@ export function NotificationsPage() {
       {!loading && notifications.length === 0 ? (
         <p className="empty-text">아직 알림이 없습니다.</p>
       ) : (
-        <div className="notification-list">
+        <ul className="notification-list" aria-label="알림 목록">
           {notifications.map((notification) => {
             const Icon = getNotificationIcon(notification.type)
             const isUnread = !notification.readAt
 
             return (
-              <button
+              <li key={notification.id}><button
                 className={`notification-row ${isUnread ? 'unread' : ''}`}
-                key={notification.id}
                 type="button"
                 onClick={() => void handleOpenNotification(notification)}
               >
@@ -209,10 +208,10 @@ export function NotificationsPage() {
                   <time>{formatTimestamp(notification.createdAt)}</time>
                 </span>
                 {isUnread && <i aria-label="읽지 않은 알림" />}
-              </button>
+              </button></li>
             )
           })}
-        </div>
+        </ul>
       )}
     </PageContainer>
   )

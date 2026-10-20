@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowUpRight, Compass, KeyRound, Lock, Plus, Search, UsersRound } from 'lucide-react'
+import { ArrowLeft, Compass, KeyRound, Lock, Plus, Search, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CreateGroupDialog } from '../components/group/CreateGroupDialog'
@@ -43,13 +43,15 @@ export function GroupsPage() {
       {error && <div className="form-error" role="alert">{error} <button className="button button-secondary" type="button" onClick={retry}>다시 시도</button></div>}
       {loading && <p className="empty-text" role="status">함께할 그룹을 불러오는 중입니다.</p>}
       {!loading && !error && filtered.length === 0 && <div className="empty-state"><Compass size={36} aria-hidden="true" /><h2>{term ? '검색 결과가 없어요' : tab === 'joined' ? '아직 가입한 그룹이 없어요' : '첫 그룹을 만들어 보세요'}</h2><p>{term ? '다른 이름이나 관심사로 찾아보세요.' : '좋아하는 장소를 모으며 같은 취향의 사람들을 만나보세요.'}</p>{tab === 'joined' && !term && <button type="button" className="button button-secondary" onClick={() => setTab('all')}>그룹 둘러보기</button>}</div>}
-      {!loading && !error && filtered.length > 0 && <ul className="groups-grid" aria-label="그룹 목록">
+      {!loading && !error && filtered.length > 0 && <ul className="groups-grid groups-list" aria-label="그룹 목록">
         {filtered.map(group => <li key={group.id} className="group-card">
           <Link className="group-card-main" to={`/groups/${group.id}`}>
-            <div className="group-card-top"><span className="group-symbol">{group.visibility === 'private' ? <Lock size={27} aria-hidden="true" /> : <Compass size={27} aria-hidden="true" />}</span><span className="group-public">{group.visibility === 'private' ? '비공개 그룹' : '공개 그룹'} <ArrowUpRight size={15} aria-hidden="true" /></span></div>
-            <h2>{group.name}</h2><p>{group.description}</p>
+            <span className="group-symbol">{group.visibility === 'private' ? <Lock size={22} aria-hidden="true" /> : <Compass size={22} aria-hidden="true" />}</span>
+            <span className="group-list-copy"><strong>{group.name}</strong><span>{group.description}</span>
+              <small>{group.visibility === 'private' ? '비공개' : '공개'} · 멤버 {group.memberCount}명</small>
+            </span>
           </Link>
-          <div className="group-card-bottom"><span><UsersRound size={16} aria-hidden="true" />멤버 {group.memberCount}명</span><GroupJoinButton groupId={group.id} visibility={group.visibility} joined={joinedIds.includes(group.id)} /></div>
+          <div className="group-card-bottom"><GroupJoinButton groupId={group.id} visibility={group.visibility} joined={joinedIds.includes(group.id)} /></div>
         </li>)}
       </ul>}
       {creating && <CreateGroupDialog onClose={() => setCreating(false)} onCreated={id => { setCreating(false); navigate(`/groups/${id}`) }} />}

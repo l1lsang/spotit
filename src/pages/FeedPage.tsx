@@ -153,11 +153,11 @@ export function FeedPage() {
             {keyword.trim() && <button className="button button-secondary" type="button" onClick={clearKeyword}>검색 초기화</button>}
           </div>
         ) : (
-          <div className="post-grid">
+          <ul className="post-grid" aria-label="피드 기록 목록">
             {filteredPosts.map((post) => (
-              <PostCard key={post.id} post={post} showVisibility={post.uid === currentUser?.uid} />
+              <li key={post.id}><PostCard post={post} showVisibility={post.uid === currentUser?.uid} /></li>
             ))}
-          </div>
+          </ul>
         )
       )}
       {currentUser && !loading && nextCursor && <button className="button button-secondary" type="button" disabled={loadingMore} onClick={() => void loadMore()}>

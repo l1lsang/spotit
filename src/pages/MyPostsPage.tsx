@@ -88,10 +88,9 @@ export function MyPostsPage() {
       {!loading && posts.length === 0 ? (
         <p className="empty-text">아직 남긴 기록이 없습니다. 지도에서 첫 장소를 찍어보세요.</p>
       ) : (
-        <div className="post-grid">
+        <ul className="post-grid" aria-label="내 기록 목록">
           {posts.map((post) => (
-            <PostCard
-              key={post.id}
+            <li key={post.id}><PostCard
               post={post}
               showVisibility
               actions={
@@ -106,9 +105,9 @@ export function MyPostsPage() {
                   </button>
                 </>
               }
-            />
+            /></li>
           ))}
-        </div>
+        </ul>
       )}
 
       <PostFormModal

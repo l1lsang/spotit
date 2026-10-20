@@ -1,9 +1,10 @@
-import { Compass, LocateFixed, MapPin, Plus, Search, SendHorizonal, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Compass, LocateFixed, Plus, Search, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { GroupJoinButton } from '../components/group/GroupJoinButton'
 import { PageContainer } from '../components/layout/PageContainer'
 import { MapView } from '../components/map/MapView'
+import { MapPlacePanel, type SelectedMapPlace } from '../components/map/MapPlacePanel'
 import { MapPinList } from '../components/map/MapPinList'
 import { MapPostPreview } from '../components/map/MapPostPreview'
 import { PostFormModal, type PostFormSubmitPayload } from '../components/post/PostFormModal'
@@ -13,16 +14,7 @@ import { getGroupMapUrl } from '../lib/groupNavigation'
 import { SEOUL_CITY_HALL, useCurrentLocation } from '../hooks/useCurrentLocation'
 import type { LatLng, PlaceSearchResult } from '../lib/mapLocation'
 import { searchPlaces } from '../lib/placeSearch'
-import {
-  createLivePlaceStatus,
-  subscribePlaceStatusUpdates,
-} from '../services/mapFeatureService'
 import { createPost, getVisiblePosts, subscribeGroupPosts } from '../services/postService'
-import {
-  LIVE_PLACE_STATUS_OPTIONS,
-  type LivePlaceStatusKey,
-  type LivePlaceStatusUpdate,
-} from '../types/mapFeature'
 import {
   DEFAULT_POST_PIN_COLOR,
   FOLLOWING_PIN_COLOR,
@@ -30,63 +22,6 @@ import {
   type PostFormInput,
 } from '../types/post'
 import '../styles/mapGroups.css'
-
-type MapMode = 'main' | 'live'
-type PanelMessageType = 'success' | 'error'
-
-interface SelectedPlacePrefill {
-  placeId: string
-  placeName: string
-  address: string
-  location: LatLng
-}
-
-interface TimestampLike {
-  toMillis: () => number
-}
-
-const statusLabelById = new Map(
-  LIVE_PLACE_STATUS_OPTIONS.map((option) => [option.id, option.label]),
-)
-
-function hasToMillis(value: unknown): value is TimestampLike {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'toMillis' in value &&
-    typeof (value as { toMillis?: unknown }).toMillis === 'function'
-  )
-}
-
-function formatRelativeTime(value: unknown): string {
-  const millis = hasToMillis(value) ? value.toMillis() : 0
-
-  if (!millis) {
-    return '방금 전'
-  }
-
-  const minutes = Math.max(0, Math.floor((Date.now() - millis) / 60000))
-
-  if (minutes < 1) {
-    return '방금 전'
-  }
-
-  if (minutes < 60) {
-    return `${minutes}분 전`
-  }
-
-  const hours = Math.floor(minutes / 60)
-
-  if (hours < 24) {
-    return `${hours}시간 전`
-  }
-
-  return `${Math.floor(hours / 24)}일 전`
-}
-
-function getStatusLabel(statusKey: LivePlaceStatusKey): string {
-  return statusLabelById.get(statusKey) || statusKey
-}
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
@@ -114,7 +49,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   const [center, setCenter] = useState<LatLng>(SEOUL_CITY_HALL)
   const [initialLocationReady, setInitialLocationReady] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<LatLng | null>(null)
-  const [selectedPlace, setSelectedPlace] = useState<SelectedPlacePrefill | null>(null)
+  const [selectedPlace, setSelectedPlace] = useState<SelectedMapPlace | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [clusterPosts, setClusterPosts] = useState<Post[]>([])
@@ -127,28 +62,9 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   const [searchingPlaces, setSearchingPlaces] = useState(false)
   const [placeSearchMessage, setPlaceSearchMessage] = useState('')
   const [error, setError] = useState('')
-  const [mapMode, setMapMode] = useState<MapMode>('main')
-  const [statusUpdates, setStatusUpdates] = useState<LivePlaceStatusUpdate[]>([])
-  const [selectedStatusTags, setSelectedStatusTags] = useState<LivePlaceStatusKey[]>([])
-  const [statusNote, setStatusNote] = useState('')
-  const [loadingStatusUpdates, setLoadingStatusUpdates] = useState(false)
-  const [submittingStatus, setSubmittingStatus] = useState(false)
-  const [statusPanelMessage, setStatusPanelMessage] = useState('')
-  const [statusPanelMessageType, setStatusPanelMessageType] =
-    useState<PanelMessageType>('success')
-
-  const visiblePosts = mapMode === 'main' && (!groupId || (selectedGroup && (selectedGroupVisibility !== 'private' || joined))) ? posts : []
+  const visiblePosts = (!groupId || (selectedGroup && (selectedGroupVisibility !== 'private' || joined))) ? posts : []
   const visibleSelectedPost = visiblePosts.find(post => post.id === selectedPost?.id)
   const visibleClusterPosts = clusterPosts.filter(post => visiblePosts.some(item => item.id === post.id))
-  const statusCounts = useMemo(
-    () =>
-      LIVE_PLACE_STATUS_OPTIONS.map((option) => ({
-        ...option,
-        count: statusUpdates.filter((update) => update.tags.includes(option.id)).length,
-      })).filter((option) => option.count > 0),
-    [statusUpdates],
-  )
-
   const loadPosts = useCallback(async () => {
     if (groupId) return
     if (!firebaseReady) {
@@ -225,31 +141,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
     }
   }, [requestLocation, groupId])
 
-  useEffect(() => {
-    setStatusPanelMessage('')
-
-    if (!firebaseReady || !currentUser || !selectedPlace || mapMode !== 'live') {
-      setStatusUpdates([])
-      setLoadingStatusUpdates(false)
-      return undefined
-    }
-
-    setLoadingStatusUpdates(true)
-
-    return subscribePlaceStatusUpdates(
-      selectedPlace.placeId,
-      (updates) => {
-        setStatusUpdates(updates)
-        setLoadingStatusUpdates(false)
-      },
-      (statusError) => {
-        setStatusPanelMessageType('error')
-        setStatusPanelMessage(getErrorMessage(statusError, '실시간 리뷰를 불러오지 못했습니다.'))
-        setLoadingStatusUpdates(false)
-      },
-    )
-  }, [firebaseReady, selectedPlace, currentUser, mapMode])
-
   async function handleUseCurrentLocation() {
     const nextLocation = await requestLocation()
     setSelectedPost(null)
@@ -258,15 +149,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
     setSelectedPlace(null)
     setCenter(nextLocation)
     setInitialLocationReady(true)
-  }
-
-  function handleModeChange(nextMode: MapMode) {
-    setMapMode(nextMode)
-    setClusterPosts([])
-
-    if (nextMode !== 'main') {
-      setSelectedPost(null)
-    }
   }
 
   function handleMapClick(location: LatLng) {
@@ -334,6 +216,8 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   }
 
   function handleSelectPlace(place: PlaceSearchResult) {
+    searchRequestRef.current += 1
+    setSearchingPlaces(false)
     const location = place.location
     setClusterPosts([])
 
@@ -349,63 +233,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
     setPlaceQuery(place.name)
     setPlaceResults([])
     setPlaceSearchMessage('')
-  }
-
-  function toggleStatusTag(statusKey: LivePlaceStatusKey) {
-    setSelectedStatusTags((currentTags) =>
-      currentTags.includes(statusKey)
-        ? currentTags.filter((tag) => tag !== statusKey)
-        : [...currentTags, statusKey],
-    )
-  }
-
-  async function handleSubmitPlaceStatus() {
-    if (!selectedPlace) {
-      setStatusPanelMessageType('error')
-      setStatusPanelMessage('장소를 먼저 선택해 주세요.')
-      return
-    }
-
-    if (!currentUser || !profile) {
-      navigate('/login')
-      return
-    }
-
-    if (selectedStatusTags.length === 0) {
-      setStatusPanelMessageType('error')
-      setStatusPanelMessage('상태를 하나 이상 선택해 주세요.')
-      return
-    }
-
-    setSubmittingStatus(true)
-    setStatusPanelMessage('')
-
-    try {
-      await createLivePlaceStatus(
-        {
-          placeId: selectedPlace.placeId,
-          placeName: selectedPlace.placeName,
-          address: selectedPlace.address,
-          lat: selectedPlace.location.lat,
-          lng: selectedPlace.location.lng,
-          tags: selectedStatusTags,
-          note: statusNote,
-        },
-        {
-          uid: currentUser.uid,
-          nickname: profile.nickname,
-        },
-      )
-      setSelectedStatusTags([])
-      setStatusNote('')
-      setStatusPanelMessageType('success')
-      setStatusPanelMessage('모든 사용자에게 공유되는 실시간 리뷰를 올렸습니다.')
-    } catch (submitError) {
-      setStatusPanelMessageType('error')
-      setStatusPanelMessage(getErrorMessage(submitError, '실시간 리뷰를 올리지 못했습니다.'))
-    } finally {
-      setSubmittingStatus(false)
-    }
   }
 
   async function handleCreatePost(payload: PostFormSubmitPayload) {
@@ -435,7 +262,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
       nickname: profile.nickname,
     })
     setIsFormOpen(false)
-    setSelectedLocation(null)
+    if (!selectedPlace) setSelectedLocation(null)
     if (input.groupId && input.groupId !== groupId) {
       navigate(getGroupMapUrl(input.groupId))
       return
@@ -474,7 +301,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
             <Search size={18} aria-hidden="true" />
             <input
               value={placeQuery}
-              onChange={(event) => setPlaceQuery(event.target.value)}
+              onChange={(event) => { searchRequestRef.current += 1; setSearchingPlaces(false); setPlaceResults([]); setPlaceSearchMessage(''); setPlaceQuery(event.target.value) }}
               placeholder="장소 검색"
               aria-label="장소 검색"
             />
@@ -498,7 +325,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
             </Link>
           </div>
 
-          {mapMode === 'main' && currentUser && <div className="map-scope-controls">
+          {currentUser && <div className="map-scope-controls">
             <select aria-label="지도에 표시할 그룹" value={groupId} disabled={groupState.loading || Boolean(groupState.error)} onChange={event => navigate(getGroupMapUrl(event.target.value))}>
               <option value="">내 지도 · 나와 팔로잉</option>
               {groupState.groups.filter(group => groupState.joinedIds.includes(group.id) || group.id === groupId).map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
@@ -511,24 +338,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
           {groupState.error && <p className="map-group-notice" role="alert">{groupState.error} <button type="button" onClick={groupState.retry}>다시 시도</button>{groupId && <Link to="/map">내 지도로</Link>}</p>}
           {groupId && currentUser && !groupState.loading && !groupState.error && !selectedGroup && <p className="map-group-notice" role="alert">그룹을 찾을 수 없습니다. <Link to="/groups">그룹 둘러보기</Link></p>}
 
-          <div className="map-mode-tabs" role="tablist" aria-label="지도 모드">
-            <button
-              className={mapMode === 'main' ? 'active' : ''}
-              type="button"
-              onClick={() => handleModeChange('main')}
-            >
-              {groupId ? '그룹 지도' : '기본 지도'}
-            </button>
-            <button
-              className={mapMode === 'live' ? 'active' : ''}
-              type="button"
-              onClick={() => handleModeChange('live')}
-            >
-              실시간 리뷰
-            </button>
-          </div>
-
-          {currentUser && mapMode === 'main' && (
+          {currentUser && (
             <span className="map-legend pin-group-legend">
               <i style={{ backgroundColor: DEFAULT_POST_PIN_COLOR }} />
               {profile?.pinThemes?.slice(0, 3).map((theme) => (
@@ -546,136 +356,27 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
         </div>
 
         {(placeResults.length > 0 || placeSearchMessage || searchingPlaces) && (
-          <div className="map-place-results">
-            {searchingPlaces ? (
-              <p>검색 중</p>
-            ) : placeSearchMessage ? (
-              <p>{placeSearchMessage}</p>
-            ) : (
-              placeResults.map((place) => (
-                <button key={place.id} type="button" onClick={() => handleSelectPlace(place)}>
-                  <strong>{place.name}</strong>
-                  <span>{place.address}</span>
+          <section className="map-place-results" aria-label="장소 검색 결과" aria-busy={searchingPlaces}>
+            {searchingPlaces ? <p role="status">검색 중…</p>
+              : placeSearchMessage ? <p role="status">{placeSearchMessage}</p>
+              : <ul>{placeResults.map(place => <li key={place.id}>
+                <button type="button" onClick={() => handleSelectPlace(place)}>
+                  <strong>{place.name}</strong><span>{place.address}</span>
                 </button>
-              ))
-            )}
-          </div>
+              </li>)}</ul>}
+          </section>
         )}
 
-        {mapMode === 'live' && (
-          <aside className="map-side-panel" aria-label="실시간 리뷰">
-            <div className="map-panel-header">
-              <div>
-                <p className="eyebrow">실시간 리뷰</p>
-                <h2>이 장소를 쓰는 모두가 보는 지금 분위기</h2>
-              </div>
-              <MapPin size={22} aria-hidden="true" />
-            </div>
-
-            {selectedPlace ? (
-              <>
-                <div className="selected-place-card">
-                  <strong>{selectedPlace.placeName}</strong>
-                  <span>{selectedPlace.address || '주소 정보 없음'}</span>
-                </div>
-
-                <div className="status-chip-grid">
-                  {LIVE_PLACE_STATUS_OPTIONS.map((option) => (
-                    <button
-                      key={option.id}
-                      className={`status-chip ${
-                        selectedStatusTags.includes(option.id) ? 'active' : ''
-                      }`}
-                      type="button"
-                      onClick={() => toggleStatusTag(option.id)}
-                      aria-pressed={selectedStatusTags.includes(option.id)}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-
-                <label className="field compact-field">
-                  <span>한줄 리뷰</span>
-                  <textarea
-                    value={statusNote}
-                    onChange={(event) => setStatusNote(event.target.value)}
-                    placeholder="예: 2층 창가 자리 여유 있어요"
-                  />
-                </label>
-
-                <button
-                  className="button button-primary wide"
-                  type="button"
-                  onClick={handleSubmitPlaceStatus}
-                  disabled={submittingStatus}
-                >
-                  <SendHorizonal size={18} aria-hidden="true" />
-                  {submittingStatus ? '올리는 중' : '공유 리뷰 올리기'}
-                </button>
-
-                {statusPanelMessage && (
-                  <p className={`panel-message ${statusPanelMessageType}`}>
-                    {statusPanelMessage}
-                  </p>
-                )}
-
-                <section className="status-panel-section">
-                  <h3>지금 많이 찍힌 상태</h3>
-                  {loadingStatusUpdates ? (
-                    <p className="status-feed-empty">불러오는 중</p>
-                  ) : statusCounts.length > 0 ? (
-                    <div className="live-status-summary">
-                      {statusCounts.map((option) => (
-                        <div key={option.id} className="status-meter-row">
-                          <span>{option.label}</span>
-                          <strong>{option.count}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="status-feed-empty">아직 올라온 리뷰가 없습니다.</p>
-                  )}
-                </section>
-
-                <section className="status-panel-section">
-                  <h3>최근 공유 리뷰</h3>
-                  {statusUpdates.length > 0 ? (
-                    <ol className="status-feed">
-                      {statusUpdates.slice(0, 6).map((update) => (
-                        <li key={update.id}>
-                          <div>
-                            <strong>{update.authorNickname}</strong>
-                            <time>{formatRelativeTime(update.createdAt)}</time>
-                          </div>
-                          <p>
-                            {update.tags.map(getStatusLabel).join(' · ')}
-                            {update.note ? ` · ${update.note}` : ''}
-                          </p>
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <p className="status-feed-empty">첫 공유 리뷰를 남겨보세요.</p>
-                  )}
-                </section>
-              </>
-            ) : (
-              <div className="map-panel-empty">
-                <strong>검색한 장소를 선택하면 모두가 보는 실시간 리뷰가 열립니다.</strong>
-                <p>붐빔, 자리, 조용함, 웨이팅 같은 즉시 정보를 앱 사용자 전체와 공유합니다.</p>
-              </div>
-            )}
-          </aside>
-        )}
+        {selectedPlace && <MapPlacePanel key={selectedPlace.placeId} place={selectedPlace}
+          groupId={groupId} canCreatePin={canCreatePin}
+          hidden={isFormOpen || searchingPlaces || placeResults.length > 0 || Boolean(placeSearchMessage)}
+          onCreatePin={() => setIsFormOpen(true)} onClose={handleDismissLocation} />}
 
         {(locationError || error) && <p className="map-error" role="alert">{locationError || error}{error && groupId && <button type="button" onClick={() => setPostsRevision(value => value + 1)}>다시 시도</button>}</p>}
-        {!currentUser && (
+        {!currentUser && !selectedPlace && (
           <div className="map-floating map-login-prompt">
             <p>
-              {mapMode === 'main'
-                ? groupId ? '로그인하면 이 그룹의 핀을 보고 함께 참여할 수 있습니다.' : '로그인하면 팔로우한 사람들의 핀 위치가 지도에 표시됩니다.'
-                : '로그인하면 모두가 보는 실시간 리뷰를 남길 수 있습니다.'}
+              {groupId ? '로그인하면 그룹 핀과 장소 리뷰를 남길 수 있습니다.' : '장소를 검색하고 핀과 리뷰를 함께 남겨보세요.'}
             </p>
             <button className="button button-primary" type="button" onClick={() => navigate('/login', { state: { from: getGroupMapUrl(groupId) } })}>
               로그인
@@ -683,7 +384,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
           </div>
         )}
 
-        {selectedLocation && mapMode === 'main' && !isFormOpen && currentUser && canCreatePin && (
+        {selectedLocation && !selectedPlace && !isFormOpen && currentUser && canCreatePin && (
           <div className="map-floating map-record-floating" role="region" aria-label="선택한 위치에 기록하기"
             onKeyDown={(event) => {
               if (event.key === 'Escape') {
@@ -692,12 +393,6 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
               }
             }}>
             <div className="map-record-heading">
-              {selectedPlace && (
-                <p>
-                  <strong>{selectedPlace.placeName}</strong>
-                  <span>{selectedPlace.address || '주소 정보 없음'}</span>
-                </p>
-              )}
               <button className="button-icon ghost map-record-close" type="button"
                 onClick={handleDismissLocation} aria-label="선택한 위치 닫기" title="닫기">
                 <X size={20} aria-hidden="true" />
@@ -709,7 +404,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
               onClick={() => (currentUser ? setIsFormOpen(true) : navigate('/login'))}
             >
               <Plus size={18} aria-hidden="true" />
-              {groupId ? '이곳에 그룹 핀 남기기' : selectedPlace ? '이 장소 기록하기' : '이곳에 기록하기'}
+              {groupId ? '이곳에 그룹 핀 남기기' : '이곳에 핀 남기기'}
             </button>
           </div>
         )}

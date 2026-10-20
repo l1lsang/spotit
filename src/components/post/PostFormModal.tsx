@@ -202,12 +202,12 @@ export function PostFormModal({
 
             <fieldset className="field">
               <legend>공개 범위</legend>
-              <div className="segmented">
+              <ul className="segmented" aria-label="공개 범위 선택">
                 {(['followers', 'public', 'private'] as PostVisibility[]).map((visibility) => (
-                  <button
-                    key={visibility}
+                  <li key={visibility}><button
                     type="button"
                     className={form.visibility === visibility ? 'active' : ''}
+                    aria-pressed={form.visibility === visibility}
                     disabled={Boolean(form.groupId) || submitting}
                     onClick={() => updateField('visibility', visibility)}
                   >
@@ -216,9 +216,9 @@ export function PostFormModal({
                       : visibility === 'public'
                         ? '전체'
                         : '비공개'}
-                  </button>
+                  </button></li>
                 ))}
-              </div>
+              </ul>
             </fieldset>
           </div>
 

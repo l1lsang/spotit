@@ -37,6 +37,11 @@ const groupState = {
   joinedIds: ['my-group'], loading: false, error: '', retry: unexpected,
 }
 const authState = { currentUser: { uid: 'viewer' }, profile: { nickname: '참여자' }, firebaseReady: true }
+const { MapPlacePanel } = await loadModule('../src/components/map/MapPlacePanel.tsx', {
+  '../../hooks/useAuth': { useAuth: () => authState },
+  '../../services/mapFeatureService': { createLivePlaceStatus: unexpected, subscribePlaceStatusUpdates: unexpected },
+  '../../types/mapFeature': mapFeatures,
+})
 const { GroupJoinButton } = await loadModule('../src/components/group/GroupJoinButton.tsx', {
   '../../hooks/useAuth': { useAuth: () => authState },
   '../../services/groupService': { setGroupMembership: unexpected },
@@ -65,6 +70,7 @@ let formProps
 const createdPosts = []
 const { MapPage } = await loadModule('../src/pages/MapPage.tsx', {
   ...shared,
+  '../components/map/MapPlacePanel': { MapPlacePanel: () => null },
   '../components/map/MapView': { MapView: () => null },
   '../components/map/MapPinList': { MapPinList: () => null },
   '../components/map/MapPostPreview': { MapPostPreview: () => null },
@@ -124,6 +130,7 @@ test('group homes send members and visitors to the same scoped map without an em
 test('map entry icon, group selector, and pin destination follow the selected route', () => {
   let html = render(MapPage, '/map')
   assert.doesNotMatch(html, /지도 제공자 선택|카카오맵/)
+  assert.doesNotMatch(html, /지도 모드|기본 지도|map-mode-tabs/)
   assert.match(html, /aria-label="현재 위치로 이동"/)
   assert.match(html, /aria-label="그룹 페이지 열기"[^>]*href="\/groups"/)
   assert.match(html, /내 지도 · 나와 팔로잉/)
@@ -148,6 +155,42 @@ test('map entry icon, group selector, and pin destination follow the selected ro
   html = render(MapPage, '/map?group=missing')
   assert.match(html, /그룹을 찾을 수 없습니다/)
   assert.equal(formProps.isOpen, false)
+})
+
+function renderPlacePanel(canCreatePin = true, groupId = '') {
+  return renderToStaticMarkup(react.createElement(router.MemoryRouter, { initialEntries: ['/map'] },
+    react.createElement(MapPlacePanel, {
+      place: { placeId: 'searched-place', placeName: '검색한 카페', address: '서울 마포구', location: { lat: 37.56, lng: 126.97 } },
+      canCreatePin, groupId, onCreatePin: unexpected, onClose: unexpected,
+    })))
+}
+
+test('a searched place offers pins and reviews together without opening a form first', () => {
+  const html = renderPlacePanel()
+  assert.match(html, /검색한 카페/)
+  assert.match(html, /핀 남기기/)
+  assert.match(html, /리뷰 남기기/)
+  assert.match(html, /실시간 리뷰/)
+  assert.doesNotMatch(html, /<textarea|<form/)
+})
+
+test('group visitors cannot create a pin but can still write a public place review', () => {
+  const html = renderPlacePanel(false, 'public-group')
+  assert.match(html, /<button[^>]*disabled=""[^>]*>[\s\S]*?그룹 핀 남기기/)
+  const reviewButton = html.match(/<button[^>]*aria-controls="place-review-form"[^>]*>/)?.[0]
+  assert.ok(reviewButton)
+  assert.doesNotMatch(reviewButton, /disabled/)
+})
+
+test('guests get a login action in the same place panel', () => {
+  const previous = authState.currentUser
+  authState.currentUser = null
+  try {
+    const html = renderPlacePanel()
+    assert.match(html, /검색한 카페/)
+    assert.match(html, /href="\/login"/)
+    assert.doesNotMatch(html, /place-review-form|place-action-list/)
+  } finally { authState.currentUser = previous }
 })
 
 test('submitting on a group map saves into that group and rejects visitors before writing', async () => {
