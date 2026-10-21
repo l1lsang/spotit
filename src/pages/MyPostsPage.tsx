@@ -1,18 +1,39 @@
-import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
+import { ChevronLeft, MapPin, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
-import { PostCard } from '../components/post/PostCard'
-import { PostFormModal, type PostFormSubmitPayload } from '../components/post/PostFormModal'
+import { PinAlbumGrid } from '../components/profile/PinAlbumGrid'
 import { useAuth } from '../hooks/useAuth'
-import { deletePost, getUserPosts, updatePost } from '../services/postService'
-import type { Post, PostFormInput } from '../types/post'
+import { getUserPosts } from '../services/postService'
+import type { Post } from '../types/post'
+import '../styles/people.css'
+import '../styles/myRecords.css'
+
+type RecordKind = 'public' | 'followers' | 'private' | 'group'
+type RecordFilter = 'all' | RecordKind
+
+const FILTERS: { id: RecordFilter; label: string }[] = [
+  { id: 'all', label: '전체' },
+  { id: 'public', label: '전체 공개' },
+  { id: 'followers', label: '팔로워' },
+  { id: 'private', label: '나만 보기' },
+  { id: 'group', label: '그룹' },
+]
+
+// Group pins count as group records whatever visibility the group gave them.
+function getRecordKind(post: Pick<Post, 'groupId' | 'visibility'>): RecordKind {
+  if (post.groupId || post.visibility === 'group') return 'group'
+  return post.visibility
+}
 
 export function MyPostsPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const { currentUser, firebaseReady } = useAuth()
   const [posts, setPosts] = useState<Post[]>([])
-  const [editingPost, setEditingPost] = useState<Post | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [filter, setFilter] = useState<RecordFilter>('all')
 
   const loadPosts = useCallback(async () => {
     if (!firebaseReady || !currentUser) {
@@ -35,88 +56,62 @@ export function MyPostsPage() {
     void loadPosts()
   }, [loadPosts])
 
-  async function handleDelete(post: Post) {
-    if (!currentUser || !window.confirm('이 기록을 삭제할까요?')) {
-      return
-    }
-
-    await deletePost(post.id, currentUser.uid)
-    await loadPosts()
-  }
-
-  async function handleUpdate(payload: PostFormSubmitPayload) {
-    if (!currentUser || !editingPost) {
-      return
-    }
-
-    const input: PostFormInput = {
-      title: payload.title,
-      content: payload.content,
-      placeName: payload.placeName,
-      address: payload.address,
-      lat: payload.lat,
-      lng: payload.lng,
-      dateKey: payload.dateKey,
-      visibility: payload.visibility,
-      pinColor: payload.pinColor,
-      pinThemeId: payload.pinThemeId || '',
-      groupId: payload.groupId || '',
-    }
-
-    await updatePost(editingPost.id, input, payload.existingPhotoUrls, payload.files, currentUser.uid)
-    setEditingPost(null)
-    await loadPosts()
-  }
+  const counts = posts.reduce<Record<RecordFilter, number>>((total, post) => {
+    total[getRecordKind(post)] += 1
+    return total
+  }, { all: posts.length, public: 0, followers: 0, private: 0, group: 0 })
+  const visiblePosts = filter === 'all' ? posts : posts.filter((post) => getRecordKind(post) === filter)
 
   return (
-    <PageContainer className="content-page">
-      <section className="page-heading">
-        <div>
-          <p className="eyebrow">My daymarks</p>
-          <h1>내 기록</h1>
-          <p>내가 남긴 공개/비공개 장소 기록을 관리합니다.</p>
-        </div>
-        <button className="button button-secondary" type="button" onClick={() => void loadPosts()}>
-          <RefreshCw size={17} aria-hidden="true" />
-          새로고침
+    <PageContainer className="content-page my-records-page">
+      <header className="my-records-bar">
+        <button className="my-records-back" type="button" aria-label="뒤로 가기"
+          onClick={() => (location.key === 'default' ? navigate('/profile') : navigate(-1))}>
+          <ChevronLeft size={22} aria-hidden="true" />
         </button>
-      </section>
+        <h1>내 기록</h1>
+        {!loading && !error && <span className="my-records-count">기록 {posts.length}개</span>}
+      </header>
 
-      {error && <p className="form-error">{error}</p>}
-      {loading && <p className="empty-text">내 기록을 불러오는 중입니다.</p>}
-
-      {!loading && posts.length === 0 ? (
-        <p className="empty-text">아직 남긴 기록이 없습니다. 지도에서 첫 장소를 찍어보세요.</p>
-      ) : (
-        <ul className="post-grid" aria-label="내 기록 목록">
-          {posts.map((post) => (
-            <li key={post.id}><PostCard
-              post={post}
-              showVisibility
-              actions={
-                <>
-                  <button className="button button-secondary" type="button" onClick={() => setEditingPost(post)}>
-                    <Pencil size={16} aria-hidden="true" />
-                    수정
-                  </button>
-                  <button className="button button-danger" type="button" onClick={() => void handleDelete(post)}>
-                    <Trash2 size={16} aria-hidden="true" />
-                    삭제
-                  </button>
-                </>
-              }
-            /></li>
+      {posts.length > 0 && (
+        <div className="my-records-filters" role="group" aria-label="공개 범위로 보기">
+          {FILTERS.filter(({ id }) => id === 'all' || counts[id] > 0).map(({ id, label }) => (
+            <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)}>
+              {label}<span>{counts[id]}</span>
+            </button>
           ))}
-        </ul>
+        </div>
       )}
 
-      <PostFormModal
-        isOpen={Boolean(editingPost)}
-        mode="edit"
-        initialPost={editingPost}
-        onClose={() => setEditingPost(null)}
-        onSubmit={handleUpdate}
-      />
+      {error && (
+        <div className="my-records-state" role="alert">
+          <p className="form-error">{error}</p>
+          <button className="button button-secondary" type="button" onClick={() => void loadPosts()}>
+            <RefreshCw size={17} aria-hidden="true" />다시 시도
+          </button>
+        </div>
+      )}
+      {loading && <p className="my-records-state" role="status">내 기록을 불러오는 중이에요.</p>}
+
+      {!loading && !error && posts.length === 0 && (
+        <div className="my-records-state">
+          <MapPin size={28} aria-hidden="true" />
+          <p>아직 남긴 기록이 없어요.</p>
+          <Link className="button button-primary" to="/map">지도에서 첫 기록 남기기</Link>
+        </div>
+      )}
+
+      {!loading && visiblePosts.length > 0 && (
+        <>
+          <div className="my-records-grid">
+            <PinAlbumGrid posts={visiblePosts} showVisibility showTitleWithoutPhoto />
+          </div>
+          <p className="my-records-hint">기록을 누르면 내용을 보고 수정하거나 삭제할 수 있어요.</p>
+        </>
+      )}
+      {!loading && posts.length > 0 && visiblePosts.length === 0 && (
+        <p className="my-records-state" role="status">이 공개 범위로 남긴 기록이 없어요.</p>
+      )}
     </PageContainer>
   )
 }

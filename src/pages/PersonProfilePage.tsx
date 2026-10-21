@@ -1,10 +1,14 @@
-import { ArrowLeft, ChevronRight, Clock, Heart, Lock, MessageCircle, Settings, UserPlus, UserRoundCheck, X } from 'lucide-react'
+import { ChevronLeft, Clock, MessageCircle, Settings, UserPlus, UserRoundCheck, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PageContainer } from '../components/layout/PageContainer'
-import { ReportButton } from '../components/moderation/ReportButton'
-import { UserSummaryLink } from '../components/profile/UserSummaryLink'
+import { LikedPinAlbum } from '../components/profile/LikedPinAlbum'
+import { ProfileHeader } from '../components/profile/ProfileHeader'
+import { ProfileMoreMenu } from '../components/profile/ProfileMoreMenu'
 import { ProfilePinAlbum } from '../components/profile/ProfilePinAlbum'
+import { ProfileSingleTab, ProfileTabs } from '../components/profile/ProfileTabs'
+import { UserSummaryLink } from '../components/profile/UserSummaryLink'
+import { useLikedPosts, useProfileAlbum } from '../components/profile/useProfileAlbum'
 import { useAuth } from '../hooks/useAuth'
 import { getOrCreateDirectChat } from '../services/chatService'
 import { cancelFollowRequest, followUser, getFollowers, getFollowing, hasPendingFollowRequest, isFollowing, unfollowUser } from '../services/followService'
@@ -12,6 +16,7 @@ import { getUserProfile } from '../services/userService'
 import type { FollowEdge } from '../types/follow'
 import type { DaymarkUser } from '../types/user'
 import '../styles/people.css'
+import '../styles/profile.css'
 
 type FollowListKind = 'followers' | 'following'
 interface ProfileDetails { user: DaymarkUser | null; followed: boolean; requested: boolean }
@@ -25,6 +30,7 @@ export function PersonProfile({ userId }: { userId: string }) {
   const { currentUser, profile, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const [details, setDetails] = useState<ProfileDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -39,6 +45,10 @@ export function PersonProfile({ userId }: { userId: string }) {
   const requestedReturnTo: unknown = location.state?.peopleReturnTo
   const returnTo = typeof requestedReturnTo === 'string' && (requestedReturnTo === '/people' || requestedReturnTo.startsWith('/people?'))
     ? requestedReturnTo : '/people'
+  const tab = ownProfile && searchParams.get('tab') === 'likes' ? 'likes' : 'pins'
+  const albumState = useProfileAlbum(userId, viewerUid, revision)
+  const likedState = useLikedPosts(viewerUid, ownProfile && tab === 'likes')
+  const pinCount = albumState.album && albumState.album.access !== 'locked' ? albumState.album.posts.length : null
 
   useEffect(() => {
     activeRef.current = true
@@ -103,61 +113,43 @@ export function PersonProfile({ userId }: { userId: string }) {
 
   const user = details?.user
   const followLabel = details?.followed ? '팔로잉' : details?.requested ? '요청 취소' : user?.isPrivate ? '팔로우 요청' : '팔로우'
+  const handle = user ? (user.username ? `@${user.username}` : user.nickname || '스팟잇 사용자') : (ownProfile ? '내 프로필' : '프로필')
 
   return (
-    <PageContainer className="content-page person-profile-page">
-      <div className="person-profile-toolbar">
-        {ownProfile ? <span>내 프로필</span> : <Link className="person-profile-back" to={returnTo}><ArrowLeft size={18} aria-hidden="true" />사람 목록</Link>}
-        {ownProfile && <Link className="button-icon subtle profile-settings-link" to="/profile/settings" aria-label="프로필 설정" title="프로필 설정"><Settings size={22} aria-hidden="true" /></Link>}
-      </div>
+    <PageContainer className="content-page person-profile-page profile-view-page">
+      <header className="profile-view-topbar">
+        {!ownProfile && <Link className="profile-view-icon-button" to={returnTo} aria-label="사람 목록으로 돌아가기" title="사람 목록">
+          <ChevronLeft size={24} aria-hidden="true" />
+        </Link>}
+        <p className="profile-view-handle">{handle}</p>
+        {ownProfile ? <Link className="profile-view-icon-button" to="/profile/settings" aria-label="프로필 설정" title="프로필 설정">
+          <Settings size={22} aria-hidden="true" />
+        </Link> : user && <ProfileMoreMenu user={user} />}
+      </header>
       {loading && !details && <p className="empty-text" role="status">프로필을 불러오는 중입니다.</p>}
       {loadError && <div className="person-profile-error" role="alert"><p>{loadError}</p>
         <button className="button button-secondary" type="button" disabled={loading} onClick={() => setRevision(value => value + 1)}>다시 시도</button>
       </div>}
       {!loading && !loadError && !user && <div className="empty-state"><h1>프로필을 찾을 수 없습니다.</h1><p>탈퇴했거나 아직 프로필을 완성하지 않은 사용자입니다.</p></div>}
-      {user && <article className="person-profile-card">
-        <div className="person-profile-heading">
-          {user.photoURL ? <div className="person-profile-photo-with-report">
-            <img className="person-profile-photo" src={user.photoURL} alt={`${user.nickname} 프로필 사진`} />
-            {!ownProfile && <ReportButton compact label="사진 신고" target={{ kind: 'photo', sourceKind: 'user', targetId: user.uid, photoUrl: user.photoURL, label: `${user.nickname} 프로필 사진` }} />}
-          </div>
-            : <span className="profile-avatar person-profile-photo" aria-hidden="true">{user.nickname.slice(0, 1) || 'S'}</span>}
-          <div className="person-profile-identity">
-            <h1>{user.nickname || '스팟잇 사용자'}</h1>
-            {user.username && <p className="person-profile-username">@{user.username}</p>}
-            <div className="profile-stats">
-              <button type="button" onClick={() => setFollowListKind('followers')}><span>팔로워</span><strong>{user.followerCount || 0}</strong></button>
-              <button type="button" onClick={() => setFollowListKind('following')}><span>팔로잉</span><strong>{user.followingCount || 0}</strong></button>
-            </div>
-          </div>
-        </div>
-        <section className="person-profile-about" aria-label="소개">
-          <h2>소개</h2>
-          <p>{user.bio || '아직 소개글이 없습니다.'}</p>
-          {user.isPrivate && <div className="person-profile-privacy"><Lock size={15} aria-hidden="true" /><span>{ownProfile ? '비공개 계정 · 새 팔로우 요청은 설정에서 승인할 수 있습니다.' : '비공개 계정 · 팔로우 요청을 승인받아야 합니다.'}</span></div>}
-        </section>
-        {!ownProfile && <>
-          <div className="person-profile-actions">
-            <button className={`button ${details.followed || details.requested ? 'button-secondary' : 'button-primary'}`} type="button"
-              onClick={() => void handleFollow()} disabled={Boolean(action) || loading || Boolean(loadError) || !profile}>
-              {details.followed ? <UserRoundCheck size={17} aria-hidden="true" /> : details.requested ? <Clock size={17} aria-hidden="true" /> : <UserPlus size={17} aria-hidden="true" />}
-              {action === 'follow' ? '처리 중…' : followLabel}
-            </button>
-            <button className="button button-secondary" type="button" onClick={() => void handleChat()} disabled={Boolean(action) || !profile}>
-              <MessageCircle size={17} aria-hidden="true" />{action === 'chat' ? '채팅 여는 중…' : '채팅'}
-            </button>
-          </div>
-          <div className="person-profile-report"><ReportButton target={{ kind: 'user', targetId: user.uid, label: user.nickname }} compact /></div>
+      {user && <ProfileHeader user={user} own={ownProfile} pinCount={pinCount} onOpenFollowList={setFollowListKind}>
+        {ownProfile ? <Link className="button button-secondary" to="/profile/settings">프로필 편집</Link> : <>
+          <button className={`button ${details.followed || details.requested ? 'button-secondary' : 'button-primary'}`} type="button"
+            onClick={() => void handleFollow()} disabled={Boolean(action) || loading || Boolean(loadError) || !profile}>
+            {details.followed ? <UserRoundCheck size={17} aria-hidden="true" /> : details.requested ? <Clock size={17} aria-hidden="true" /> : <UserPlus size={17} aria-hidden="true" />}
+            {action === 'follow' ? '처리 중…' : followLabel}
+          </button>
+          <button className="button button-secondary" type="button" onClick={() => void handleChat()} disabled={Boolean(action) || !profile}>
+            <MessageCircle size={17} aria-hidden="true" />{action === 'chat' ? '채팅 여는 중…' : '채팅'}
+          </button>
         </>}
-        {actionError && <p className="form-error" role="alert">{actionError}</p>}
-      </article>}
-      {user && ownProfile && <section className="profile-activity" aria-labelledby="profile-activity-title">
-        <h2 id="profile-activity-title">내 활동</h2>
-        <Link className="profile-activity-link" to="/profile/likes">
-          <Heart size={19} aria-hidden="true" /><span>좋아요<small>좋아요한 핀 모아보기</small></span><ChevronRight size={18} aria-hidden="true" />
-        </Link>
-      </section>}
-      {user && <ProfilePinAlbum ownerUid={user.uid} refreshKey={revision} />}
+      </ProfileHeader>}
+      {actionError && <p className="form-error" role="alert">{actionError}</p>}
+      {user && <>
+        {ownProfile ? <ProfileTabs active={tab} /> : <ProfileSingleTab label="핀" />}
+        <div className="profile-view-grid">
+          {tab === 'likes' ? <LikedPinAlbum state={likedState} /> : <ProfilePinAlbum state={albumState} own={ownProfile} />}
+        </div>
+      </>}
       {user && followListKind && <PersonFollowList user={user} kind={followListKind} returnTo={returnTo} onClose={() => setFollowListKind(null)} />}
     </PageContainer>
   )

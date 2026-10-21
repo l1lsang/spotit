@@ -1,5 +1,5 @@
-import { MapPin, MessageSquare, SendHorizontal, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { MapPin, MessageCircle, SendHorizontal, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type Ref } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import type { LatLng } from '../../lib/mapLocation'
@@ -18,6 +18,7 @@ interface MapPlacePanelProps {
   canCreatePin: boolean
   groupId: string
   hidden?: boolean
+  sheetRef?: Ref<HTMLElement>
   onCreatePin: () => void
   onClose: () => void
 }
@@ -33,7 +34,7 @@ function relativeTime(value: LivePlaceStatusUpdate['createdAt']) {
 const statusLabels = new Map(LIVE_PLACE_STATUS_OPTIONS.map(option => [option.id, option.label]))
 
 // The parent keys this panel by place ID so drafts and subscriptions belong to one place.
-export function MapPlacePanel({ place, canCreatePin, groupId, hidden, onCreatePin, onClose }: MapPlacePanelProps) {
+export function MapPlacePanel({ place, canCreatePin, groupId, hidden, sheetRef, onCreatePin, onClose }: MapPlacePanelProps) {
   const { currentUser, profile, firebaseReady } = useAuth()
   const viewerUid = currentUser?.uid
   const route = useLocation()
@@ -95,26 +96,30 @@ export function MapPlacePanel({ place, canCreatePin, groupId, hidden, onCreatePi
     }
   }
 
-  return <aside className="map-side-panel map-place-panel" aria-labelledby="selected-place-title" hidden={hidden}
+  // A bottom sheet on phones and a floating panel on wider screens.
+  return <aside ref={sheetRef} className="place-sheet" aria-labelledby="selected-place-title" hidden={hidden}
     onKeyDown={event => { if (event.key === 'Escape' && !submitting) { event.stopPropagation(); onClose() } }}>
-    <header className="map-panel-header">
-      <h2 id="selected-place-title">{place.placeName}</h2>
+    <span className="place-sheet-handle" aria-hidden="true" />
+    <header className="place-sheet-header">
+      <div>
+        <h2 id="selected-place-title">{place.placeName}</h2>
+        <p>{place.address || '주소 정보 없음'}</p>
+      </div>
       <button className="button-icon ghost" type="button" onClick={onClose} aria-label="선택한 장소 닫기"><X size={20} aria-hidden="true" /></button>
     </header>
-    <p className="place-panel-address">{place.address || '주소 정보 없음'}</p>
 
     {currentUser ? <>
-      <ul className="place-action-list" aria-label="이 장소에서 할 일">
-        <li><button type="button" onClick={onCreatePin} disabled={!canCreatePin || !firebaseReady}>
-          <MapPin size={19} aria-hidden="true" />{groupId ? '그룹 핀 남기기' : '핀 남기기'}
-        </button></li>
-        <li><button ref={reviewButton} type="button" aria-expanded={writing} aria-controls="place-review-form"
+      <div className="place-sheet-actions" role="group" aria-label="이 장소에서 할 일">
+        <button className="button button-primary" type="button" onClick={onCreatePin} disabled={!canCreatePin || !firebaseReady}>
+          <MapPin size={17} aria-hidden="true" />{groupId ? '그룹 핀 남기기' : '핀 남기기'}
+        </button>
+        <button ref={reviewButton} className="button button-secondary" type="button" aria-expanded={writing} aria-controls="place-review-form"
           disabled={!firebaseReady || !profile || submitting} onClick={() => { setWriting(value => !value); setMessage('') }}>
-          <MessageSquare size={19} aria-hidden="true" />{writing ? '작성 접기' : '리뷰 남기기'}
-        </button></li>
-      </ul>
-      {!canCreatePin && <p className="field-help">그룹 정보를 확인하고 가입한 뒤 핀을 남길 수 있습니다.</p>}
-      {!firebaseReady && <p className="field-help" role="status">연결을 확인한 뒤 핀과 리뷰를 남길 수 있습니다.</p>}
+          <MessageCircle size={17} aria-hidden="true" />{writing ? '작성 접기' : '리뷰 남기기'}
+        </button>
+      </div>
+      {!canCreatePin && <p className="place-sheet-help">그룹 정보를 확인하고 가입한 뒤 핀을 남길 수 있어요.</p>}
+      {!firebaseReady && <p className="place-sheet-help" role="status">연결을 확인한 뒤 핀과 리뷰를 남길 수 있어요.</p>}
 
       {writing && <form id="place-review-form" className="place-review-form" onSubmit={submitReview} aria-busy={submitting}>
         <fieldset disabled={submitting}>
@@ -131,7 +136,6 @@ export function MapPlacePanel({ place, canCreatePin, groupId, hidden, onCreatePi
         <label className="field compact-field"><span>한줄 리뷰 <small>선택</small></span>
           <textarea value={note} disabled={submitting} onChange={event => setNote(event.target.value)} placeholder="예: 2층 창가에 자리가 있어요" rows={3} />
         </label>
-        <p className="field-help">리뷰는 그룹과 관계없이 모든 사용자에게 공개됩니다.</p>
         {submitError && <p className="form-error" role="alert">{submitError}</p>}
         <button className="button button-primary" type="submit" disabled={submitting || !tags.length}>
           <SendHorizontal size={17} aria-hidden="true" />{submitting ? '올리는 중…' : '리뷰 올리기'}
@@ -139,20 +143,24 @@ export function MapPlacePanel({ place, canCreatePin, groupId, hidden, onCreatePi
       </form>}
       {message && <p className="place-review-success" role="status">{message}</p>}
 
-      <section className="status-panel-section" aria-labelledby="place-reviews-title" aria-busy={loading}>
-        <h3 id="place-reviews-title">실시간 리뷰 {!loading && !loadError && updates.length > 0 && <span>{updates.length}</span>}</h3>
-        {loading ? <p className="status-feed-empty" role="status">리뷰를 불러오는 중…</p>
+      <section className="place-sheet-reviews" aria-labelledby="place-reviews-title" aria-busy={loading}>
+        <div className="place-sheet-reviews-heading">
+          <h3 id="place-reviews-title">실시간 리뷰</h3>
+          {!loading && !loadError && updates.length > 0 && <span className="place-sheet-count">{updates.length}</span>}
+        </div>
+        {loading ? <p className="place-sheet-state" role="status">리뷰를 불러오는 중…</p>
           : loadError ? <p className="form-error" role="alert">{loadError} <button className="text-action" type="button" onClick={() => setRevision(value => value + 1)}>다시 시도</button></p>
-          : !firebaseReady ? <p className="status-feed-empty">연결을 확인해 주세요.</p>
+          : !firebaseReady ? <p className="place-sheet-state">연결을 확인해 주세요.</p>
           : updates.length ? <>
-            <ul className="place-status-summary" aria-label="장소 상태 요약">{counts.map(option => <li key={option.id}>{option.label} <span>{option.count}</span></li>)}</ul>
-            <ol className="status-feed">{updates.slice(0, 6).map(update => <li key={update.id}>
+            <ul className="place-sheet-summary" aria-label="장소 상태 요약">{counts.map(option => <li key={option.id}>{option.label} <span>{option.count}</span></li>)}</ul>
+            <ol className="place-sheet-feed">{updates.slice(0, 6).map(update => <li key={update.id}>
               <header><strong>{update.authorNickname}</strong><time>{relativeTime(update.createdAt)}</time></header>
               <p className="review-status-labels">{update.tags.map(tag => statusLabels.get(tag) || tag).join(' · ')}</p>
               {update.note && <p>{update.note}</p>}
             </li>)}</ol>
-          </> : <p className="status-feed-empty">아직 리뷰가 없어요. 이곳의 첫 리뷰를 남겨보세요.</p>}
+          </> : <p className="place-sheet-state">아직 리뷰가 없어요. 이곳의 첫 리뷰를 남겨보세요.</p>}
       </section>
+      <p className="place-sheet-footnote">리뷰는 그룹과 관계없이 모든 사용자에게 공개돼요.</p>
     </> : <section className="place-login-message">
       <p>로그인하고 이 장소에 핀과 리뷰를 남겨보세요.</p>
       <Link className="button button-primary" to="/login" state={{ from: route.pathname + route.search }}>로그인</Link>

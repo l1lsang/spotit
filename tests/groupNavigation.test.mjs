@@ -10,6 +10,8 @@ import * as icons from 'lucide-react'
 import ts from 'typescript'
 import * as navigation from '../src/lib/groupNavigation.ts'
 import * as mapLocation from '../src/lib/mapLocation.ts'
+import * as photoMetadata from '../src/lib/photoMetadata.ts'
+import * as mapHelpers from '../src/components/map/mapHelpers.ts'
 import * as mapFeatures from '../src/types/mapFeature.ts'
 import * as postTypes from '../src/types/post.ts'
 
@@ -47,6 +49,13 @@ const { GroupJoinButton } = await loadModule('../src/components/group/GroupJoinB
   '../../services/groupService': { setGroupMembership: unexpected },
   './JoinGroupDialog': { JoinGroupDialog: () => null },
 })
+const { MapControlButton, MapPinLegend } = await loadModule('../src/components/map/MapControls.tsx', { '../../types/post': postTypes })
+const scope = await loadModule('../src/components/map/MapScopeSheet.tsx', { '../group/GroupJoinButton': { GroupJoinButton } })
+const search = await loadModule('../src/components/map/MapPlaceSearch.tsx', {
+  '../../lib/photoMetadata': photoMetadata,
+  '../../lib/placeSearch': { searchPlaces: unexpected },
+  './mapHelpers': mapHelpers,
+})
 const shared = {
   '../hooks/useAuth': { useAuth: () => authState },
   '../hooks/useGroups': { useGroups: () => groupState },
@@ -74,6 +83,10 @@ const { MapPage } = await loadModule('../src/pages/MapPage.tsx', {
   '../components/map/MapView': { MapView: () => null },
   '../components/map/MapPinList': { MapPinList: () => null },
   '../components/map/MapPostPreview': { MapPostPreview: () => null },
+  '../components/map/MapControls': { MapControlButton, MapPinLegend },
+  '../components/map/mapHelpers': mapHelpers,
+  '../components/map/MapPlaceSearch': { MapPlaceSearch: () => null, MapSelectedPlaceField: () => null },
+  '../components/map/MapScopeSheet': scope,
   '../components/map/PhotoRecordFlow': {
     PhotoRecordLauncher: () => react.createElement('button', { type: 'button' }, '사진으로 기록'),
     PhotoRecordSheet: () => null, PhotoRecordTopBar: () => null, PhotoCenterPin: () => null,
@@ -133,26 +146,29 @@ test('group homes send members and visitors to the same scoped map without an em
   }
 })
 
-test('map entry icon, group selector, and pin destination follow the selected route', () => {
+test('map controls, the group chip and the pin destination follow the selected route', () => {
   let html = render(MapPage, '/map')
   assert.doesNotMatch(html, /지도 제공자 선택|카카오맵/)
   assert.doesNotMatch(html, /지도 모드|기본 지도|map-mode-tabs/)
+  assert.match(html, /<button[^>]*class="map-control map-search-control"[^>]*aria-label="장소 검색"/)
+  assert.match(html, /aria-label="지도에 표시할 그룹 선택"/)
   assert.match(html, /aria-label="현재 위치로 이동"/)
-  assert.match(html, /aria-label="그룹 페이지 열기"[^>]*href="\/groups"/)
-  assert.match(html, /내 지도 · 나와 팔로잉/)
-  assert.match(html, /내 산책 그룹/)
-  assert.doesNotMatch(html, /공개 맛집 그룹/)
+  assert.doesNotMatch(html, /map-scope-chip|<select/)
+  assert.match(html, /<ul class="map-pin-legend" aria-label="핀 색 안내">[\s\S]*?내 핀[\s\S]*?팔로잉<\/li>/)
   assert.equal(formProps.initialGroupId, '')
   assert.equal(formProps.lockGroup, false)
 
   html = render(MapPage, '/map?group=my-group')
-  assert.match(html, /value="my-group" selected=""/)
+  assert.match(html, /class="map-scope-chip"[\s\S]*?내 산책 그룹/)
   assert.match(html, /href="\/groups\/my-group"/)
+  assert.match(html, /aria-label="내 지도로 돌아가기"[^>]*href="\/map"|href="\/map"[^>]*aria-label="내 지도로 돌아가기"/)
+  assert.doesNotMatch(html, /바로 가입/)
+  assert.match(html, /class="map-pin-legend"[\s\S]*?그룹 멤버<\/li>/)
   assert.equal(formProps.initialGroupId, 'my-group')
   assert.equal(formProps.lockGroup, true)
 
   html = render(MapPage, '/map?group=public-group')
-  assert.match(html, /value="public-group" selected=""/)
+  assert.match(html, /class="map-scope-chip"[\s\S]*?공개 맛집 그룹/)
   assert.match(html, /바로 가입/)
   assert.doesNotMatch(html, /코드로 가입/)
   assert.equal(formProps.initialGroupId, 'public-group')
@@ -160,7 +176,77 @@ test('map entry icon, group selector, and pin destination follow the selected ro
 
   html = render(MapPage, '/map?group=missing')
   assert.match(html, /그룹을 찾을 수 없습니다/)
+  assert.doesNotMatch(html, /map-scope-chip/)
   assert.equal(formProps.isOpen, false)
+})
+
+test('guests keep search and current location but get no group control', () => {
+  const previous = authState.currentUser
+  authState.currentUser = null
+  try {
+    const html = render(MapPage, '/map')
+    assert.match(html, /aria-label="장소 검색"/)
+    assert.match(html, /aria-label="현재 위치로 이동"/)
+    assert.doesNotMatch(html, /지도에 표시할 그룹 선택/)
+    assert.doesNotMatch(html, /map-pin-legend/)
+    assert.match(html, /장소를 검색하고 핀과 리뷰를 함께 남겨보세요/)
+  } finally { authState.currentUser = previous }
+})
+
+test('the group sheet offers my map, joined groups and the current group, with a way to browse groups', () => {
+  assert.deepEqual(mapHelpers.getMapScopeGroups(groupState.groups, groupState.joinedIds, '').map(group => group.id), ['my-group'])
+  assert.deepEqual(mapHelpers.getMapScopeGroups(groupState.groups, groupState.joinedIds, 'public-group').map(group => group.id), ['my-group', 'public-group'])
+  const sheet = (currentGroupId, groups) => renderToStaticMarkup(react.createElement(router.MemoryRouter, null,
+    react.createElement(scope.MapScopeSheet, { groups, currentGroupId, loading: false, error: '', onRetry: unexpected, onSelect: unexpected, onClose: unexpected })))
+  let html = sheet('', mapHelpers.getMapScopeGroups(groupState.groups, groupState.joinedIds, ''))
+  assert.match(html, /role="dialog"[^>]*aria-modal="true"/)
+  assert.match(html, /지도에 표시할 그룹/)
+  assert.match(html, /<button[^>]*aria-current="true"[^>]*><span><strong>내 지도 · 나와 팔로잉/)
+  assert.match(html, /내 산책 그룹/)
+  assert.doesNotMatch(html, /공개 맛집 그룹/)
+  assert.match(html, /href="\/groups"[^>]*>그룹 둘러보기/)
+  html = sheet('public-group', mapHelpers.getMapScopeGroups(groupState.groups, groupState.joinedIds, 'public-group'))
+  assert.match(html, /<button[^>]*aria-current="true"[^>]*><span><strong>공개 맛집 그룹/)
+  html = sheet('missing', mapHelpers.getMapScopeGroups(groupState.groups, groupState.joinedIds, 'missing'))
+  assert.match(html, /그룹을 찾을 수 없습니다/)
+})
+
+test('place search highlights the query or its shared prefix and shows readable distances', () => {
+  const { splitQueryMatch, formatDistance } = mapHelpers
+  assert.deepEqual(splitQueryMatch('청계천 광통교', '청계천'), { before: '', match: '청계천', after: ' 광통교' })
+  assert.deepEqual(splitQueryMatch('서울 청계천박물관', ' 청계천 '), { before: '서울 ', match: '청계천', after: '박물관' })
+  assert.deepEqual(splitQueryMatch('청계광장', '청계천'), { before: '', match: '청계', after: '광장' })
+  assert.deepEqual(splitQueryMatch('Cafe Onion', 'onion'), { before: 'Cafe ', match: 'Onion', after: '' })
+  assert.deepEqual(splitQueryMatch('남산타워', '청계'), { before: '', match: '', after: '남산타워' })
+  assert.deepEqual(splitQueryMatch('서울숲', ''), { before: '서울숲', match: '', after: '' })
+  assert.equal(formatDistance(4), '10m')
+  assert.equal(formatDistance(123), '120m')
+  assert.equal(formatDistance(999), '1km')
+  assert.equal(formatDistance(2600), '2.6km')
+  assert.equal(formatDistance(2000), '2km')
+  assert.equal(formatDistance(152_400), '152km')
+  assert.equal(formatDistance(Number.NaN), '')
+})
+
+test('the search overlay reopens with the last query, and a selected place keeps its name on the map', () => {
+  const html = renderToStaticMarkup(react.createElement(search.MapPlaceSearch, {
+    initialQuery: '청계천', center: { lat: 37.5691, lng: 126.9804 }, onClose: unexpected, onSelect: unexpected,
+  }))
+  assert.match(html, /role="dialog"[^>]*aria-modal="true"[^>]*aria-label="장소 검색"/)
+  assert.match(html, /aria-label="지도로 돌아가기"/)
+  assert.match(html, /value="청계천"/)
+  assert.match(html, /aria-label="검색어 지우기"/)
+  assert.match(html, /검색 중…/)
+  assert.match(html, /찾는 곳이 없다면 지도를 눌러 원하는 위치에 바로 핀을 남길 수 있어요/)
+  const empty = renderToStaticMarkup(react.createElement(search.MapPlaceSearch, {
+    initialQuery: '', center: { lat: 37.5691, lng: 126.9804 }, onClose: unexpected, onSelect: unexpected,
+  }))
+  assert.match(empty, /장소 이름이나 주소로 찾아보세요/)
+  assert.doesNotMatch(empty, /검색어 지우기/)
+  const field = renderToStaticMarkup(react.createElement(search.MapSelectedPlaceField, { name: '청계천 광통교', onBack: unexpected, onClear: unexpected }))
+  assert.match(field, /청계천 광통교/)
+  assert.match(field, /aria-label="검색으로 돌아가기"/)
+  assert.match(field, /aria-label="선택한 장소 지우기"/)
 })
 
 function renderPlacePanel(canCreatePin = true, groupId = '') {
@@ -177,6 +263,8 @@ test('a searched place offers pins and reviews together without opening a form f
   assert.match(html, /핀 남기기/)
   assert.match(html, /리뷰 남기기/)
   assert.match(html, /실시간 리뷰/)
+  assert.match(html, /class="place-sheet"/)
+  assert.match(html, /리뷰는 그룹과 관계없이 모든 사용자에게 공개돼요/)
   assert.doesNotMatch(html, /<textarea|<form/)
 })
 
@@ -195,7 +283,7 @@ test('guests get a login action in the same place panel', () => {
     const html = renderPlacePanel()
     assert.match(html, /검색한 카페/)
     assert.match(html, /href="\/login"/)
-    assert.doesNotMatch(html, /place-review-form|place-action-list/)
+    assert.doesNotMatch(html, /place-review-form|place-sheet-actions/)
   } finally { authState.currentUser = previous }
 })
 
@@ -239,4 +327,15 @@ test('private groups stay out of discovery and lose their home and invitation pa
     groupState.groups.pop()
     groupState.joinedIds = groupState.joinedIds.filter(id => id !== privateGroup.id)
   }
+})
+
+test('the pin legend shows the colours of my pins on the map and one fixed colour for others', () => {
+  const legend = props => renderToStaticMarkup(react.createElement(MapPinLegend, props))
+  const mine = legend({ mineColors: ['#123456', '#abcdef', '#356f68', '#000000'], othersLabel: '팔로잉' })
+  assert.equal((mine.match(/--legend-pin-color:#123456|--legend-pin-color:#abcdef|--legend-pin-color:#356f68/g) || []).length, 3)
+  assert.doesNotMatch(mine, /#000000/)
+  assert.match(mine, new RegExp(`--legend-pin-color:${postTypes.FOLLOWING_PIN_COLOR}.*?팔로잉</li>`, 's'))
+  const fallback = legend({ mineColors: [], othersLabel: '그룹 멤버' })
+  assert.match(fallback, new RegExp(`--legend-pin-color:${postTypes.DEFAULT_POST_PIN_COLOR}.*?내 핀`, 's'))
+  assert.match(fallback, /그룹 멤버<\/li>/)
 })

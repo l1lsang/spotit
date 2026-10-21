@@ -5,10 +5,10 @@ import { isPublicPolicyPath } from '../lib/policyNavigation'
 import { InstallPrompt } from '../components/layout/InstallPrompt'
 import { ChatListPage } from '../pages/ChatListPage'
 import { ChatRoomPage } from '../pages/ChatRoomPage'
+import { FeedDetailPage } from '../pages/FeedDetailPage'
 import { FeedPage } from '../pages/FeedPage'
 import { LandingPage } from '../pages/LandingPage'
 import { LoginPage } from '../pages/LoginPage'
-import { LikedPostsPage } from '../pages/LikedPostsPage'
 import { MapPage } from '../pages/MapPage'
 import { MyPostsPage } from '../pages/MyPostsPage'
 import { NotificationsPage } from '../pages/NotificationsPage'
@@ -74,6 +74,7 @@ export function AppRouter() {
           <Route path="/policies/:policyId?" element={<Suspense fallback={<div className="screen-message">약관 및 정책을 불러오는 중입니다.</div>}><PoliciesPage /></Suspense>} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/feed" element={<FeedPage />} />
+          <Route path="/feed/:postId" element={<FeedDetailPage />} />
           <Route path="/groups" element={<ProtectedRoute><Suspense fallback={<div className="screen-message">그룹을 불러오는 중…</div>}><GroupsPage /></Suspense></ProtectedRoute>} />
           <Route path="/groups/:groupId" element={<ProtectedRoute><Suspense fallback={<div className="screen-message">그룹을 불러오는 중…</div>}><GroupDetailPage /></Suspense></ProtectedRoute>} />
           <Route path="/posts/:postId" element={<PostDetailPage />} />
@@ -134,7 +135,8 @@ export function AppRouter() {
             }
           />
           <Route path="/profile/settings" element={<ProtectedRoute><ProfileSettingsPage /></ProtectedRoute>} />
-          <Route path="/profile/likes" element={<ProtectedRoute><LikedPostsPage /></ProtectedRoute>} />
+          {/* Liked pins now live in the profile's 좋아요 tab. */}
+          <Route path="/profile/likes" element={<Navigate to="/profile?tab=likes" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </OnboardingGuard>

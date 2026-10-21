@@ -1,13 +1,18 @@
 import { invalidateAppReads } from '../lib/readCache'
-import { MessageCircle, Plus, RefreshCw, Search, UsersRound, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { MessageCircle, RefreshCw, Search, UsersRound, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { DirectChatDialog } from '../components/chat/DirectChatDialog'
+import { NewChatFab } from '../components/chat/NewChatFab'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useAuth } from '../hooks/useAuth'
-import { createGroupChat, getOtherParticipant, subscribeToMyChats } from '../services/chatService'
+import { filterChatCandidates, getDirectChatPartnerIds } from '../lib/chatCandidates'
+import { createGroupChat, getOrCreateDirectChat, getOtherParticipant, subscribeToMyChats } from '../services/chatService'
+import { getFollowingIds } from '../services/followService'
 import { listUsers } from '../services/userService'
 import type { DaymarkChat } from '../types/chat'
 import type { DaymarkUser } from '../types/user'
+import '../styles/chatList.css'
 
 function isUnreadChat(chat: DaymarkChat, uid: string): boolean {
   const readAt = chat.readAtBy?.[uid]
@@ -31,16 +36,20 @@ export function ChatListPage() {
   const [groupName, setGroupName] = useState('')
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false)
+  const [isDirectModalOpen, setIsDirectModalOpen] = useState(false)
+  // 1:1 chats start only with people I follow.
+  const [followingIds, setFollowingIds] = useState<Set<string> | null>(null)
+  const [followingError, setFollowingError] = useState('')
+  const fabRef = useRef<HTMLButtonElement>(null)
   const [error, setError] = useState('')
   const [groupError, setGroupError] = useState('')
   const [creatingGroup, setCreatingGroup] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const viewerUid = currentUser?.uid
-  const searchKeyword = memberSearch.trim().toLowerCase()
-  const filteredUsers = users.filter((user) => !searchKeyword
-    || user.nickname.toLowerCase().includes(searchKeyword)
-    || user.username?.toLowerCase().includes(searchKeyword.replace(/^@/, '')))
+  const searchKeyword = memberSearch.trim()
+  const filteredUsers = filterChatCandidates(users, memberSearch)
   const selectedUsers = users.filter((user) => selectedUserIds.has(user.uid))
+  const followingUsers = followingIds ? users.filter((user) => followingIds.has(user.uid)) : []
 
   useEffect(() => {
     if (!firebaseReady || !currentUser) {
@@ -56,7 +65,7 @@ export function ChatListPage() {
   }, [currentUser, firebaseReady, refreshKey])
 
   useEffect(() => {
-    if (!firebaseReady || !viewerUid || !isGroupModalOpen) {
+    if (!firebaseReady || !viewerUid || (!isGroupModalOpen && !isDirectModalOpen)) {
       return
     }
 
@@ -76,14 +85,54 @@ export function ChatListPage() {
       })
       .finally(() => { if (active) setUsersLoading(false) })
     return () => { active = false }
-  }, [viewerUid, firebaseReady, isGroupModalOpen, usersRevision])
+  }, [viewerUid, firebaseReady, isGroupModalOpen, isDirectModalOpen, usersRevision])
+
+  useEffect(() => {
+    if (!firebaseReady || !viewerUid || !isDirectModalOpen) return
+    let active = true
+    setFollowingIds(null)
+    setFollowingError('')
+    getFollowingIds(viewerUid).then(
+      (ids) => { if (active) setFollowingIds(new Set(ids)) },
+      (loadError) => {
+        if (!active) return
+        setFollowingIds(new Set())
+        setFollowingError(loadError instanceof Error ? loadError.message : '팔로잉 목록을 불러오지 못했습니다.')
+      },
+    )
+    return () => { active = false }
+  }, [viewerUid, firebaseReady, isDirectModalOpen, usersRevision])
 
   function handleOpenGroupModal() {
     setMemberSearch('')
     setGroupError('')
     setUsersError('')
     setUsersLoading(true)
+    setIsDirectModalOpen(false)
     setIsGroupModalOpen(true)
+  }
+
+  function handleCloseGroupModal() {
+    setIsGroupModalOpen(false)
+    fabRef.current?.focus()
+  }
+
+  function handleOpenDirectModal() {
+    setUsersError('')
+    setUsersLoading(true)
+    setIsDirectModalOpen(true)
+  }
+
+  function handleCloseDirectModal() {
+    setIsDirectModalOpen(false)
+    fabRef.current?.focus()
+  }
+
+  async function handleStartDirectChat(user: DaymarkUser) {
+    if (!profile) throw new Error('프로필을 확인한 뒤 다시 시도해 주세요.')
+    const chatId = await getOrCreateDirectChat(profile, user)
+    setIsDirectModalOpen(false)
+    navigate(`/chats/${chatId}`)
   }
 
   function toggleSelectedUser(uid: string) {
@@ -129,12 +178,6 @@ export function ChatListPage() {
         <div>
           <p className="eyebrow">Messages</p>
           <h1>채팅</h1>
-        </div>
-        <div className="page-actions">
-          <button className="button button-primary" type="button" disabled={!firebaseReady || !profile} onClick={handleOpenGroupModal}>
-            <Plus size={17} aria-hidden="true" />
-            단체방
-          </button>
         </div>
       </section>
 
@@ -199,7 +242,7 @@ export function ChatListPage() {
                 <p className="eyebrow">Group chat</p>
                 <h2 id="group-chat-title">단체방 만들기</h2>
               </div>
-              <button className="button-icon" type="button" disabled={creatingGroup} onClick={() => setIsGroupModalOpen(false)} aria-label="닫기">
+              <button className="button-icon" type="button" disabled={creatingGroup} onClick={handleCloseGroupModal} aria-label="닫기">
                 <X size={20} aria-hidden="true" />
               </button>
             </div>
@@ -290,7 +333,7 @@ export function ChatListPage() {
               {groupError && <p className="form-error">{groupError}</p>}
 
               <div className="modal-actions">
-                <button className="button button-secondary" type="button" disabled={creatingGroup} onClick={() => setIsGroupModalOpen(false)}>
+                <button className="button button-secondary" type="button" disabled={creatingGroup} onClick={handleCloseGroupModal}>
                   취소
                 </button>
                 <button
@@ -305,6 +348,23 @@ export function ChatListPage() {
             </form>
           </section>
         </div>
+      )}
+
+      {isDirectModalOpen && currentUser && (
+        <DirectChatDialog
+          users={followingUsers}
+          loading={usersLoading || followingIds === null}
+          error={usersError || followingError}
+          chattingUids={getDirectChatPartnerIds(chats, currentUser.uid)}
+          onRetry={() => { invalidateAppReads(); setUsersRevision((value) => value + 1) }}
+          onStart={handleStartDirectChat}
+          onClose={handleCloseDirectModal}
+          onCreateGroup={handleOpenGroupModal}
+        />
+      )}
+
+      {currentUser && firebaseReady && profile && (
+        <NewChatFab buttonRef={fabRef} onGroup={handleOpenGroupModal} onDirect={handleOpenDirectModal} />
       )}
     </PageContainer>
   )

@@ -1,12 +1,15 @@
 import { Compass, LocateFixed, Plus, Search, X } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { GroupJoinButton } from '../components/group/GroupJoinButton'
 import { PageContainer } from '../components/layout/PageContainer'
+import { MapControlButton, MapPinLegend } from '../components/map/MapControls'
+import { getMapScopeGroups } from '../components/map/mapHelpers'
 import { MapView } from '../components/map/MapView'
 import { MapPlacePanel, type SelectedMapPlace } from '../components/map/MapPlacePanel'
+import { MapPlaceSearch, MapSelectedPlaceField } from '../components/map/MapPlaceSearch'
 import { MapPinList } from '../components/map/MapPinList'
 import { MapPostPreview } from '../components/map/MapPostPreview'
+import { MapScopeChip, MapScopeSheet } from '../components/map/MapScopeSheet'
 import { PhotoCenterPin, PhotoRecordLauncher, PhotoRecordSheet, PhotoRecordTopBar } from '../components/map/PhotoRecordFlow'
 import { PostFormModal, type PostFormSubmitPayload } from '../components/post/PostFormModal'
 import { useAuth } from '../hooks/useAuth'
@@ -15,18 +18,34 @@ import { usePhotoRecordFlow, type PhotoRecordPrefill } from '../hooks/usePhotoRe
 import { getGroupMapUrl } from '../lib/groupNavigation'
 import { SEOUL_CITY_HALL, useCurrentLocation } from '../hooks/useCurrentLocation'
 import type { LatLng, PlaceSearchResult } from '../lib/mapLocation'
-import { searchPlaces } from '../lib/placeSearch'
 import { createPost, getVisiblePosts, subscribeGroupPosts } from '../services/postService'
-import {
-  DEFAULT_POST_PIN_COLOR,
-  FOLLOWING_PIN_COLOR,
-  type Post,
-  type PostFormInput,
-} from '../types/post'
+import { getPostMarkerColor, type Post, type PostFormInput } from '../types/post'
 import '../styles/mapGroups.css'
+import '../styles/mapControls.css'
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
+}
+
+// On phones the map shrinks above a bottom sheet so its pin stays in the visible center.
+function useSheetHeightVariable(shellRef: RefObject<HTMLElement | null>, sheetRef: RefObject<HTMLElement | null>, active: boolean, name: string) {
+  useEffect(() => {
+    const sheet = sheetRef.current
+    const shell = shellRef.current
+    if (!active || !sheet || !shell) return
+    const measure = () => shell.style.setProperty(name, `${Math.ceil(sheet.getBoundingClientRect().height)}px`)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(sheet)
+    return () => {
+      observer.disconnect()
+      shell.style.removeProperty(name)
+    }
+  }, [active, name, shellRef, sheetRef])
+}
+
+function focusLater(ref: RefObject<HTMLElement | null>) {
+  window.requestAnimationFrame(() => ref.current?.focus())
 }
 
 export function MapPage() {
@@ -45,8 +64,11 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   const selectedGroupVisibility = selectedGroup?.visibility
   const joined = groupState.joinedIds.includes(groupId)
   const canCreatePin = !groupId || Boolean(selectedGroup && joined && !groupState.loading && !groupState.error)
-  const toolbarRef = useRef<HTMLDivElement>(null)
   const mapShellRef = useRef<HTMLDivElement>(null)
+  const searchControlRef = useRef<HTMLButtonElement>(null)
+  const groupControlRef = useRef<HTMLButtonElement>(null)
+  const selectedFieldRef = useRef<HTMLButtonElement>(null)
+  const placeSheetRef = useRef<HTMLElement>(null)
   const { location: currentLocation, loading: locationLoading, error: locationError, requestLocation } = useCurrentLocation()
   const [center, setCenter] = useState<LatLng>(SEOUL_CITY_HALL)
   const [centerRevision, setCenterRevision] = useState(0)
@@ -60,13 +82,12 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   const [posts, setPosts] = useState<Post[]>([])
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [clusterPosts, setClusterPosts] = useState<Post[]>([])
-  const searchRequestRef = useRef(0)
   const [loadingPosts, setLoadingPosts] = useState(false)
   const [postsRevision, setPostsRevision] = useState(0)
   const [placeQuery, setPlaceQuery] = useState('')
-  const [placeResults, setPlaceResults] = useState<PlaceSearchResult[]>([])
-  const [searchingPlaces, setSearchingPlaces] = useState(false)
-  const [placeSearchMessage, setPlaceSearchMessage] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchCenter, setSearchCenter] = useState<LatLng>(SEOUL_CITY_HALL)
+  const [groupSheetOpen, setGroupSheetOpen] = useState(false)
   const [error, setError] = useState('')
   const visiblePosts = (!groupId || (selectedGroup && (selectedGroupVisibility !== 'private' || joined))) ? posts : []
   const visibleSelectedPost = visiblePosts.find(post => post.id === selectedPost?.id)
@@ -81,6 +102,14 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   const photoPinLocation = photoFlow
     ? (isFormOpen ? photoPrefill?.location : photoFlow.step === 'confirm' ? photoFlow.summary?.location : null) ?? null
     : null
+  const placeSheetOpen = Boolean(selectedPlace) && !photoFlow && !isFormOpen && !searchOpen
+  const recordPromptOpen = Boolean(selectedLocation && !selectedPlace && !isFormOpen && currentUser && canCreatePin)
+  const pinListOpen = visibleClusterPosts.length > 1 && !visibleSelectedPost
+  // Floating controls step aside while a panel or flow owns the bottom of the map.
+  const myPinColors = [...new Set(visiblePosts.filter(post => post.uid === currentUser?.uid)
+    .map(post => getPostMarkerColor(post, currentUser?.uid, profile?.pinThemes)))]
+  const controlsVisible = !photoFlow && !isFormOpen && !selectedPlace && !recordPromptOpen && !pinListOpen && !visibleSelectedPost
+  const showLauncher = controlsVisible && Boolean(currentUser && firebaseReady && canCreatePin && initialLocationReady)
   const loadPosts = useCallback(async () => {
     if (groupId) return
     if (!firebaseReady) {
@@ -121,31 +150,8 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
     }, () => { setPosts([]); setError('그룹 핀을 불러오지 못했습니다.'); setLoadingPosts(false) }, selectedGroupVisibility)
   }, [currentUser, firebaseReady, groupId, selectedGroupId, selectedGroupVisibility, postsRevision])
 
-  useEffect(() => {
-    const toolbar = toolbarRef.current
-    const shell = mapShellRef.current
-    if (!toolbar || !shell) return
-    const measure = () => shell.style.setProperty('--map-toolbar-height', `${toolbar.getBoundingClientRect().height}px`)
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(toolbar)
-    return () => observer.disconnect()
-  }, [])
-
-  // On phones the map shrinks above the sheet so the pin stays in the visible center.
-  useEffect(() => {
-    const sheet = photoSheetRef.current
-    const shell = mapShellRef.current
-    if (!photoSheetOpen || !sheet || !shell) return
-    const measure = () => shell.style.setProperty('--photo-sheet-height', `${Math.ceil(sheet.getBoundingClientRect().height)}px`)
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(sheet)
-    return () => {
-      observer.disconnect()
-      shell.style.removeProperty('--photo-sheet-height')
-    }
-  }, [photoSheetOpen])
+  useSheetHeightVariable(mapShellRef, photoSheetRef, photoSheetOpen, '--photo-sheet-height')
+  useSheetHeightVariable(mapShellRef, placeSheetRef, placeSheetOpen, '--place-sheet-height')
 
   useEffect(() => {
     let active = true
@@ -208,51 +214,20 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
     setSelectedPlace(null)
   }
 
-  function handleClearSearch() {
-    searchRequestRef.current += 1
-    setSearchingPlaces(false)
-    setPlaceQuery('')
-    setPlaceResults([])
-    setPlaceSearchMessage('')
-    setSelectedPlace(null)
-    setSelectedLocation(null)
+  function openSearch() {
+    setSearchCenter(mapCenterRef.current)
+    setSearchOpen(true)
   }
 
-  async function handlePlaceSearch(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const requestId = ++searchRequestRef.current
-
-    if (!placeQuery.trim()) {
-      setPlaceResults([])
-      setPlaceSearchMessage('')
-      setSearchingPlaces(false)
-      return
-    }
-
-    setSearchingPlaces(true)
-    setPlaceSearchMessage('')
-
-    try {
-      const results = await searchPlaces(placeQuery, center)
-      if (requestId !== searchRequestRef.current) return
-      setPlaceResults(results)
-      setPlaceSearchMessage(results.length === 0 ? '검색 결과가 없습니다.' : '')
-    } catch (searchError) {
-      if (requestId !== searchRequestRef.current) return
-      setPlaceResults([])
-      setPlaceSearchMessage(getErrorMessage(searchError, '장소 검색에 실패했습니다.'))
-    } finally {
-      if (requestId === searchRequestRef.current) setSearchingPlaces(false)
-    }
+  function closeSearch() {
+    setSearchOpen(false)
+    focusLater(selectedPlace ? selectedFieldRef : searchControlRef)
   }
 
-  function handleSelectPlace(place: PlaceSearchResult) {
-    searchRequestRef.current += 1
-    setSearchingPlaces(false)
+  function handleSelectPlace(place: PlaceSearchResult, query: string) {
     const location = place.location
     setClusterPosts([])
-
-    setCenter(location)
+    focusMap(location)
     setSelectedLocation(location)
     setSelectedPlace({
       placeId: place.id,
@@ -261,15 +236,35 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
       location,
     })
     setSelectedPost(null)
-    setPlaceQuery(place.name)
-    setPlaceResults([])
-    setPlaceSearchMessage('')
+    setPlaceQuery(query)
+    setSearchOpen(false)
+    focusLater(selectedFieldRef)
+  }
+
+  function handleClearSelectedPlace() {
+    setSelectedPlace(null)
+    setSelectedLocation(null)
+    setPlaceQuery('')
+    focusLater(searchControlRef)
+  }
+
+  function closeGroupSheet() {
+    setGroupSheetOpen(false)
+    focusLater(groupControlRef)
+  }
+
+  function handleSelectScope(nextGroupId: string) {
+    setGroupSheetOpen(false)
+    if (nextGroupId !== groupId) navigate(getGroupMapUrl(nextGroupId))
+    else focusLater(groupControlRef)
   }
 
   function handleStartPhotoRecord(files: File[]) {
-    handleClearSearch()
+    setSelectedPlace(null)
+    setSelectedLocation(null)
     setSelectedPost(null)
     setClusterPosts([])
+    setGroupSheetOpen(false)
     void photoRecord.start(files)
   }
 
@@ -349,7 +344,8 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
 
   return (
     <PageContainer fullBleed fillViewport className="map-page">
-      <div ref={mapShellRef} className={`map-shell map-with-groups${photoFlow ? ' is-photo-flow' : ''}`} aria-busy={loadingPosts || Boolean(groupId && groupState.loading)}>
+      <div ref={mapShellRef} className={`map-shell${photoFlow ? ' is-photo-flow' : ''}${placeSheetOpen ? ' has-place-sheet' : ''}`}
+        aria-busy={loadingPosts || Boolean(groupId && groupState.loading)}>
         {initialLocationReady ? (
           <MapView
             center={center}
@@ -378,84 +374,29 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
           </section>
         )}
 
-        <div ref={toolbarRef} className="map-toolbar">
-          <div className="map-search-row">
-          <form className="map-search-form" onSubmit={handlePlaceSearch}>
-            <Search size={18} aria-hidden="true" />
-            <input
-              value={placeQuery}
-              onChange={(event) => { searchRequestRef.current += 1; setSearchingPlaces(false); setPlaceResults([]); setPlaceSearchMessage(''); setPlaceQuery(event.target.value) }}
-              placeholder="장소 검색"
-              aria-label="장소 검색"
-            />
-            {placeQuery && (
-              <button
-                className="button-icon ghost"
-                type="button"
-                onClick={handleClearSearch}
-                aria-label="검색어 지우기"
-              >
-                <X size={16} aria-hidden="true" />
-              </button>
+        {!photoFlow && (
+          <div className="map-status-stack">
+            {groupId && (selectedGroup || groupState.loading) && (
+              <MapScopeChip group={selectedGroup} loading={groupState.loading}
+                canJoin={Boolean(currentUser && selectedGroup && !joined && !groupState.loading && !groupState.error)} />
             )}
-            <button className="button-icon map-search-submit" type="submit" aria-label="검색" disabled={searchingPlaces || !initialLocationReady}>
-              <Search size={17} aria-hidden="true" />
-            </button>
-          </form>
-            <Link className="map-groups-link" to="/groups" aria-label="그룹 페이지 열기" title="그룹 둘러보기 · 내 그룹">
-              <Compass size={22} aria-hidden="true" />
-              <span>그룹</span>
-            </Link>
+            {currentUser && controlsVisible && <MapPinLegend mineColors={myPinColors} othersLabel={groupId ? '그룹 멤버' : '팔로잉'} />}
+            {groupState.error && <p className="map-status-message is-error" role="alert">{groupState.error} <button type="button" onClick={groupState.retry}>다시 시도</button>{groupId && <Link to="/map">내 지도로</Link>}</p>}
+            {groupId && currentUser && !groupState.loading && !groupState.error && !selectedGroup && <p className="map-status-message" role="alert">그룹을 찾을 수 없습니다. <Link to="/groups">그룹 둘러보기</Link><Link to="/map">내 지도로</Link></p>}
+            {(locationError || error) && <p className="map-status-message is-error" role="alert">{locationError || error}{error && groupId && <button type="button" onClick={() => setPostsRevision(value => value + 1)}>다시 시도</button>}</p>}
           </div>
+        )}
 
-          {currentUser && <div className="map-scope-controls">
-            <select aria-label="지도에 표시할 그룹" value={groupId} disabled={groupState.loading || Boolean(groupState.error)} onChange={event => navigate(getGroupMapUrl(event.target.value))}>
-              <option value="">내 지도 · 나와 팔로잉</option>
-              {groupState.groups.filter(group => groupState.joinedIds.includes(group.id) || group.id === groupId).map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
-              {groupId && !selectedGroup && <option value={groupId}>{groupState.loading ? '그룹 불러오는 중…' : '그룹을 찾을 수 없습니다'}</option>}
-            </select>
-            {selectedGroup && <Link className="button button-secondary" to={`/groups/${selectedGroup.id}`}>그룹 홈</Link>}
-            {selectedGroup && !joined && !groupState.loading && !groupState.error && <GroupJoinButton groupId={groupId} visibility={selectedGroup.visibility} joined={false} />}
-          </div>}
-
-          {groupState.error && <p className="map-group-notice" role="alert">{groupState.error} <button type="button" onClick={groupState.retry}>다시 시도</button>{groupId && <Link to="/map">내 지도로</Link>}</p>}
-          {groupId && currentUser && !groupState.loading && !groupState.error && !selectedGroup && <p className="map-group-notice" role="alert">그룹을 찾을 수 없습니다. <Link to="/groups">그룹 둘러보기</Link></p>}
-
-          {currentUser && (
-            <span className="map-legend pin-group-legend">
-              <i style={{ backgroundColor: DEFAULT_POST_PIN_COLOR }} />
-              {profile?.pinThemes?.slice(0, 3).map((theme) => (
-                <i
-                  key={theme.id}
-                  title={theme.name}
-                  style={{ backgroundColor: theme.color }}
-                />
-              ))}
-              내 핀
-              <i className="other" style={{ backgroundColor: FOLLOWING_PIN_COLOR }} />
-              {groupId ? '그룹 멤버' : '팔로잉'}
-            </span>
-          )}
-        </div>
-
-        {!photoFlow && (placeResults.length > 0 || placeSearchMessage || searchingPlaces) && (
-          <section className="map-place-results" aria-label="장소 검색 결과" aria-busy={searchingPlaces}>
-            {searchingPlaces ? <p role="status">검색 중…</p>
-              : placeSearchMessage ? <p role="status">{placeSearchMessage}</p>
-              : <ul>{placeResults.map(place => <li key={place.id}>
-                <button type="button" onClick={() => handleSelectPlace(place)}>
-                  <strong>{place.name}</strong><span>{place.address}</span>
-                </button>
-              </li>)}</ul>}
-          </section>
+        {selectedPlace && !photoFlow && !isFormOpen && (
+          <MapSelectedPlaceField name={selectedPlace.placeName} backRef={selectedFieldRef}
+            onBack={openSearch} onClear={handleClearSelectedPlace} />
         )}
 
         {selectedPlace && !photoFlow && <MapPlacePanel key={selectedPlace.placeId} place={selectedPlace}
-          groupId={groupId} canCreatePin={canCreatePin}
-          hidden={isFormOpen || searchingPlaces || placeResults.length > 0 || Boolean(placeSearchMessage)}
+          groupId={groupId} canCreatePin={canCreatePin} sheetRef={placeSheetRef}
+          hidden={isFormOpen || searchOpen}
           onCreatePin={() => setIsFormOpen(true)} onClose={handleDismissLocation} />}
 
-        {(locationError || error) && <p className="map-error" role="alert">{locationError || error}{error && groupId && <button type="button" onClick={() => setPostsRevision(value => value + 1)}>다시 시도</button>}</p>}
         {!currentUser && !selectedPlace && (
           <div className="map-floating map-login-prompt">
             <p>
@@ -467,7 +408,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
           </div>
         )}
 
-        {selectedLocation && !selectedPlace && !isFormOpen && currentUser && canCreatePin && (
+        {recordPromptOpen && (
           <div className="map-floating map-record-floating" role="region" aria-label="선택한 위치에 기록하기"
             onKeyDown={(event) => {
               if (event.key === 'Escape') {
@@ -492,7 +433,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
           </div>
         )}
 
-        {visibleClusterPosts.length > 1 && !visibleSelectedPost && <MapPinList posts={visibleClusterPosts} onSelect={handleSelectPost} onClose={() => setClusterPosts([])} />}
+        {pinListOpen && <MapPinList posts={visibleClusterPosts} onSelect={handleSelectPost} onClose={() => setClusterPosts([])} />}
         {visibleSelectedPost && <MapPostPreview key={visibleSelectedPost.id} post={visibleSelectedPost}
           onClose={() => { setSelectedPost(null); setClusterPosts([]) }}
           onBack={visibleClusterPosts.length > 1 ? () => setSelectedPost(null) : undefined}
@@ -526,22 +467,47 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
           </>
         )}
 
-        {currentUser && firebaseReady && canCreatePin && initialLocationReady && !photoFlow && !isFormOpen && (
+        {controlsVisible && (
+          <>
+            <MapControlButton icon={Search} label="검색" ariaLabel="장소 검색" className="map-search-control"
+              buttonRef={searchControlRef} hasPopup="dialog" expanded={searchOpen} onClick={openSearch} />
+            <div className={`map-control-rail${showLauncher ? ' above-fab' : ''}`} role="group" aria-label="지도 도구">
+              {currentUser && (
+                <MapControlButton icon={Compass} label="그룹" ariaLabel="지도에 표시할 그룹 선택" buttonRef={groupControlRef}
+                  hasPopup="dialog" expanded={groupSheetOpen} onClick={() => setGroupSheetOpen(true)} />
+              )}
+              <MapControlButton icon={LocateFixed} label="내 위치" ariaLabel={locationLoading ? '현재 위치 확인 중' : '현재 위치로 이동'}
+                busy={locationLoading} disabled={locationLoading} onClick={() => void handleUseCurrentLocation()} />
+            </div>
+          </>
+        )}
+
+        {showLauncher && (
           <PhotoRecordLauncher
             error={photoRecord.error}
-            hideTip={Boolean(selectedPlace || selectedLocation || visibleSelectedPost || visibleClusterPosts.length > 1
-              || placeResults.length || searchingPlaces || placeSearchMessage)}
+            hideTip={groupSheetOpen}
             onSelect={handleStartPhotoRecord}
           />
         )}
 
-        {!photoFlow && <div className="map-bottom-controls" role="group" aria-label="지도 도구">
-          <button className={`map-control-icon${locationLoading ? ' is-locating' : ''}`} type="button" onClick={handleUseCurrentLocation} disabled={locationLoading}
-            aria-label={locationLoading ? '현재 위치 확인 중' : '현재 위치로 이동'} aria-busy={locationLoading} title="현재 위치로 이동">
-            <LocateFixed size={21} aria-hidden="true" />
-          </button>
-        </div>}
+        {groupSheetOpen && currentUser && controlsVisible && (
+          <MapScopeSheet
+            groups={getMapScopeGroups(groupState.groups, groupState.joinedIds, groupId)}
+            currentGroupId={groupId}
+            loading={groupState.loading}
+            error={groupState.error}
+            aboveFab={showLauncher}
+            onRetry={groupState.retry}
+            onSelect={handleSelectScope}
+            onClose={closeGroupSheet}
+          />
+        )}
       </div>
+
+      {searchOpen && (
+        <MapPlaceSearch initialQuery={placeQuery} center={searchCenter}
+          onClose={closeSearch} onSelect={handleSelectPlace} />
+      )}
 
       <PostFormModal
         isOpen={isFormOpen && canCreatePin}

@@ -1,8 +1,9 @@
-import { ArrowRight, LocateFixed, MapPin, RefreshCw, Search, X } from 'lucide-react'
+import { ArrowRight, ChevronDown, LocateFixed, MapPin, RefreshCw, Search, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { getFeedDetailHref, getFeedTone, rememberFeedPosts } from '../components/feed/feedPosts'
 import { PageContainer } from '../components/layout/PageContainer'
-import { PostCard } from '../components/post/PostCard'
+import { PinAlbumGrid } from '../components/profile/PinAlbumGrid'
 import { useAuth } from '../hooks/useAuth'
 import { SEOUL_CITY_HALL, useCurrentLocation } from '../hooks/useCurrentLocation'
 import { useSearchKeyword } from '../hooks/useSearchKeyword'
@@ -11,6 +12,9 @@ import { filterFeedPosts } from '../lib/feedSearch'
 import { filterNearbyPosts, getVisiblePostPage, type PostPageCursor } from '../services/postService'
 import { invalidateAppReads } from '../lib/readCache'
 import type { Post } from '../types/post'
+import '../styles/feed.css'
+
+const RADIUS_OPTIONS = [3, 10, 30]
 
 export function FeedPage() {
   const { currentUser, firebaseReady } = useAuth()
@@ -50,6 +54,11 @@ export function FeedPage() {
     }).finally(() => { if (active) setLoading(false) })
     return () => { active = false; requestVersion.current += 1 }
   }, [viewerUid, firebaseReady, revision])
+
+  // The detail feed continues from the tapped tile in this exact order.
+  useEffect(() => {
+    if (viewerUid) rememberFeedPosts(viewerUid, filteredPosts)
+  }, [viewerUid, filteredPosts])
 
   async function loadMore() {
     if (!viewerUid || !nextCursor || morePending.current) return
@@ -99,53 +108,47 @@ export function FeedPage() {
   const waitingForLocation = !initialLocationReady || locationLoading
 
   return (
-    <PageContainer className="content-page feed-page">
-      <section className="page-heading">
-        <div>
-          <p className="eyebrow">Recent daymarks</p>
-          <h1>피드</h1>
-          <p>나와 팔로우한 사람들이 남긴, 가까운 장소의 이야기.</p>
-        </div>
-        <div className="feed-controls" role="group" aria-label="피드 위치와 반경 설정">
-          <label>
-            <span>반경</span>
-            <select value={radiusKm} onChange={(event) => setRadiusKm(Number(event.target.value))}>
-              <option value={3}>3km</option>
-              <option value={10}>10km</option>
-              <option value={30}>30km</option>
-            </select>
-          </label>
-          <button className="button-icon feed-control-button" type="button" onClick={handleUseCurrentLocation}
-            disabled={locationLoading} aria-label={locationLoading ? '현재 위치 확인 중' : '현재 위치로 이동'} aria-busy={locationLoading} title="현재 위치">
-            <LocateFixed size={16} aria-hidden="true" />
-          </button>
-          <button className="button-icon feed-control-button" type="button" disabled={loading} onClick={() => { invalidateAppReads(); setRevision(value => value + 1) }}
-            aria-label={loading ? '피드 새로고침 중' : '피드 새로고침'} aria-busy={loading} title="새로고침">
-            <RefreshCw size={16} aria-hidden="true" />
-          </button>
-        </div>
-      </section>
+    <PageContainer className="content-page feed-page feed-grid-page">
+      <h1 className="sr-only">피드</h1>
 
-      {currentUser && <section className="feed-search-section" aria-label="피드 검색">
-        <div className="people-search feed-search" role="search">
+      {currentUser && <section className="feed-toolbar" aria-label="피드 검색과 반경">
+        <div className="feed-search-field" role="search">
           <Search size={18} aria-hidden="true" />
           <input type="search" {...inputProps}
             placeholder="제목, 장소, 내용, 작성자 검색" aria-label="피드 검색" />
-          {inputValue && <button className="button-icon subtle" type="button" onClick={clearKeyword} aria-label="검색어 지우기"><X size={18} aria-hidden="true" /></button>}
+          {inputValue && <button className="feed-search-clear" type="button" onClick={clearKeyword} aria-label="검색어 지우기"><X size={14} aria-hidden="true" /></button>}
         </div>
-        <p className="feed-search-summary" role="status">{waitingForLocation || loading ? '주변 기록을 확인하고 있어요.'
-          : `불러온 기록 중 반경 ${radiusKm}km 안 ${keyword.trim() ? '검색 결과' : '기록'} ${filteredPosts.length}개`}</p>
+        <div className="feed-filter-row">
+          <label className="feed-radius-chip">
+            <MapPin size={14} aria-hidden="true" />
+            <span className="sr-only">피드 반경</span>
+            <select value={radiusKm} onChange={(event) => setRadiusKm(Number(event.target.value))}>
+              {RADIUS_OPTIONS.map(radius => <option key={radius} value={radius}>내 주변 {radius}km</option>)}
+            </select>
+            <ChevronDown size={14} aria-hidden="true" />
+          </label>
+          <button className="feed-icon-button" type="button" onClick={handleUseCurrentLocation}
+            disabled={locationLoading} aria-label={locationLoading ? '현재 위치 확인 중' : '현재 위치로 이동'} aria-busy={locationLoading} title="현재 위치">
+            <LocateFixed size={17} aria-hidden="true" />
+          </button>
+          <button className="feed-icon-button" type="button" disabled={loading} onClick={() => { invalidateAppReads(); setRevision(value => value + 1) }}
+            aria-label={loading ? '피드 새로고침 중' : '피드 새로고침'} aria-busy={loading} title="새로고침">
+            <RefreshCw size={17} aria-hidden="true" />
+          </button>
+          <p className="feed-count" role="status">{waitingForLocation || loading ? '주변 기록을 확인하고 있어요.'
+            : `${keyword.trim() ? '검색 결과' : '기록'} ${filteredPosts.length}개`}</p>
+        </div>
       </section>}
 
-      {(error || locationError) && <p className="form-error">{error || locationError}</p>}
+      {(error || locationError) && <p className="form-error feed-message">{error || locationError}</p>}
       {!currentUser && <div className="empty-state feed-welcome">
         <MapPin size={32} aria-hidden="true" />
         <h2>어떤 하루를 보내고 있나요?</h2>
         <p>로그인하면 내 기록과 팔로우한 사람들의<br />가까운 장소 이야기를 모아볼 수 있어요.</p>
         <Link className="button button-primary" to="/login" state={{ from: '/feed' }}>로그인하고 둘러보기 <ArrowRight size={16} aria-hidden="true" /></Link>
       </div>}
-      {waitingForLocation && <p className="empty-text">현재 위치를 확인하는 중입니다.</p>}
-      {loading && <p className="empty-text">기록을 불러오는 중입니다.</p>}
+      {waitingForLocation && <p className="empty-text feed-message">현재 위치를 확인하는 중입니다.</p>}
+      {loading && <p className="empty-text feed-message">기록을 불러오는 중입니다.</p>}
 
       {currentUser && !waitingForLocation && !loading && (!error || posts.length > 0) && (
         filteredPosts.length === 0 ? (
@@ -153,14 +156,13 @@ export function FeedPage() {
             {keyword.trim() && <button className="button button-secondary" type="button" onClick={clearKeyword}>검색 초기화</button>}
           </div>
         ) : (
-          <ul className="post-grid" aria-label="피드 기록 목록">
-            {filteredPosts.map((post) => (
-              <li key={post.id}><PostCard post={post} showVisibility={post.uid === currentUser?.uid} /></li>
-            ))}
-          </ul>
+          <section aria-label="피드 기록 목록">
+            <PinAlbumGrid posts={filteredPosts} className="feed-grid" getHref={getFeedDetailHref}
+              getLabel={post => `${post.title} · ${post.placeName} 기록 보기`} getTileClassName={getFeedTone} showTitleWithoutPhoto />
+          </section>
         )
       )}
-      {currentUser && !loading && nextCursor && <button className="button button-secondary" type="button" disabled={loadingMore} onClick={() => void loadMore()}>
+      {currentUser && !loading && nextCursor && <button className="button button-secondary feed-more" type="button" disabled={loadingMore} onClick={() => void loadMore()}>
         {loadingMore ? '기록을 불러오는 중…' : '이전 기록 더 보기'}
       </button>}
     </PageContainer>
