@@ -11,6 +11,18 @@ export function formatDateKey(dateKey: string): string {
   return dateKey.replaceAll('-', '.')
 }
 
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+
+export function formatDateKeyWithWeekday(dateKey: string): string {
+  const [year, month, day] = dateKey.split('-').map(Number)
+  return `${year}년 ${month}월 ${day}일 (${WEEKDAYS[new Date(year, month - 1, day).getDay()]})`
+}
+
+export function formatClockTime(time: string): string {
+  const [hour, minute] = time.split(':').map(Number)
+  return `${hour < 12 ? '오전' : '오후'} ${hour % 12 || 12}:${String(minute).padStart(2, '0')}`
+}
+
 export function formatTimestamp(timestamp?: Timestamp): string {
   if (!timestamp) {
     return ''

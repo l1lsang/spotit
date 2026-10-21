@@ -18,6 +18,7 @@ interface GooglePlace {
   displayName?: string
   formattedAddress?: string
   location?: GoogleLatLng
+  types?: string[]
 }
 interface GoogleMapsNamespace {
   Map: new (container: HTMLElement, options: {
@@ -31,10 +32,19 @@ interface GoogleMapsNamespace {
   }) => GoogleMarker }
   event: { clearInstanceListeners: (instance: GoogleMapInstance) => void }
   importLibrary: (library: string) => Promise<unknown>
-  places: { Place: { searchByText: (request: {
-    textQuery: string; fields: string[]; locationBias: { center: LatLng; radius: number }
-    maxResultCount: number; language: string
-  }) => Promise<{ places: GooglePlace[] }> } }
+  places: {
+    Place: {
+      searchByText: (request: {
+        textQuery: string; fields: string[]; locationBias: { center: LatLng; radius: number }
+        maxResultCount: number; language: string
+      }) => Promise<{ places: GooglePlace[] }>
+      searchNearby: (request: {
+        fields: string[]; locationRestriction: { center: LatLng; radius: number }
+        maxResultCount: number; language: string; rankPreference?: string
+      }) => Promise<{ places: GooglePlace[] }>
+    }
+    SearchNearbyRankPreference?: { DISTANCE: string }
+  }
 }
 
 declare global {
@@ -101,6 +111,33 @@ export async function searchGooglePlacesByKeyword(keyword: string, center: LatLn
   return places.flatMap((place) => place.location ? [{
     id: `google:${place.id}`,
     name: place.displayName || keyword,
+    address: place.formattedAddress || '',
+    location: { lat: place.location.lat(), lng: place.location.lng() },
+  }] : [])
+}
+
+// Districts and streets are addresses, not names someone would give a visit.
+const AREA_PLACE_TYPES = new Set([
+  'political', 'locality', 'sublocality', 'neighborhood', 'route', 'country', 'postal_code',
+  'administrative_area_level_1', 'administrative_area_level_2', 'administrative_area_level_3', 'administrative_area_level_4',
+])
+
+export async function searchGooglePlacesNearby(center: LatLng, radius: number): Promise<PlaceSearchResult[]> {
+  await loadGoogleMapSdk()
+  const google = getGoogleMaps()
+  await google.importLibrary('places')
+  const rankPreference = google.places.SearchNearbyRankPreference?.DISTANCE
+  const { places } = await google.places.Place.searchNearby({
+    fields: ['id', 'displayName', 'formattedAddress', 'location', 'types'],
+    locationRestriction: { center, radius },
+    maxResultCount: 10,
+    language: 'ko',
+    ...(rankPreference ? { rankPreference } : {}),
+  })
+  return places.flatMap((place) => place.location && place.displayName
+    && !place.types?.some((type) => AREA_PLACE_TYPES.has(type)) ? [{
+    id: `google:${place.id}`,
+    name: place.displayName,
     address: place.formattedAddress || '',
     location: { lat: place.location.lat(), lng: place.location.lng() },
   }] : [])

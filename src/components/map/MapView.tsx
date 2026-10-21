@@ -7,32 +7,36 @@ import { createPostMarkerContent } from './PostMarker'
 
 interface MapViewProps {
   center: LatLng
+  // Bump to pan back to `center` even when its coordinates did not change.
+  centerRevision?: number
   posts: Post[]
   currentLocation?: LatLng | null
   selectedLocation?: LatLng | null
+  selectedPhotoUrl?: string
   selectedPostId?: string
   onMapClick: (location: LatLng) => void
   onMarkerClick: (post: Post) => void
   onClusterClick?: (posts: Post[]) => void
+  onCenterIdle?: (center: LatLng) => void
   currentUserUid?: string
   pinThemes?: PinTheme[]
   className?: string
 }
 
 export function MapView({
-  center, posts, currentLocation = null, selectedLocation = null, selectedPostId,
-  onMapClick, onMarkerClick, onClusterClick, currentUserUid, pinThemes, className = '',
+  center, centerRevision = 0, posts, currentLocation = null, selectedLocation = null, selectedPhotoUrl, selectedPostId,
+  onMapClick, onMarkerClick, onClusterClick, onCenterIdle, currentUserUid, pinThemes, className = '',
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const driverRef = useRef<MapDriver | null>(null)
-  const latestRef = useRef({ center, onMapClick, onMarkerClick, onClusterClick })
+  const latestRef = useRef({ center, onMapClick, onMarkerClick, onClusterClick, onCenterIdle })
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [message, setMessage] = useState('')
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
-    latestRef.current = { center, onMapClick, onMarkerClick, onClusterClick }
-  }, [center, onMapClick, onMarkerClick, onClusterClick])
+    latestRef.current = { center, onMapClick, onMarkerClick, onClusterClick, onCenterIdle }
+  }, [center, onMapClick, onMarkerClick, onClusterClick, onCenterIdle])
 
   useEffect(() => {
     let canceled = false
@@ -64,7 +68,7 @@ export function MapView({
   useEffect(() => {
     const location = { lat: center.lat, lng: center.lng }
     if (status === 'ready' && isValidLocation(location)) driverRef.current?.setCenter(location)
-  }, [center.lat, center.lng, status])
+  }, [center.lat, center.lng, centerRevision, status])
 
   useEffect(() => {
     const driver = driverRef.current
@@ -92,13 +96,25 @@ export function MapView({
 
   useEffect(() => {
     const driver = driverRef.current
+    if (status !== 'ready' || !driver) return
+    return driver.onIdle(() => latestRef.current.onCenterIdle?.(driver.getCenter()))
+  }, [status])
+
+  useEffect(() => {
+    const driver = driverRef.current
     if (status !== 'ready' || !driver || !selectedLocation || !isValidLocation(selectedLocation)) return
     const content = document.createElement('div')
-    content.className = 'map-location-pin'
+    content.className = selectedPhotoUrl ? 'map-photo-pin' : 'map-location-pin'
     content.setAttribute('role', 'img')
-    content.setAttribute('aria-label', '새 기록을 남길 위치')
+    content.setAttribute('aria-label', selectedPhotoUrl ? '사진을 찍은 위치' : '새 기록을 남길 위치')
+    if (selectedPhotoUrl) {
+      const photo = document.createElement('img')
+      photo.src = selectedPhotoUrl
+      photo.alt = ''
+      content.appendChild(photo)
+    }
     return driver.addMarker(selectedLocation, content, true)
-  }, [selectedLocation, status])
+  }, [selectedLocation, selectedPhotoUrl, status])
 
   useEffect(() => {
     const driver = driverRef.current

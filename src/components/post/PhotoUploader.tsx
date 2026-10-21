@@ -1,5 +1,5 @@
 import { Crop, ImagePlus, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { EDITABLE_IMAGE_TYPES, getEditableImageError } from '../../lib/imageEditing'
 import { ImageEditorModal } from '../image/ImageEditorModal'
 
@@ -14,6 +14,7 @@ interface PhotoUploaderProps {
   existingPhotoUrls: string[]
   onRemoveExisting: (url: string) => void
   disabled?: boolean
+  badgeFor?: (file: File) => ReactNode
 }
 
 export function PhotoUploader({
@@ -22,6 +23,7 @@ export function PhotoUploader({
   existingPhotoUrls,
   onRemoveExisting,
   disabled = false,
+  badgeFor,
 }: PhotoUploaderProps) {
   const [previews, setPreviews] = useState<FilePreview[]>([])
   const [editing, setEditing] = useState<{ source: File | string; index?: number; existingUrl?: string } | null>(null)
@@ -89,6 +91,7 @@ export function PhotoUploader({
           {previews.map((preview, index) => (
             <figure key={preview.url} className="photo-preview">
               <img src={preview.url} alt={preview.name} />
+              {files[index] && badgeFor?.(files[index]) && <span className="photo-preview-badge">{badgeFor(files[index])}</span>}
               <button
                 type="button"
                 onClick={() => onFilesChange(files.filter((_, fileIndex) => fileIndex !== index))}

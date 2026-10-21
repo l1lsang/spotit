@@ -4,11 +4,11 @@ import test from 'node:test'
 import { createContext, SourceTextModule } from 'node:vm'
 import ts from 'typescript'
 
-async function loadSearch(searchByText, env = {}) {
+async function loadSearch(searchByText, env = {}, searchNearby) {
   const libraries = []
-  const window = searchByText ? { google: { maps: {
+  const window = searchByText || searchNearby ? { google: { maps: {
     importLibrary: async library => { libraries.push(library) },
-    places: { Place: { searchByText } },
+    places: { Place: { searchByText, searchNearby }, SearchNearbyRankPreference: { DISTANCE: 'DISTANCE' } },
   } } } : {}
   const context = createContext({ window })
   const modules = new Map()
@@ -27,7 +27,7 @@ async function loadSearch(searchByText, env = {}) {
   }
   const module = await load(new URL('../src/lib/placeSearch.ts', import.meta.url))
   await module.evaluate()
-  return { searchPlaces: module.namespace.searchPlaces, libraries }
+  return { searchPlaces: module.namespace.searchPlaces, findNearbyPlaces: module.namespace.findNearbyPlaces, libraries }
 }
 
 const coordinates = (lat, lng) => ({ lat: () => lat, lng: () => lng })
@@ -95,4 +95,31 @@ test('blank searches need no SDK and missing Google configuration produces a rea
   const center = { lat: 37.5665, lng: 126.978 }
   assert.equal((await searchPlaces('  ', center)).length, 0)
   await assert.rejects(searchPlaces('서울숲', center), /지도가 아직 준비되지 않았습니다/)
+})
+
+test('photo place suggestions list nearby named places closest first, without districts or roads', async () => {
+  const requests = []
+  const photo = { lat: 37.56912, lng: 126.98041 }
+  const { findNearbyPlaces } = await loadSearch(undefined, { VITE_GOOGLE_MAPS_API_KEY: 'test-key' }, async request => {
+    requests.push(request)
+    return { places: [
+      { id: 'far', displayName: '청계광장', formattedAddress: '대한민국 서울특별시 중구 태평로1가 1', location: coordinates(37.5693, 126.9780), types: ['tourist_attraction'] },
+      { id: 'district', displayName: '종로구', formattedAddress: '대한민국 서울특별시 종로구', location: coordinates(37.5691, 126.9804), types: ['sublocality', 'political'] },
+      { id: 'near', displayName: '광통교', formattedAddress: '대한민국 서울특별시 종로구 청계천로 85', location: coordinates(37.56915, 126.98045), types: ['point_of_interest'] },
+      { id: 'road', displayName: '청계천로', location: coordinates(37.5691, 126.9803), types: ['route'] },
+      { id: 'unnamed', location: coordinates(37.5691, 126.9804) },
+    ] }
+  })
+  const places = await findNearbyPlaces(photo)
+  assert.deepEqual(places.map(place => place.name), ['광통교', '청계광장'])
+  assert.equal(places[0].address, '서울특별시 종로구 청계천로 85')
+  assert.equal(places[0].id, 'google:near')
+  assert.equal(requests[0].locationRestriction.center, photo)
+  assert.equal(requests[0].locationRestriction.radius, 200)
+  assert.equal(requests[0].rankPreference, 'DISTANCE')
+  assert.equal(requests[0].language, 'ko')
+  assert.ok(requests[0].fields.includes('types'))
+  // The confirm sheet and the form ask for the same spot; Google is called once.
+  assert.deepEqual((await findNearbyPlaces({ ...photo })).map(place => place.id), ['google:near', 'google:far'])
+  assert.equal(requests.length, 1)
 })

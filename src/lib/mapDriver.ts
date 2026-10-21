@@ -4,6 +4,7 @@ import type { LatLng } from './mapLocation'
 
 export interface MapDriver {
   setCenter: (location: LatLng) => void
+  getCenter: () => LatLng
   project: (location: LatLng) => MapPoint | null
   addMarker: (location: LatLng, content: HTMLElement, selected?: boolean) => () => void
   onIdle: (handler: () => void) => () => void
@@ -35,8 +36,19 @@ export function createMapDriver(
     event?.stop?.() // Selecting a place creates our pin instead of a competing POI popup.
     if (event?.latLng) onClick({ lat: event.latLng.lat(), lng: event.latLng.lng() })
   })
+  // The latest settled center survives container resizes such as a bottom sheet opening.
+  let settledCenter = center
+  const readCenter = (): LatLng => {
+    const current = map.getCenter()
+    return current ? { lat: current.lat(), lng: current.lng() } : settledCenter
+  }
+  const idleCenterListener = map.addListener('idle', () => { settledCenter = readCenter() })
   return {
-    setCenter: (location) => map.setCenter(location),
+    setCenter: (location) => {
+      settledCenter = location
+      map.setCenter(location)
+    },
+    getCenter: readCenter,
     project: (location) => {
       const projection = map.getProjection()
       const point = projection?.fromLatLngToPoint(new google.LatLng(location.lat, location.lng))
@@ -60,9 +72,10 @@ export function createMapDriver(
       return () => idleListener.remove()
     },
     preventMapClick: () => undefined,
-    resize: () => undefined,
+    resize: () => map.setCenter(settledCenter),
     destroy: () => {
       listener.remove()
+      idleCenterListener.remove()
       google.event.clearInstanceListeners(map)
       container.replaceChildren()
     },

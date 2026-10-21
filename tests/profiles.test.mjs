@@ -52,7 +52,9 @@ async function client(suffix) {
     return module
   }
   const service = await load(resolve(root, 'src/services/userService.ts'))
-  const linker = (specifier, referencing) => load(specifier.startsWith('.') ? resolve(dirname(referencing.identifier), specifier + '.ts') : specifier)
+  const linker = (specifier, referencing) => load(specifier.startsWith('.')
+    ? resolve(dirname(referencing.identifier), specifier.endsWith('.ts') ? specifier : specifier + '.ts')
+    : specifier)
   await service.link(linker)
   await service.evaluate()
   const storageService = await load(resolve(root, 'src/services/storageService.ts'))

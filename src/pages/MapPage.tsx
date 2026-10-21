@@ -7,9 +7,11 @@ import { MapView } from '../components/map/MapView'
 import { MapPlacePanel, type SelectedMapPlace } from '../components/map/MapPlacePanel'
 import { MapPinList } from '../components/map/MapPinList'
 import { MapPostPreview } from '../components/map/MapPostPreview'
+import { PhotoCenterPin, PhotoRecordLauncher, PhotoRecordSheet, PhotoRecordTopBar } from '../components/map/PhotoRecordFlow'
 import { PostFormModal, type PostFormSubmitPayload } from '../components/post/PostFormModal'
 import { useAuth } from '../hooks/useAuth'
 import { useGroups } from '../hooks/useGroups'
+import { usePhotoRecordFlow, type PhotoRecordPrefill } from '../hooks/usePhotoRecordFlow'
 import { getGroupMapUrl } from '../lib/groupNavigation'
 import { SEOUL_CITY_HALL, useCurrentLocation } from '../hooks/useCurrentLocation'
 import type { LatLng, PlaceSearchResult } from '../lib/mapLocation'
@@ -47,14 +49,18 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   const mapShellRef = useRef<HTMLDivElement>(null)
   const { location: currentLocation, loading: locationLoading, error: locationError, requestLocation } = useCurrentLocation()
   const [center, setCenter] = useState<LatLng>(SEOUL_CITY_HALL)
+  const [centerRevision, setCenterRevision] = useState(0)
+  const mapCenterRef = useRef<LatLng>(SEOUL_CITY_HALL)
+  const photoSheetRef = useRef<HTMLElement>(null)
+  const [photoPrefill, setPhotoPrefill] = useState<PhotoRecordPrefill | null>(null)
   const [initialLocationReady, setInitialLocationReady] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<LatLng | null>(null)
+  const [isFormOpen, setIsFormOpen] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<SelectedMapPlace | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [clusterPosts, setClusterPosts] = useState<Post[]>([])
   const searchRequestRef = useRef(0)
-  const [isFormOpen, setIsFormOpen] = useState(false)
   const [loadingPosts, setLoadingPosts] = useState(false)
   const [postsRevision, setPostsRevision] = useState(0)
   const [placeQuery, setPlaceQuery] = useState('')
@@ -65,6 +71,16 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
   const visiblePosts = (!groupId || (selectedGroup && (selectedGroupVisibility !== 'private' || joined))) ? posts : []
   const visibleSelectedPost = visiblePosts.find(post => post.id === selectedPost?.id)
   const visibleClusterPosts = clusterPosts.filter(post => visiblePosts.some(item => item.id === post.id))
+  const focusMap = useCallback((location: LatLng) => {
+    setCenter(location)
+    setCenterRevision(value => value + 1)
+  }, [])
+  const photoRecord = usePhotoRecordFlow(focusMap)
+  const photoFlow = photoRecord.flow
+  const photoSheetOpen = Boolean(photoFlow) && !isFormOpen
+  const photoPinLocation = photoFlow
+    ? (isFormOpen ? photoPrefill?.location : photoFlow.step === 'confirm' ? photoFlow.summary?.location : null) ?? null
+    : null
   const loadPosts = useCallback(async () => {
     if (groupId) return
     if (!firebaseReady) {
@@ -115,6 +131,21 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
     observer.observe(toolbar)
     return () => observer.disconnect()
   }, [])
+
+  // On phones the map shrinks above the sheet so the pin stays in the visible center.
+  useEffect(() => {
+    const sheet = photoSheetRef.current
+    const shell = mapShellRef.current
+    if (!photoSheetOpen || !sheet || !shell) return
+    const measure = () => shell.style.setProperty('--photo-sheet-height', `${Math.ceil(sheet.getBoundingClientRect().height)}px`)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(sheet)
+    return () => {
+      observer.disconnect()
+      shell.style.removeProperty('--photo-sheet-height')
+    }
+  }, [photoSheetOpen])
 
   useEffect(() => {
     let active = true
@@ -235,6 +266,48 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
     setPlaceSearchMessage('')
   }
 
+  function handleStartPhotoRecord(files: File[]) {
+    handleClearSearch()
+    setSelectedPost(null)
+    setClusterPosts([])
+    void photoRecord.start(files)
+  }
+
+  function closePhotoRecord() {
+    photoRecord.close()
+    setPhotoPrefill(null)
+  }
+
+  function openPhotoForm(location: LatLng, source: PhotoRecordPrefill['source']) {
+    const prefill = photoRecord.buildPrefill(location, source)
+    if (!prefill) return
+    setPhotoPrefill(prefill)
+    setIsFormOpen(true)
+  }
+
+  function handlePhotoBack() {
+    if (photoFlow?.step === 'locate' && photoFlow.locateReason === 'adjust') photoRecord.returnToPhotoLocation()
+    else closePhotoRecord()
+  }
+
+  async function handlePhotoUseCurrentLocation() {
+    focusMap(await requestLocation())
+  }
+
+  function handleChangePhotoLocation() {
+    if (!photoPrefill) return
+    setIsFormOpen(false)
+    photoRecord.locate(photoPrefill.source === 'photo' ? 'adjust' : 'missing')
+    focusMap(photoPrefill.location)
+    setPhotoPrefill(null)
+  }
+
+  function handleCloseForm() {
+    setIsFormOpen(false)
+    // A photo record returns to its location sheet with the selected photos kept.
+    setPhotoPrefill(null)
+  }
+
   async function handleCreatePost(payload: PostFormSubmitPayload) {
     if (!currentUser || !profile) {
       navigate('/login')
@@ -262,6 +335,10 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
       nickname: profile.nickname,
     })
     setIsFormOpen(false)
+    if (photoPrefill) {
+      closePhotoRecord()
+      focusMap({ lat: input.lat, lng: input.lng })
+    }
     if (!selectedPlace) setSelectedLocation(null)
     if (input.groupId && input.groupId !== groupId) {
       navigate(getGroupMapUrl(input.groupId))
@@ -272,17 +349,23 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
 
   return (
     <PageContainer fullBleed fillViewport className="map-page">
-      <div ref={mapShellRef} className="map-shell map-with-groups" aria-busy={loadingPosts || Boolean(groupId && groupState.loading)}>
+      <div ref={mapShellRef} className={`map-shell map-with-groups${photoFlow ? ' is-photo-flow' : ''}`} aria-busy={loadingPosts || Boolean(groupId && groupState.loading)}>
         {initialLocationReady ? (
           <MapView
             center={center}
+            centerRevision={centerRevision}
             posts={visiblePosts}
             currentLocation={currentLocation}
-            selectedLocation={selectedLocation}
+            selectedLocation={photoFlow ? photoPinLocation : selectedLocation}
+            selectedPhotoUrl={photoPinLocation ? photoFlow?.items[0]?.url : undefined}
             selectedPostId={visibleSelectedPost?.id}
-            onMapClick={handleMapClick}
-            onMarkerClick={(post) => { setClusterPosts([]); handleSelectPost(post) }}
-            onClusterClick={handleClusterClick}
+            onMapClick={(location) => {
+              if (!photoFlow) handleMapClick(location)
+              else if (photoFlow.step === 'locate') focusMap(location)
+            }}
+            onMarkerClick={(post) => { if (photoFlow) return; setClusterPosts([]); handleSelectPost(post) }}
+            onClusterClick={(group) => { if (!photoFlow) handleClusterClick(group) }}
+            onCenterIdle={(location) => { mapCenterRef.current = location }}
             currentUserUid={currentUser?.uid}
             pinThemes={profile?.pinThemes}
           />
@@ -355,7 +438,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
           )}
         </div>
 
-        {(placeResults.length > 0 || placeSearchMessage || searchingPlaces) && (
+        {!photoFlow && (placeResults.length > 0 || placeSearchMessage || searchingPlaces) && (
           <section className="map-place-results" aria-label="장소 검색 결과" aria-busy={searchingPlaces}>
             {searchingPlaces ? <p role="status">검색 중…</p>
               : placeSearchMessage ? <p role="status">{placeSearchMessage}</p>
@@ -367,7 +450,7 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
           </section>
         )}
 
-        {selectedPlace && <MapPlacePanel key={selectedPlace.placeId} place={selectedPlace}
+        {selectedPlace && !photoFlow && <MapPlacePanel key={selectedPlace.placeId} place={selectedPlace}
           groupId={groupId} canCreatePin={canCreatePin}
           hidden={isFormOpen || searchingPlaces || placeResults.length > 0 || Boolean(placeSearchMessage)}
           onCreatePin={() => setIsFormOpen(true)} onClose={handleDismissLocation} />}
@@ -415,22 +498,61 @@ function ScopedMapPage({ groupId }: { groupId: string }) {
           onBack={visibleClusterPosts.length > 1 ? () => setSelectedPost(null) : undefined}
         />}
 
-        <div className="map-bottom-controls" role="group" aria-label="지도 도구">
+        {photoSheetOpen && photoFlow && (
+          <>
+            <PhotoRecordTopBar
+              title={photoFlow.step === 'reading' ? '사진 정보 읽기'
+                : photoFlow.step === 'confirm' ? '핀 위치 확인'
+                : photoFlow.locateReason === 'adjust' ? '핀 위치 조정' : '위치 직접 지정'}
+              step="1 / 2"
+              backLabel={photoFlow.step === 'locate' && photoFlow.locateReason === 'adjust' ? '사진 위치 확인으로 돌아가기' : '사진으로 기록 닫기'}
+              onBack={handlePhotoBack}
+            />
+            {photoFlow.step === 'locate' && <PhotoCenterPin />}
+            <PhotoRecordSheet
+              sheetRef={photoSheetRef}
+              flow={photoFlow}
+              notice={photoRecord.error}
+              getSearchCenter={() => mapCenterRef.current}
+              locating={locationLoading}
+              onBack={handlePhotoBack}
+              onConfirm={() => { if (photoFlow.summary?.location) openPhotoForm(photoFlow.summary.location, 'photo') }}
+              onAdjust={() => photoRecord.locate('adjust')}
+              onReturnToPhotoLocation={photoRecord.returnToPhotoLocation}
+              onPlaceHere={() => openPhotoForm(mapCenterRef.current, 'manual')}
+              onUseCurrentLocation={() => void handlePhotoUseCurrentLocation()}
+              onSelectPlace={photoRecord.selectSearchedPlace}
+            />
+          </>
+        )}
+
+        {currentUser && firebaseReady && canCreatePin && initialLocationReady && !photoFlow && !isFormOpen && (
+          <PhotoRecordLauncher
+            error={photoRecord.error}
+            hideTip={Boolean(selectedPlace || selectedLocation || visibleSelectedPost || visibleClusterPosts.length > 1
+              || placeResults.length || searchingPlaces || placeSearchMessage)}
+            onSelect={handleStartPhotoRecord}
+          />
+        )}
+
+        {!photoFlow && <div className="map-bottom-controls" role="group" aria-label="지도 도구">
           <button className={`map-control-icon${locationLoading ? ' is-locating' : ''}`} type="button" onClick={handleUseCurrentLocation} disabled={locationLoading}
             aria-label={locationLoading ? '현재 위치 확인 중' : '현재 위치로 이동'} aria-busy={locationLoading} title="현재 위치로 이동">
             <LocateFixed size={21} aria-hidden="true" />
           </button>
-        </div>
+        </div>}
       </div>
 
       <PostFormModal
         isOpen={isFormOpen && canCreatePin}
         mode="create"
-        location={selectedLocation}
-        placePrefill={selectedPlace}
+        location={photoPrefill ? photoPrefill.location : selectedLocation}
+        placePrefill={photoPrefill ? null : selectedPlace}
+        photoPrefill={photoPrefill}
         initialGroupId={groupId}
         lockGroup={Boolean(groupId)}
-        onClose={() => setIsFormOpen(false)}
+        onClose={handleCloseForm}
+        onChangeLocation={photoPrefill ? handleChangePhotoLocation : undefined}
         onSubmit={handleCreatePost}
       />
     </PageContainer>

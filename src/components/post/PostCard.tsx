@@ -49,7 +49,7 @@ export function PostCard({ post, showVisibility = false, actions }: PostCardProp
             <MapPin size={15} aria-hidden="true" />
             {post.placeName}
           </p>
-          <p className="post-excerpt">{excerpt}</p>
+          {excerpt && <p className="post-excerpt">{excerpt}</p>}
           <div className="post-meta">
             <span>
               <CalendarDays size={14} aria-hidden="true" />

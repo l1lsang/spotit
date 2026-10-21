@@ -170,7 +170,7 @@ export function PostDetailPage() {
             </div>
           )}
 
-          <p className="detail-content">{post.content}</p>
+          {post.content && <p className="detail-content">{post.content}</p>}
 
           {actionError && <p className="form-error compact-message" role="alert">{actionError}</p>}
           {shareMessage && <p className="form-success compact-message" role="status">{shareMessage}</p>}
