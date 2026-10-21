@@ -40,13 +40,7 @@ export function PeoplePage() {
 
   return (
     <PageContainer className="content-page people-page">
-      <section className="page-heading">
-        <div>
-          <p className="eyebrow">Follow network</p>
-          <h1>사람 찾기</h1>
-          <p>프로필을 눌러 친구의 소개를 보고 소통해 보세요.</p>
-        </div>
-      </section>
+      <h1 className="sr-only">사람 찾기</h1>
       <label className="people-search">
         <Search size={18} aria-hidden="true" />
         <input {...inputProps} placeholder="사용자 이름 또는 닉네임 검색" aria-label="사용자 검색" />

@@ -1,10 +1,11 @@
 /* Chat list: one floating button starts both 1:1 chats and group rooms. */
 
-/* Outranks the mobile min-height in design-system.css, which loads after this file. */
-.app-shell .chat-list-page .page-heading { min-height: 0; }
+/* The room list starts right under the header (Figma 45:2). Outranks the page
+   padding in design-system.css, which loads after this file. */
+.app-shell .chat-list-page.page { padding-top: 0; }
 
 /* Keep the last conversation clear of the floating button. */
-.chat-list-page .chat-list { margin-bottom: 72px; }
+.chat-list-page .chat-list { margin-bottom: 72px; padding-top: var(--space-2xs); border-top: 1px solid var(--line); }
 
 .new-chat-backdrop {
   position: fixed;

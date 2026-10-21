@@ -1,4 +1,6 @@
 .people-page, .person-profile-page { max-width: 760px; }
+/* Search sits right under the header (Figma 43:2). Outranks the page padding in design-system.css. */
+.app-shell .people-page.page { padding-top: var(--space-md); }
 .people-list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
 .people-list > li + li { border-top: 1px solid var(--line); }
 .user-summary-link { display: flex; align-items: center; gap: 14px; min-height: 82px; min-width: 0; padding: 14px 18px; border-radius: 8px; transition: background 150ms ease; }

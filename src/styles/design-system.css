@@ -259,9 +259,6 @@ button, a, input, textarea, select, summary { -webkit-tap-highlight-color: trans
   .page-heading { align-items: start; gap: var(--space-sm); margin-bottom: var(--space-md); }
   .page-heading h1 { font-size: 1.8rem; }
   .page-heading p { margin-top: var(--space-2xs); }
-  .people-page .page-heading, .chat-list-page .page-heading { min-height: 153px; }
-  .chat-list-page .page-heading { justify-content: space-between; }
-  .chat-list-page .page-actions { width: auto; min-width: 144px; }
   .chat-room-header { min-height: 100px; }
   .page-actions { width: 100%; gap: var(--space-2xs); }
   .page-actions > .button { flex: 1; width: auto; }

@@ -174,12 +174,7 @@ export function ChatListPage() {
 
   return (
     <PageContainer className="content-page chat-list-page">
-      <section className="page-heading">
-        <div>
-          <p className="eyebrow">Messages</p>
-          <h1>채팅</h1>
-        </div>
-      </section>
+      <h1 className="sr-only">채팅</h1>
 
       {error && <div className="form-error" role="alert"><p>{error}</p>
         <button className="button button-secondary" type="button" onClick={() => setRefreshKey(key => key + 1)}><RefreshCw size={17} aria-hidden="true" />다시 시도</button>
