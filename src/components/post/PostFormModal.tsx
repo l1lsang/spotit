@@ -8,6 +8,8 @@ import { useGroups } from '../../hooks/useGroups'
 import { useNearbyPlaces, type PhotoRecordPrefill } from '../../hooks/usePhotoRecordFlow'
 import { useLocationConsent } from '../../contexts/locationConsentCore'
 import {
+  FOLLOWING_PIN_COLOR,
+  FOLLOWING_PIN_COLOR_ERROR,
   normalizePinColor,
   getPostPinColor,
   parsePinColorCode,
@@ -129,6 +131,11 @@ export function PostFormModal({
 
     if (!form.pinThemeId && !parsePinColorCode(form.pinColor)) {
       setError('올바른 HEX 색상 코드를 입력해 주세요.')
+      return
+    }
+
+    if (!form.pinThemeId && parsePinColorCode(form.pinColor) === FOLLOWING_PIN_COLOR) {
+      setError(FOLLOWING_PIN_COLOR_ERROR)
       return
     }
 

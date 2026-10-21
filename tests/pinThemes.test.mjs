@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { DEFAULT_POST_PIN_COLOR, FOLLOWING_PIN_COLOR, getPinThemeError, getPostMarkerColor, getPostPinColor, normalizePinColor, parsePinColorCode } from '../src/types/post.ts'
+import { DEFAULT_POST_PIN_COLOR, FOLLOWING_PIN_COLOR, FOLLOWING_PIN_COLOR_ERROR, PIN_COLOR_PALETTE, getPinThemeError, getPostMarkerColor, getPostPinColor, normalizePinColor, parsePinColorCode } from '../src/types/post.ts'
 
 test('entered HEX codes accept both lengths and optional hash, and normalize for persistence', () => {
   for (const [input, expected] of [['#8B7EC8', '#8b7ec8'], ['8B7EC8', '#8b7ec8'], ['#AbC', '#aabbcc'], ['abc', '#aabbcc'], ['  #FFF  ', '#ffffff'], ['000000', '#000000']]) {
@@ -54,5 +54,14 @@ test('custom themes require a name, stable ID, and a valid color', () => {
   assert.equal(getPinThemeError({ ...theme, name: '가'.repeat(18) }), '')
   for (const change of [{ name: '   ' }, { name: '가'.repeat(19) }, { id: '' }, { id: 'path/id' }, { color: '#fff' }, { color: 'transparent' }]) {
     assert.notEqual(getPinThemeError({ ...theme, ...change }), '')
+  }
+})
+
+test('others’ pins use a colour that none of my current or legacy pin colours share', () => {
+  const mine = [DEFAULT_POST_PIN_COLOR, ...PIN_COLOR_PALETTE.map(({ color }) => color),
+    ...['default', 'cafe', 'food', 'study', 'date', 'solo', 'walk'].map(normalizePinColor)]
+  assert.ok(!mine.includes(FOLLOWING_PIN_COLOR))
+  for (const color of [FOLLOWING_PIN_COLOR, FOLLOWING_PIN_COLOR.toUpperCase()]) {
+    assert.equal(getPinThemeError({ id: 'custom', name: '보라', color }), FOLLOWING_PIN_COLOR_ERROR)
   }
 })
