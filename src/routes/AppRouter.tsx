@@ -3,23 +3,24 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { useAuth } from '../hooks/useAuth'
 import { isPublicPolicyPath } from '../lib/policyNavigation'
 import { InstallPrompt } from '../components/layout/InstallPrompt'
-import { ChatListPage } from '../pages/ChatListPage'
-import { ChatRoomPage } from '../pages/ChatRoomPage'
-import { FeedDetailPage } from '../pages/FeedDetailPage'
-import { FeedPage } from '../pages/FeedPage'
 import { LandingPage } from '../pages/LandingPage'
-import { LoginPage } from '../pages/LoginPage'
-import { MapPage } from '../pages/MapPage'
-import { MyPostsPage } from '../pages/MyPostsPage'
-import { NotificationsPage } from '../pages/NotificationsPage'
-import { PeoplePage } from '../pages/PeoplePage'
-import { PersonProfilePage } from '../pages/PersonProfilePage'
-import { PostDetailPage } from '../pages/PostDetailPage'
-import { ProfilePage } from '../pages/ProfilePage'
-import { ProfileSettingsPage } from '../pages/ProfileSettingsPage'
-import { SignupPage } from '../pages/SignupPage'
-import { SupportPage } from '../pages/SupportPage'
 
+// Only the landing page ships in the entry bundle; every other screen loads on demand.
+const ChatListPage = lazy(() => import('../pages/ChatListPage').then(module => ({ default: module.ChatListPage })))
+const ChatRoomPage = lazy(() => import('../pages/ChatRoomPage').then(module => ({ default: module.ChatRoomPage })))
+const FeedDetailPage = lazy(() => import('../pages/FeedDetailPage').then(module => ({ default: module.FeedDetailPage })))
+const FeedPage = lazy(() => import('../pages/FeedPage').then(module => ({ default: module.FeedPage })))
+const LoginPage = lazy(() => import('../pages/LoginPage').then(module => ({ default: module.LoginPage })))
+const MapPage = lazy(() => import('../pages/MapPage').then(module => ({ default: module.MapPage })))
+const MyPostsPage = lazy(() => import('../pages/MyPostsPage').then(module => ({ default: module.MyPostsPage })))
+const NotificationsPage = lazy(() => import('../pages/NotificationsPage').then(module => ({ default: module.NotificationsPage })))
+const PeoplePage = lazy(() => import('../pages/PeoplePage').then(module => ({ default: module.PeoplePage })))
+const PersonProfilePage = lazy(() => import('../pages/PersonProfilePage').then(module => ({ default: module.PersonProfilePage })))
+const PostDetailPage = lazy(() => import('../pages/PostDetailPage').then(module => ({ default: module.PostDetailPage })))
+const ProfilePage = lazy(() => import('../pages/ProfilePage').then(module => ({ default: module.ProfilePage })))
+const ProfileSettingsPage = lazy(() => import('../pages/ProfileSettingsPage').then(module => ({ default: module.ProfileSettingsPage })))
+const SignupPage = lazy(() => import('../pages/SignupPage').then(module => ({ default: module.SignupPage })))
+const SupportPage = lazy(() => import('../pages/SupportPage').then(module => ({ default: module.SupportPage })))
 const AdminPage = lazy(() => import('../pages/AdminPage').then(module => ({ default: module.AdminPage })))
 const GroupsPage = lazy(() => import('../pages/GroupsPage').then(module => ({ default: module.GroupsPage })))
 const GroupDetailPage = lazy(() => import('../pages/GroupDetailPage').then(module => ({ default: module.GroupDetailPage })))
@@ -45,7 +46,8 @@ function OnboardingGuard({ children }: { children: ReactNode }) {
   const { currentUser, profile, loading, profileError, refreshProfile } = useAuth()
   const location = useLocation()
   if (isPublicPolicyPath(location.pathname) || location.pathname === '/signup' || ['/admin', '/licenses'].includes(location.pathname.replace(/\/$/, ''))) return children
-  if (loading) return <div className="screen-message">로그인 상태를 확인하는 중입니다.</div>
+  // The landing page is public, so paint it immediately; the guard re-checks once auth settles.
+  if (loading) return location.pathname === '/' ? children : <div className="screen-message">로그인 상태를 확인하는 중입니다.</div>
   if (currentUser && profileError) {
     return (
       <div className="screen-message" role="alert">
@@ -64,6 +66,7 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <OnboardingGuard>
+        <Suspense fallback={<div className="screen-message">화면을 불러오는 중입니다.</div>}>
         <Routes>
           <Route path="/admin" element={<Suspense fallback={<div className="screen-message">관리자 화면을 불러오는 중…</div>}><AdminPage /></Suspense>} />
           <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
@@ -139,6 +142,7 @@ export function AppRouter() {
           <Route path="/profile/likes" element={<Navigate to="/profile?tab=likes" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </OnboardingGuard>
       <InstallPrompt />
     </BrowserRouter>

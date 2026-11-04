@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { subscribeToForegroundPushMessages } from '../../services/pushNotificationService'
+
+// Firebase Messaging loads only for signed-in users who already granted notifications.
+const loadPushService = () => import('../../services/pushNotificationService')
 
 export function ForegroundPushListener() {
   const { currentUser } = useAuth()
@@ -13,7 +15,7 @@ export function ForegroundPushListener() {
     let unsubscribe: (() => void) | undefined
     let canceled = false
 
-    void subscribeToForegroundPushMessages((payload) => {
+    void loadPushService().then(({ subscribeToForegroundPushMessages }) => subscribeToForegroundPushMessages((payload) => {
       if (canceled || Notification.permission !== 'granted') {
         return
       }
@@ -32,7 +34,7 @@ export function ForegroundPushListener() {
         window.focus()
         window.location.assign(href)
       }
-    }).then((nextUnsubscribe) => {
+    })).then((nextUnsubscribe) => {
       unsubscribe = nextUnsubscribe
     })
 

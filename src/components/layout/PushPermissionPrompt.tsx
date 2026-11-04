@@ -1,11 +1,10 @@
 import { BellRing, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import {
-  enablePushNotifications,
-  getPushPermissionStatus,
-  type PushPermissionStatus,
-} from '../../services/pushNotificationService'
+import type { PushPermissionStatus } from '../../services/pushNotificationService'
+
+// Firebase Messaging stays out of the entry bundle until the prompt can actually appear.
+const loadPushService = () => import('../../services/pushNotificationService')
 
 const dismissedStorageKey = 'spotit-push-permission-prompt-dismissed-at'
 const dismissCooldownMs = 1000 * 60 * 60 * 24 * 7
@@ -52,7 +51,7 @@ export function PushPermissionPrompt() {
 
     let canceled = false
 
-    void getPushPermissionStatus().then((nextStatus) => {
+    void loadPushService().then(({ getPushPermissionStatus }) => getPushPermissionStatus()).then((nextStatus) => {
       if (canceled) {
         return
       }
@@ -78,6 +77,7 @@ export function PushPermissionPrompt() {
 
     setSubmitting(true)
     setMessage('')
+    const { enablePushNotifications, getPushPermissionStatus } = await loadPushService()
 
     try {
       await enablePushNotifications(currentUser.uid)

@@ -42,7 +42,7 @@ export function AuthProvider({ children }: PropsWithChildren): ReactElement {
     let active = true
     let revision = 0
     let unsubscribeProfile: (() => void) | undefined
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       invalidateAppReads()
       const currentRevision = ++revision
       unsubscribeProfile?.()
@@ -57,24 +57,33 @@ export function AuthProvider({ children }: PropsWithChildren): ReactElement {
       }
 
       setLoading(true)
-      try {
-        const nextProfile = await upsertUserProfile(user)
-        if (!active || currentRevision !== revision) return
-        setProfile(nextProfile)
-        setLoading(false)
-        unsubscribeProfile = onSnapshot(doc(requireDb(), 'users', user.uid), (snapshot) => {
-          if (!active || currentRevision !== revision) return
-          setProfile(snapshot.exists() ? snapshot.data() as DaymarkUser : null)
-          setLoading(false)
-        }, () => {
-          if (!active || currentRevision !== revision) return
-          setProfileError('프로필을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
-          setLoading(false)
-        })
-      } catch {
+      let upserted = false
+      const failProfile = () => {
         if (!active || currentRevision !== revision) return
         setProfileError('프로필을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
         setLoading(false)
+      }
+      try {
+        unsubscribeProfile = onSnapshot(doc(requireDb(), 'users', user.uid), (snapshot) => {
+          if (!active || currentRevision !== revision) return
+          const snapshotProfile = snapshot.exists() ? snapshot.data() as DaymarkUser : null
+          // Existing complete profiles render from this single read; only missing or
+          // legacy (no username) profiles pay for the upsert transaction, once.
+          if (!upserted && (!snapshotProfile || (!snapshotProfile.username && snapshotProfile.onboardingComplete !== false))) {
+            upserted = true
+            upsertUserProfile(user).then((nextProfile) => {
+              if (!active || currentRevision !== revision) return
+              setProfile(nextProfile)
+              setLoading(false)
+            }, failProfile)
+            return
+          }
+          upserted = true
+          setProfile(snapshotProfile)
+          setLoading(false)
+        }, failProfile)
+      } catch {
+        failProfile()
       }
     })
     return () => {

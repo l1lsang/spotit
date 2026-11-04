@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App.tsx'
+import './styles/pretendard.css'
 import './styles/globals.css'
 import '../tokens.css'
 import './styles/design-system.css'

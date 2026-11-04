@@ -61,9 +61,9 @@ export async function upsertUserProfile(user: FirebaseUser): Promise<DaymarkUser
     const migrated = await runTransaction(db, async (transaction) => {
       const snapshot = await transaction.get(userRef)
       if (!snapshot.exists()) {
+        // Profiles are readable by every member, so the sign-in email stays in Firebase Auth only.
         transaction.set(userRef, {
           uid: user.uid,
-          email: user.email || '',
           photoURL: user.photoURL || '',
           nickname: getFallbackNickname(user),
           bio: '',
@@ -276,8 +276,6 @@ export async function deleteUserAccountData(uid: string): Promise<void> {
       getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', uid))),
     ])
 
-  const myPostIds = new Set(postsSnapshot.docs.map((postDoc) => postDoc.id))
-
   followersSnapshot.docs.forEach((followerDoc) => {
     addDeleteOperation(operations, deletedPaths, followerDoc.ref)
     addDeleteOperation(operations, deletedPaths, doc(db, 'users', followerDoc.id, 'following', uid))
@@ -341,60 +339,13 @@ export async function deleteUserAccountData(uid: string): Promise<void> {
     })),
   )
 
+  // Other members' pins recount their likes and comments on the server once these are gone.
   commentReplyEntries.forEach(({ commentDoc, repliesSnapshot }) => {
-    const parentPostRef = commentDoc.ref.parent.parent
-
     repliesSnapshot.docs.forEach((replyDoc) => addDeleteOperation(operations, deletedPaths, replyDoc.ref))
     addDeleteOperation(operations, deletedPaths, commentDoc.ref)
-
-    if (parentPostRef && !myPostIds.has(parentPostRef.id)) {
-      operations.push((batch) =>
-        batch.update(parentPostRef, {
-          commentCount: increment(-((commentDoc.data().deleted ? 0 : 1) + ((commentDoc.data() as { replyCount?: number }).replyCount || 0))),
-          updatedAt: serverTimestamp(),
-        }),
-      )
-    }
   })
-
-  repliesSnapshot.docs.forEach((replyDoc) => {
-    const parentCommentRef = replyDoc.ref.parent.parent
-    const parentPostRef = parentCommentRef?.parent.parent
-
-    addDeleteOperation(operations, deletedPaths, replyDoc.ref)
-
-    if (
-      parentCommentRef &&
-      parentPostRef &&
-      !deletedPaths.has(parentCommentRef.path) &&
-      !myPostIds.has(parentPostRef.id)
-    ) {
-      operations.push((batch) => {
-        batch.update(parentCommentRef, {
-          replyCount: increment(-1),
-        })
-        batch.update(parentPostRef, {
-          commentCount: increment(-1),
-          updatedAt: serverTimestamp(),
-        })
-      })
-    }
-  })
-
-  likesSnapshot.docs.forEach((likeDoc) => {
-    const parentPostRef = likeDoc.ref.parent.parent
-
-    addDeleteOperation(operations, deletedPaths, likeDoc.ref)
-
-    if (parentPostRef && !myPostIds.has(parentPostRef.id)) {
-      operations.push((batch) =>
-        batch.update(parentPostRef, {
-          likeCount: increment(-1),
-          updatedAt: serverTimestamp(),
-        }),
-      )
-    }
-  })
+  repliesSnapshot.docs.forEach((replyDoc) => addDeleteOperation(operations, deletedPaths, replyDoc.ref))
+  likesSnapshot.docs.forEach((likeDoc) => addDeleteOperation(operations, deletedPaths, likeDoc.ref))
 
   await Promise.all(
     chatsSnapshot.docs.map(async (chatDoc) => {

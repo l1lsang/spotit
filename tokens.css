@@ -1,11 +1,5 @@
 /* Hallmark · genre: modern-minimal · theme: Spotit · design-system: design.md · designed-as-app */
-@font-face {
-  font-family: 'Pretendard Variable';
-  src: url('/fonts/PretendardVariable.woff2') format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
+/* Pretendard Variable @font-face rules live in src/styles/pretendard.css (unicode-range subsets). */
 
 :root {
   --font-body: 'Pretendard Variable', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
