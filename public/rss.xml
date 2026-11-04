@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>피노리 - 오늘의 추억을 지도에 남기다</title>
+    <link>https://pinori.kr/</link>
+    <description>피노리는 오늘의 장소와 순간을 지도 위에 남기며, 나만의 일상 지도를 만들어가는 장소 기록 SNS입니다.</description>
+    <language>ko</language>
+    <lastBuildDate>Wed, 04 Nov 2026 00:00:00 +0900</lastBuildDate>
+    <atom:link href="https://pinori.kr/rss.xml" rel="self" type="application/rss+xml" />
+    <image>
+      <url>https://pinori.kr/icon-192.png</url>
+      <title>피노리 - 오늘의 추억을 지도에 남기다</title>
+      <link>https://pinori.kr/</link>
+    </image>
+
+    <item>
+      <title>피노리 소개</title>
+      <link>https://pinori.kr/</link>
+      <guid isPermaLink="true">https://pinori.kr/</guid>
+      <description>오늘의 추억을 지도 위에 남기고, 나만의 일상 지도를 만들어보세요.</description>
+      <pubDate>Wed, 04 Nov 2026 00:00:00 +0900</pubDate>
+    </item>
+    <item>
+      <title>지도</title>
+      <link>https://pinori.kr/map</link>
+      <guid isPermaLink="true">https://pinori.kr/map</guid>
+      <description>지도 위에서 오늘의 장소를 찾고 기록을 남깁니다.</description>
+      <pubDate>Mon, 25 May 2026 00:00:00 +0900</pubDate>
+    </item>
+    <item>
+      <title>피드</title>
+      <link>https://pinori.kr/feed</link>
+      <guid isPermaLink="true">https://pinori.kr/feed</guid>
+      <description>사람들이 남긴 장소와 순간을 모아 봅니다.</description>
+      <pubDate>Mon, 25 May 2026 00:00:00 +0900</pubDate>
+    </item>
+    <item>
+      <title>이용약관</title>
+      <link>https://pinori.kr/policies/terms</link>
+      <guid isPermaLink="true">https://pinori.kr/policies/terms</guid>
+      <description>서비스 이용과 회원의 권리·의무</description>
+      <pubDate>Wed, 09 Sep 2026 00:00:00 +0900</pubDate>
+    </item>
+    <item>
+      <title>개인정보처리방침</title>
+      <link>https://pinori.kr/policies/privacy</link>
+      <guid isPermaLink="true">https://pinori.kr/policies/privacy</guid>
+      <description>개인정보의 수집·이용·보관과 권리 행사</description>
+      <pubDate>Wed, 09 Sep 2026 00:00:00 +0900</pubDate>
+    </item>
+    <item>
+      <title>운영정책</title>
+      <link>https://pinori.kr/policies/community</link>
+      <guid isPermaLink="true">https://pinori.kr/policies/community</guid>
+      <description>안전한 소통을 위한 기준과 신고 절차</description>
+      <pubDate>Wed, 09 Sep 2026 00:00:00 +0900</pubDate>
+    </item>
+    <item>
+      <title>청소년보호정책</title>
+      <link>https://pinori.kr/policies/youth</link>
+      <guid isPermaLink="true">https://pinori.kr/policies/youth</guid>
+      <description>아동·청소년 보호와 법정대리인의 권리</description>
+      <pubDate>Wed, 09 Sep 2026 00:00:00 +0900</pubDate>
+    </item>
+    <item>
+      <title>위치기반서비스 이용약관</title>
+      <link>https://pinori.kr/policies/location</link>
+      <guid isPermaLink="true">https://pinori.kr/policies/location</guid>
+      <description>위치정보의 이용·공유와 동의 철회</description>
+      <pubDate>Wed, 09 Sep 2026 00:00:00 +0900</pubDate>
+    </item>
+    <item>
+      <title>오픈소스 라이선스</title>
+      <link>https://pinori.kr/licenses</link>
+      <guid isPermaLink="true">https://pinori.kr/licenses</guid>
+      <description>피노리를 만드는 데 함께한 오픈소스 프로젝트입니다.</description>
+      <pubDate>Mon, 25 May 2026 00:00:00 +0900</pubDate>
+    </item>
+  </channel>
+</rss>

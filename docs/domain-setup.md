@@ -65,7 +65,8 @@
 - **Google Cloud Console > APIs & Services > Credentials > 지도 API 키**의 웹사이트 제한에도 `https://pinori.kr`와 `https://pinori.kr/*`를 추가합니다. `www`에서 앱을 제공하면 해당 주소도 추가합니다. 대상 키는 `VITE_GOOGLE_MAPS_API_KEY`입니다. [Google 공식 안내](https://developers.google.com/maps/api-security-best-practices)
 - Firebase API 키에도 웹사이트 제한을 별도로 설정했다면 새 운영 주소를 추가하고, 기존 Firebase 인증 도메인 허용은 유지합니다.
 - Vercel 프로젝트에 `pinori.kr`가 연결된 상태에서 이번 변경을 빌드·배포합니다. 기존 도메인에서 새 도메인으로 이동시키려면 Vercel의 도메인 리다이렉트를 설정합니다. [Vercel 공식 안내](https://vercel.com/docs/domains/working-with-domains/deploying-and-redirecting)
-- 검색엔진 도구에 사이트맵을 제출했다면 `https://pinori.kr/sitemap.xml`로 갱신합니다.
+- 검색엔진 도구에 사이트맵을 제출했다면 `https://pinori.kr/sitemap.xml`로 갱신합니다. 네이버 서치어드바이저에는 **요청 > RSS 제출**에 `https://pinori.kr/rss.xml`을 제출합니다.
+- `public/rss.xml`에는 로그인 없이 볼 수 있는 공개 페이지만 넣습니다. 게시글은 로그인한 회원만 읽을 수 있으므로 포함하지 않습니다. 약관 시행일이나 공개 페이지가 바뀌면 해당 항목의 `pubDate`와 `lastBuildDate`를 갱신합니다.
 
 ## 배포 후 확인
 
