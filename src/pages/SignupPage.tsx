@@ -163,7 +163,7 @@ export function SignupPage() {
           <h1 id="signup-title" ref={headingRef} tabIndex={-1}>
             {step === 'account' ? '나만의 이름으로 시작해요' : '프로필을 꾸며보세요'}
           </h1>
-          <p>{step === 'account' ? '스팟잇에서 나를 찾을 수 있는 고유한 이름이에요.' : '사진과 짧은 소개로 나를 표현해 보세요.'}</p>
+          <p>{step === 'account' ? '피노리에서 나를 찾을 수 있는 고유한 이름이에요.' : '사진과 짧은 소개로 나를 표현해 보세요.'}</p>
         </div>
 
         {step === 'account' ? (
@@ -177,7 +177,7 @@ export function SignupPage() {
                     autoCapitalize="none" spellCheck={false} value={username}
                     aria-invalid={Boolean(usernameError)} aria-describedby="username-hint username-error"
                     onChange={(event) => { setUsername(event.target.value.toLowerCase()); setUsernameError('') }}
-                    placeholder="spotit.name" />
+                    placeholder="pinori.name" />
                 </div>
                 <small id="username-hint" className="field-hint">영어, 숫자, 밑줄(_), 점(.) · 최대 30자 · 대문자는 소문자로 저장돼요.</small>
                 <small id="username-error" className="field-error" aria-live="polite">{usernameError}</small>

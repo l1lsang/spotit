@@ -27,7 +27,7 @@ import { setGroupMembership } from './groupService'
 type BatchOperation = (batch: WriteBatch) => void
 
 export function getFallbackNickname(user: Pick<FirebaseUser, 'displayName'>): string {
-  return user.displayName?.trim() || '스팟잇 사용자'
+  return user.displayName?.trim() || '피노리 사용자'
 }
 
 export async function getUserProfile(uid: string, fresh = false): Promise<DaymarkUser | null> {

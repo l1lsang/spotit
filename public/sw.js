@@ -1,8 +1,8 @@
-const CACHE_NAME = 'spotit-shell-v5'
+const CACHE_NAME = 'spotit-shell-v6'
 const APP_SHELL = [
   '/', '/map', '/manifest.webmanifest',
-  '/logo.svg', '/logo-reversed.svg', '/brand-wordmark.png',
-  '/logo-32.png', '/logo-64.png', '/logo-192.png', '/logo-512.png', '/logo-badge.png',
+  '/logo-mark.png', '/logo-wordmark.png', '/favicon-32.png', '/favicon-64.png',
+  '/icon-192.png', '/icon-512.png', '/badge-96.png',
 ]
 
 self.addEventListener('install', (event) => {
@@ -59,15 +59,15 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   const payload = event.data ? event.data.json() : {}
   const data = payload.data || payload.notification?.data || {}
-  const title = data.title || payload.notification?.title || '스팟잇'
+  const title = data.title || payload.notification?.title || '피노리'
   const body = data.body || payload.notification?.body || ''
   const href = data.href || payload.fcmOptions?.link || '/notifications'
 
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: '/logo-512.png',
-      badge: '/logo-badge.png',
+      icon: '/icon-512.png',
+      badge: '/badge-96.png',
       tag: data.notificationId ? `spotit-${data.notificationId}` : 'spotit-notification',
       data: { href },
     }),

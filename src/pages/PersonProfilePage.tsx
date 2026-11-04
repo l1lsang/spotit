@@ -113,7 +113,7 @@ export function PersonProfile({ userId }: { userId: string }) {
 
   const user = details?.user
   const followLabel = details?.followed ? '팔로잉' : details?.requested ? '요청 취소' : user?.isPrivate ? '팔로우 요청' : '팔로우'
-  const handle = user ? (user.username ? `@${user.username}` : user.nickname || '스팟잇 사용자') : (ownProfile ? '내 프로필' : '프로필')
+  const handle = user ? (user.username ? `@${user.username}` : user.nickname || '피노리 사용자') : (ownProfile ? '내 프로필' : '프로필')
 
   return (
     <PageContainer className="content-page person-profile-page profile-view-page">

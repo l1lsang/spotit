@@ -14,8 +14,7 @@ button, a, input, textarea, select, summary { -webkit-tap-highlight-color: trans
 .skip-link:focus { top: var(--space-sm); }
 .site-header { min-height: 80px; padding: var(--space-sm) clamp(20px, 4vw, 64px); gap: var(--space-lg); border-bottom: 0; background: var(--bg); backdrop-filter: none; }
 .brand-logo { height: 34px; gap: var(--space-2xs); }
-.brand-symbol { height: 32px; }
-.brand-wordmark { width: 79px; }
+.brand-wordmark { height: 32px; }
 .header-tagline { color: var(--muted); font-size: var(--text-xs); margin-right: auto; white-space: nowrap; }
 .header-nav { gap: var(--space-2xs); font-size: var(--text-sm); }
 .header-nav a { min-height: 44px; border-radius: 0; padding-inline: var(--space-sm); white-space: nowrap; }

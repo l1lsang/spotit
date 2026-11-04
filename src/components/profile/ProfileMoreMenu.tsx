@@ -11,7 +11,7 @@ export function ProfileMoreMenu({ user }: { user: DaymarkUser }) {
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLUListElement>(null)
   const menuId = useId()
-  const name = user.nickname || '스팟잇 사용자'
+  const name = user.nickname || '피노리 사용자'
   const items: { label: string; target: ReportTarget }[] = [
     { label: '사용자 신고', target: { kind: 'user', targetId: user.uid, label: name } },
     ...(user.photoURL ? [{ label: '프로필 사진 신고', target: { kind: 'photo', sourceKind: 'user', targetId: user.uid, photoUrl: user.photoURL, label: `${name} 프로필 사진` } as ReportTarget }] : []),

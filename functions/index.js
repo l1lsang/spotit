@@ -49,7 +49,7 @@ exports.sendPushForNotification = onDocumentCreated(
       return
     }
 
-    const title = notification.title || '스팟잇'
+    const title = notification.title || '피노리'
     const body = notification.message || '새 알림이 도착했습니다.'
     const href = notification.href || '/notifications'
     const invalidTokenRefs = []

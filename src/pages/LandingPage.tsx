@@ -11,7 +11,7 @@ export function LandingPage() {
   return (
     <div className="landing-page">
       <header className="landing-header">
-        <Link to="/" className="brand-lockup" aria-label="스팟잇 홈"><BrandLogo variant="reversed" /></Link>
+        <Link to="/" className="brand-lockup" aria-label="피노리 홈"><BrandLogo variant="reversed" /></Link>
         <span className="landing-tagline">오늘, 이곳.</span>
         <nav aria-label="시작 메뉴">
           <Link to={currentUser ? '/profile' : '/login'}>{currentUser ? '내 기록' : '로그인'}</Link>
@@ -30,14 +30,14 @@ export function LandingPage() {
           </div>
         </section>
         <LandingHero />
-        <section className="landing-closing" aria-label="스팟잇 소개">
+        <section className="landing-closing" aria-label="피노리 소개">
           <p>흘러가는 하루를,<br />다시 찾을 수 있는 장소로.</p>
           <div><p>지도에 핀을 남기고, 사진과 이야기를 더해보세요.<br />혼자 간직하거나 팔로우한 사람들과 나눌 수 있어요.</p>
             <Link to="/map" className="text-link">지도로 바로가기 <ArrowUpRight size={17} aria-hidden="true" /></Link>
           </div>
         </section>
       </main>
-      <footer className="landing-footer"><span>스팟잇</span><PolicyFooter showCredit={false} /></footer>
+      <footer className="landing-footer"><span>피노리</span><PolicyFooter showCredit={false} /></footer>
     </div>
   )
 }

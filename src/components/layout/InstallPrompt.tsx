@@ -62,9 +62,9 @@ export function InstallPrompt() {
     <button className="button-icon ghost install-close" type="button" onClick={dismiss} aria-label="설치 안내 닫기">
       <X size={17} aria-hidden="true" />
     </button>
-    <img src="/logo-512.png" alt="" aria-hidden="true" width="512" height="512" />
+    <img src="/icon-512.png" alt="" aria-hidden="true" width="512" height="512" />
     <div className="install-copy">
-      <strong id="install-prompt-title">다음 산책도, 스팟잇과 함께.</strong>
+      <strong id="install-prompt-title">다음 산책도, 피노리와 함께.</strong>
       <p>앱에서 오늘의 장소를 간편하게 남겨보세요.</p>
     </div>
     <div className="install-actions">

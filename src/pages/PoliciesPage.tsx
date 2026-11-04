@@ -45,7 +45,7 @@ export function PoliciesPage() {
 
   useEffect(() => {
     const previousTitle = window.document.title
-    window.document.title = `${title} | 스팟잇`
+    window.document.title = `${title} | 피노리`
     if (!location.hash) {
       window.scrollTo(0, 0)
       headingRef.current?.focus({ preventScroll: true })
@@ -63,7 +63,7 @@ export function PoliciesPage() {
       </Link>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">스팟잇 · 이용 안내</p>
+          <p className="eyebrow">피노리 · 이용 안내</p>
           <h1 ref={headingRef} tabIndex={-1}>{title}</h1>
         </div>
         {document && <button className="button button-secondary policy-print" type="button" onClick={() => window.print()}>

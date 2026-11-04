@@ -339,7 +339,7 @@ export function ProfileSettingsPage() {
           <div className="profile-avatar">{nickname.slice(0, 1) || 'D'}</div>
         )}
         <div className="profile-identity">
-          <p>{profile?.nickname || '스팟잇 사용자'}</p>
+          <p>{profile?.nickname || '피노리 사용자'}</p>
           {profile?.username && <p className="profile-username">@{profile.username}</p>}
           <div className="profile-stats">
             <button type="button" onClick={() => void handleOpenFollowList('followers')}>

@@ -10,7 +10,7 @@ export function UserSummaryLink({ user, returnTo = '/people', onOpen }: { user: 
       {user.photoURL ? <img className="profile-photo small" src={user.photoURL} alt="" loading="lazy" />
         : <span className="profile-avatar small" aria-hidden="true">{user.nickname.slice(0, 1) || 'S'}</span>}
       <span className="user-summary-identity">
-        <strong>{user.nickname || '스팟잇 사용자'}</strong>
+        <strong>{user.nickname || '피노리 사용자'}</strong>
         {user.username && <span>@{user.username}</span>}
       </span>
     </Link>

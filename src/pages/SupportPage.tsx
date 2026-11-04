@@ -84,7 +84,7 @@ export function SupportPage() {
               </div>
               <h3>{item.title}</h3>
               {item.details && <p className="preserve-text">{item.details}</p>}
-              {item.reply && <div className="support-reply"><strong>스팟잇 답변</strong><p className="preserve-text">{item.reply}</p></div>}
+              {item.reply && <div className="support-reply"><strong>피노리 답변</strong><p className="preserve-text">{item.reply}</p></div>}
             </article>
           ))}
         </section>

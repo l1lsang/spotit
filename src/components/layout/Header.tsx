@@ -12,7 +12,7 @@ export function Header() {
 
   return (
     <header className="site-header">
-      <Link className="brand-lockup" to="/map" aria-label="스팟잇 지도 홈">
+      <Link className="brand-lockup" to="/map" aria-label="피노리 지도 홈">
         <BrandLogo variant="reversed" />
       </Link>
 

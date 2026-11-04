@@ -20,13 +20,13 @@ export function ForegroundPushListener() {
         return
       }
 
-      const title = payload.data?.title || payload.notification?.title || '스팟잇'
+      const title = payload.data?.title || payload.notification?.title || '피노리'
       const body = payload.data?.body || payload.notification?.body || ''
       const href = payload.data?.href || '/notifications'
       const notification = new Notification(title, {
         body,
-        icon: '/logo-512.png',
-        badge: '/logo-badge.png',
+        icon: '/icon-512.png',
+        badge: '/badge-96.png',
         data: { href },
       })
 

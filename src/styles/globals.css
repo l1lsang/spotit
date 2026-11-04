@@ -169,22 +169,11 @@ img {
   flex-shrink: 0;
 }
 
-.brand-symbol {
+.brand-wordmark {
   width: auto;
   height: 42px;
   flex-shrink: 0;
   object-fit: contain;
-}
-
-.brand-wordmark {
-  width: 96px;
-  height: auto;
-  flex-shrink: 0;
-  object-fit: contain;
-}
-
-.brand-logo-main .brand-symbol {
-  border-radius: 8px;
 }
 
 .brand-lockup strong {

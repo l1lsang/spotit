@@ -44,7 +44,7 @@ export function ReportDialog({ target, onClose }: { target: ReportTarget; onClos
       <div className="modal-header">
         <div className="report-heading">
           <div className="moderation-heading-icon"><Flag size={22} aria-hidden="true" /></div>
-          <div><p className="eyebrow">안전한 스팟잇</p><h2 id={`${formId}-title`}>{target.kind === 'photo' ? '사진' : target.kind === 'pin' ? '핀' : target.kind === 'user' ? '유저' : '채팅'} 신고</h2></div>
+          <div><p className="eyebrow">안전한 피노리</p><h2 id={`${formId}-title`}>{target.kind === 'photo' ? '사진' : target.kind === 'pin' ? '핀' : target.kind === 'user' ? '유저' : '채팅'} 신고</h2></div>
         </div>
         <button type="button" className="button-icon" disabled={busy} onClick={onClose} aria-label="신고 창 닫기"><X size={20} aria-hidden="true" /></button>
       </div>

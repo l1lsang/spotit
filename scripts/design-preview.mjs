@@ -73,4 +73,4 @@ const plugin = {
 
 const server = await createServer({configFile:false,root,plugins:[plugin,react()],server:{host:'127.0.0.1',port:5241,strictPort:true,watch:{ignored:['**/.verification.local/**','**/*-debug.log']}}})
 await server.listen()
-console.log('Spotit Figma preview: http://127.0.0.1:5241/feed')
+console.log('PINORI Figma preview: http://127.0.0.1:5241/feed')

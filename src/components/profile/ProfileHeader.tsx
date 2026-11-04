@@ -11,7 +11,7 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ user, own, pinCount, onOpenFollowList, children }: ProfileHeaderProps) {
-  const name = user.nickname || '스팟잇 사용자'
+  const name = user.nickname || '피노리 사용자'
   const followers = user.followerCount || 0
   const following = user.followingCount || 0
   return <section className="profile-view-header" aria-label="프로필">

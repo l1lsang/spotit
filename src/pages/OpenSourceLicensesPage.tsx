@@ -79,7 +79,7 @@ export function OpenSourceLicensesPage() {
         <div>
           <p className="eyebrow">약관 및 정책</p>
           <h1>오픈소스 라이선스</h1>
-          <p>스팟잇을 만드는 데 함께한 오픈소스 프로젝트입니다.</p>
+          <p>피노리를 만드는 데 함께한 오픈소스 프로젝트입니다.</p>
         </div>
       </section>
       <p className="licenses-description">
