@@ -56,6 +56,16 @@ export async function loginWithGoogle(): Promise<User> {
   return credential.user
 }
 
+export async function loginWithApple(): Promise<User> {
+  const provider = new OAuthProvider('apple.com')
+  provider.addScope('email')
+  provider.addScope('name')
+  provider.setCustomParameters({ locale: 'ko_KR' })
+  const credential = await signInWithPopup(requireAuth(), provider)
+  await upsertUserProfile(credential.user)
+  return credential.user
+}
+
 export async function logout(): Promise<void> {
   await signOut(requireAuth())
 }

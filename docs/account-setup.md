@@ -3,7 +3,7 @@
 ## 가입 흐름
 
 - 이메일 가입: 사용자 이름·이메일·비밀번호 → 다음 → 사진·닉네임·소개글 → 가입 완료.
-- 구글/카카오 최초 로그인: 사용자 이름 → 사진·닉네임·소개글. 기존 계정은 바로 로그인합니다.
+- 구글/Apple/카카오 최초 로그인: 사용자 이름 → 사진·닉네임·소개글. 기존 계정은 바로 로그인합니다.
 - 사용자 이름: 영어·숫자·밑줄·점, 1~30자, 소문자로 저장합니다. 표시할 때 `@`를 붙입니다.
 - 닉네임: 한글 등 사용 가능, 1~24자. 소개글: 선택, 최대 150자. 사진: 선택, JPG/PNG/WebP/GIF, 최대 5MB.
 - `users/{uid}`에 `username`, `bio`, `onboardingComplete`를 저장합니다. 중복 방지를 위해 `usernames/@{username}`에 `{ uid }`를 함께 저장합니다.
@@ -25,6 +25,22 @@ Google 로그인은 Firebase `GoogleAuthProvider`와 팝업을 사용합니다. 
 버튼 아래에는 Chrome, Safari, Edge, Firefox 등 지원되는 일반 브라우저 안내와 앱 내 브라우저의 로그인 제한 안내를 표시합니다. 브라우저 이름으로 버튼을 막지는 않습니다. 팝업 차단·취소·기존 로그인 방법 충돌·미등록 도메인 오류를 별도로 처리합니다.
 
 공식 문서: [Firebase Google 로그인](https://firebase.google.com/docs/auth/web/google-signin), [Google 지원 브라우저](https://support.google.com/accounts/answer/7675428?hl=ko).
+
+### Apple 로그인
+
+Apple 로그인은 Firebase `OAuthProvider('apple.com')`와 팝업을 사용합니다. Apple Developer Program 유료 멤버십이 필요합니다.
+
+1. Apple Developer → Certificates, Identifiers & Profiles → Identifiers에서 App ID를 만들고 **Sign In with Apple**을 활성화합니다.
+2. 같은 화면에서 **Services ID**를 만들고 Sign In with Apple을 활성화한 뒤 Configure를 엽니다.
+   - Domains and Subdomains: Firebase `authDomain` 값(예: `naran-235a6.firebaseapp.com` 또는 사용자 지정 인증 도메인)
+   - Return URLs: `https://{authDomain}/__/auth/handler`
+3. Keys에서 Sign In with Apple을 사용하는 키를 만들고 `.p8` 파일을 내려받습니다. 키 파일은 저장소에 추가하지 않습니다.
+4. Firebase Console → Authentication → Sign-in method → Apple을 활성화하고 Services ID, Apple Team ID, Key ID, 개인 키(`.p8` 내용)를 입력합니다.
+5. 사용자가 "나의 이메일 가리기"를 선택하면 `@privaterelay.appleid.com` 주소가 전달됩니다. 이 주소로 메일을 보내려면 Apple Developer → Services → Sign in with Apple for Email Communication에 발신 도메인을 등록합니다.
+
+Apple은 웹 팝업에서 이름을 Firebase 사용자 표시 이름으로 넘기지 않는 경우가 많고 프로필 사진은 제공하지 않습니다. 기본 닉네임으로 프로필을 만든 뒤 가입 설정에서 사용자가 닉네임과 사진을 입력합니다.
+
+공식 문서: [Firebase Apple 로그인](https://firebase.google.com/docs/auth/web/apple), [Sign in with Apple 웹 설정](https://developer.apple.com/help/account/configure-app-capabilities/configure-sign-in-with-apple-for-the-web).
 
 ### Firestore 규칙
 

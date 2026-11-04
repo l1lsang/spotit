@@ -746,6 +746,20 @@ img {
   flex-shrink: 0;
 }
 
+.apple-button {
+  margin-bottom: 12px;
+  color: #fff;
+  background: #000;
+}
+
+.apple-button:hover {
+  background: #1d1d1f;
+}
+
+.apple-button svg {
+  flex-shrink: 0;
+}
+
 .google-signin-notice {
   display: grid;
   gap: 5px;
