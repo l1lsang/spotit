@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { formatTimestamp } from '../../lib/date'
 import { COMMENT_MAX_LENGTH, type PostComment, type PostReply } from '../../types/comment'
 import { getMentionUsernames, MAX_COMMENT_MENTIONS } from '../../lib/commentMentions'
+import { ReportButton } from '../moderation/ReportButton'
 import { CommentContent } from './CommentContent'
 import { MentionTextarea } from './MentionTextarea'
 
@@ -34,6 +35,7 @@ export function CommentList({ comments, currentUserUid, postOwnerUid, postId, an
   const pending = useRef(false)
   const visibleComments = comments.filter(comment => !comment.deleted || comment.replies.length > 0)
   const rowId = (kind: string, id: string) => `${anchorTargets ? '' : `${postId}-`}${kind}-${id}`
+  const reportable = (author: PostComment | PostReply) => !!currentUserUid && author.uid !== currentUserUid
 
   async function run(action: () => Promise<void>) {
     if (pending.current) return
@@ -55,6 +57,8 @@ export function CommentList({ comments, currentUserUid, postOwnerUid, postId, an
             <header className="comment-heading">
               {comment.deleted ? <span className="comment-deleted">삭제된 댓글</span> : <CommentAuthor author={comment} />}
               <time>{formatTimestamp(comment.createdAt)}</time>
+              {!comment.deleted && reportable(comment) && <ReportButton compact
+                target={{ kind: 'comment', targetId: postId, messageId: comment.id, label: `${comment.authorNickname}님의 댓글` }} />}
               {canDelete && <button className="text-action comment-delete" type="button" disabled={busy}
                 onClick={() => void run(() => onDelete(comment.id))} aria-label={`${comment.authorNickname}님의 댓글 삭제`}>
                 <Trash2 size={15} aria-hidden="true" />
@@ -75,6 +79,8 @@ export function CommentList({ comments, currentUserUid, postOwnerUid, postId, an
                   <div className="comment-main">
                     <header className="comment-heading">
                       <CommentAuthor author={reply} /><time>{formatTimestamp(reply.createdAt)}</time>
+                      {reportable(reply) && <ReportButton compact
+                        target={{ kind: 'comment', targetId: postId, messageId: comment.id, replyId: reply.id, label: `${reply.authorNickname}님의 답글` }} />}
                       {canDeleteReply && <button className="text-action comment-delete" type="button" disabled={busy}
                         onClick={() => void run(() => onDeleteReply(comment, reply))} aria-label={`${reply.authorNickname}님의 답글 삭제`}>
                         <Trash2 size={15} aria-hidden="true" />

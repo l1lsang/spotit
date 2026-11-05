@@ -1,9 +1,9 @@
-import { ArrowLeft, Check, Flag, LayoutDashboard, LockKeyhole, LogOut, MapPin, MessageCircle, RefreshCw, Search, ShieldCheck, Users, X } from 'lucide-react'
+import { ArrowLeft, Check, EyeOff, Flag, LayoutDashboard, LockKeyhole, LogOut, MapPin, MessageCircle, RefreshCw, Search, ShieldCheck, UserCog, Users, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../styles/admin.css'
-import { getAdminStats, listAdminCases, loginAdmin, logoutAdmin, manageAdminUser, reviewCase, searchAdminUsers, type AdminStats } from '../services/moderationService'
-import { CASE_LABELS, REPORT_REASONS, STATUS_LABELS, type AdminUser, type CaseStatus, type ModerationCase } from '../types/moderation'
+import { getAdminCaseHistory, getAdminStats, getAdminUserHistory, listAdminCases, loginAdmin, logoutAdmin, manageAdminUser, reviewCase, searchAdminUsers, type AdminStats } from '../services/moderationService'
+import { CASE_LABELS, REPORT_REASONS, STATUS_LABELS, type AdminUser, type CaseHistoryEntry, type CaseStatus, type ModerationCase, type UserHistory } from '../types/moderation'
 
 const storageKey = 'spotit.admin.session.v1'
 type AdminSession = { token: string; expiresAt: number }
@@ -15,7 +15,16 @@ function storedSession(): AdminSession | null {
 }
 function errorText(error: unknown) { return error instanceof Error ? error.message : '요청을 처리하지 못했습니다.' }
 function date(value: number) { return value ? new Date(value).toLocaleString('ko-KR') : '기록 없음' }
-function reasonLabel(value: string) { return REPORT_REASONS.find(reason => reason.id === value)?.label || (value === 'auto' ? '자동 필터 감지' : '문의') }
+function reasonLabel(value: string) { return REPORT_REASONS.find(reason => reason.id === value)?.label || (value === 'auto' ? '자동 필터 감지' : value === 'blocked' ? '사용자 차단' : '문의') }
+const ACTION_LABELS: Record<string, string> = { save: '처리 내용 저장', hide: '콘텐츠 숨김', restore: '콘텐츠 복구', suspend_user: '이용 정지', restore_user: '정지 해제' }
+function actionLabel(value: string) { return ACTION_LABELS[value] || value }
+// Pins (directly, via a pin photo, or auto-flagged) and comments can be hidden and restored from a case.
+function hideTarget(item: Pick<ModerationCase, 'kind' | 'sourceKind' | 'evidence'>) {
+  if (item.kind === 'comment') return item.evidence?.replyId ? '답글' : '댓글'
+  if (['pin', 'auto'].includes(item.kind) || (item.kind === 'photo' && item.sourceKind === 'pin')) return '핀'
+  return ''
+}
+const isHidden = (item: Pick<ModerationCase, 'kind' | 'sourceKind' | 'evidence' | 'lastAction'>) => !!hideTarget(item) && item.lastAction === 'hide'
 
 export function AdminPage() {
   const [session, setSession] = useState<AdminSession | null>(storedSession)
@@ -106,7 +115,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => Pr
     {tab === 'overview' && <>
       <div className="admin-metrics">{metrics.length ? metrics.map(metric => <article key={metric.label}><div><span>{metric.label}</span><metric.icon size={20} /></div><strong>{metric.value.toLocaleString()}</strong><small>{metric.detail}</small></article>) : <p role="status">통계를 불러오는 중…</p>}</div>
       <div className="admin-overview-grid"><section className="admin-panel"><div className="admin-row"><h2>확인이 필요한 항목</h2><span className="case-badge open">운영 현황</span></div><button className="admin-overview-link" onClick={() => setTab('cases')}><div><strong>신고·문의 검토</strong><p>접수 및 검토 중인 항목을 처리해 주세요.</p></div><b>{stats?.openCases ?? '—'}건 →</b></button><button className="admin-overview-link" onClick={() => setTab('users')}><div><strong>유저 이용 상태</strong><p>현재 이용 정지된 계정</p></div><b>{stats?.suspendedUsers ?? '—'}명 →</b></button></section>
-      <section className="admin-panel"><h2>핀 검토 기준</h2><ul className="admin-guidelines"><li>불법 거래·촬영물 의심 문구와 링크 도배는 자동 검토 목록으로 들어옵니다.</li><li>신고 증거를 확인한 뒤 핀을 숨기거나 다시 복구할 수 있습니다.</li><li>신고 횟수만으로 핀을 삭제하지 않습니다.</li><li>사진 자동 판별은 아직 연결되지 않았습니다. 첨부 사진을 직접 확인해 주세요.</li></ul></section></div>
+      <section className="admin-panel"><h2>핀 검토 기준</h2><ul className="admin-guidelines"><li>불법 거래·촬영물 의심 문구와 링크 도배는 자동 검토 목록으로 들어옵니다.</li><li>서로 다른 이용자 3명 이상이 신고한 핀은 자동으로 숨겨지고 자동 검토 목록에 올라옵니다. 검토 후 복구할 수 있습니다.</li><li>이용자가 다른 계정을 차단하면 유저 신고(사유: 사용자 차단)로 함께 접수됩니다.</li><li>신고 증거를 확인한 뒤 핀·댓글을 숨기거나 다시 복구할 수 있습니다. 숨긴 콘텐츠는 원본이 보관됩니다.</li><li>신고 횟수만으로 핀을 삭제하지 않습니다.</li><li>사진 자동 판별은 아직 연결되지 않았습니다. 첨부 사진을 직접 확인해 주세요.</li></ul></section></div>
       <p className="admin-footnote">최근 7일은 현재 시각 기준입니다. 핀 통계는 현재 게시된 핀만 집계하며, 숨겨진 핀은 제외됩니다.</p>
     </>}
     {tab === 'cases' && <CasesPanel token={token} onChanged={refresh} />}
@@ -120,6 +129,7 @@ function CasesPanel({ token, onChanged }: { token: string; onChanged: () => Prom
   const [cases, setCases] = useState<ModerationCase[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [selected, setSelected] = useState<ModerationCase | null>(null)
+  const [managed, setManaged] = useState<AdminUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [version, setVersion] = useState(0)
@@ -137,29 +147,51 @@ function CasesPanel({ token, onChanged }: { token: string; onChanged: () => Prom
   }
   return <><section className="admin-panel"><div className="admin-filters"><label>접수 유형<select value={kind} onChange={e => setKind(e.target.value)} disabled={loading}><option value="all">전체 유형</option>{Object.entries(CASE_LABELS).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label><label>처리 상태<select value={status} onChange={e => setStatus(e.target.value)} disabled={loading}><option value="all">전체 상태</option>{Object.entries(STATUS_LABELS).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label><button className="button button-secondary" disabled={loading} onClick={() => setVersion(v => v + 1)}><RefreshCw size={16} />내역 새로고침</button></div>
     {error && <p className="form-error" role="alert">{error}</p>}
-    <div className="admin-case-list">{cases.map(item => <button key={item.id} className="admin-case-row" onClick={() => setSelected(item)}><span className={`admin-type-icon ${item.kind}`}><Flag size={18} /></span><div><small>{CASE_LABELS[item.kind]} · {reasonLabel(item.reason)}</small><strong>{item.title}</strong><p>{item.details || '상세 내용 없음'}</p><small>{item.reporterName} · {date(item.createdAt)}</small></div><span className={`case-badge ${item.status}`}>{STATUS_LABELS[item.status]}</span></button>)}</div>
+    <div className="admin-case-list">{cases.map(item => <button key={item.id} className="admin-case-row" onClick={() => setSelected(item)}><span className={`admin-type-icon ${item.kind}`}><Flag size={18} /></span><div><small>{CASE_LABELS[item.kind]} · {reasonLabel(item.reason)}</small><strong>{item.title}</strong><p>{item.details || '상세 내용 없음'}</p><small>{item.reporterName} · {date(item.createdAt)}</small></div><div className="admin-case-badges">{isHidden(item) && <span className="case-badge hidden"><EyeOff size={12} aria-hidden="true" />{hideTarget(item)} 숨김</span>}<span className={`case-badge ${item.status}`}>{STATUS_LABELS[item.status]}</span></div></button>)}</div>
     {loading && <p className="empty-text" role="status">접수 내역을 불러오는 중…</p>}{!loading && !cases.length && !error && <div className="admin-empty"><Check size={30} /><h3>접수 내역이 없습니다</h3><p>선택한 조건에 해당하는 신고나 문의가 없어요.</p></div>}{cursor && <button className="button button-secondary" disabled={loading} onClick={() => void more()}>더 보기</button>}
-  </section>{selected && <CaseDetail key={selected.id} item={selected} token={token} onClose={() => setSelected(null)} onSaved={() => { setSelected(null); setVersion(v => v + 1); void onChanged() }} />}</>
+  </section>{selected && <CaseDetail key={selected.id} item={selected} token={token} onClose={() => setSelected(null)} onSaved={() => { setSelected(null); setVersion(v => v + 1); void onChanged() }} onOpenUser={user => { setSelected(null); setManaged(user) }} />}
+  {managed && <UserDetail key={managed.uid} user={managed} token={token} onClose={() => setManaged(null)} onSaved={() => { setManaged(null); void onChanged() }} />}</>
 }
 
-function CaseDetail({ item, token, onClose, onSaved }: { item: ModerationCase; token: string; onClose: () => void; onSaved: () => void }) {
+function CaseDetail({ item, token, onClose, onSaved, onOpenUser }: { item: ModerationCase; token: string; onClose: () => void; onSaved: () => void; onOpenUser: (user: AdminUser) => void }) {
   const [status, setStatus] = useState(item.status)
   const [note, setNote] = useState(item.note || '')
   const [reply, setReply] = useState(item.reply || '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [history, setHistory] = useState<CaseHistoryEntry[] | null>(null)
+  const [historyError, setHistoryError] = useState('')
   const evidence = item.kind !== 'inquiry' ? item.evidence : undefined
-  const canHidePin = ['pin', 'auto'].includes(item.kind) || (item.kind === 'photo' && item.sourceKind === 'pin')
+  const target = hideTarget(item)
+  const managedUid = item.targetUid && item.targetUid !== 'system' ? item.targetUid : ''
+  useEffect(() => {
+    let cancelled = false
+    void getAdminCaseHistory(token, item.id).then(result => { if (!cancelled) setHistory(result.entries) })
+      .catch(e => { if (!cancelled) { setHistory([]); setHistoryError(errorText(e)) } })
+    return () => { cancelled = true }
+  }, [token, item.id])
   async function save(action: 'save' | 'hide' | 'restore') {
     setBusy(true); setError('')
     try { await reviewCase(token, item.id, action === 'hide' ? 'resolved' : status, note, reply, action); onSaved() }
     catch (e) { setError(errorText(e)); setBusy(false) }
   }
-  return <AdminDialog title="접수 상세" busy={busy} onClose={onClose}><div className="admin-row"><span className="eyebrow">{CASE_LABELS[item.kind]}</span><span className={`case-badge ${item.status}`}>{STATUS_LABELS[item.status]}</span></div><h3>{item.title}</h3><p>{reasonLabel(item.reason)} · {date(item.createdAt)}</p><p className="preserve-text">{item.details || '추가 설명 없음'}</p><small>신고자: {item.reporterName} · {item.reporterUid}</small>
-    {evidence && <section className="admin-evidence"><h3>접수 당시 콘텐츠</h3>{evidence.authorNickname && <p>작성자: {evidence.authorNickname}</p>}{evidence.nickname && <p>{evidence.nickname} @{evidence.username}</p>}{evidence.placeName && <p>{evidence.placeName} · {evidence.address}</p>}<p className="preserve-text">{evidence.content || evidence.bio}</p><div className="admin-evidence-photos">{evidence.photoUrls?.map(url => <a href={safeImage(url)} key={url} target="_blank" rel="noreferrer"><img src={safeImage(url)} alt="신고된 콘텐츠 사진" loading="lazy" /></a>)}</div>{evidence.messages?.map(message => <article className="admin-evidence-message" key={message.id}><strong>{message.authorNickname}</strong><p className="preserve-text">{message.content}</p>{message.photoUrl && <img src={safeImage(message.photoUrl)} alt="신고된 채팅 사진" loading="lazy" />}</article>)}</section>}
-    {item.targetUid && <p className="admin-footnote">대상 UID: {item.targetUid}</p>}
-    {item.kind === 'photo' && <p className="admin-footnote">{item.sourceKind === 'pin' ? '선택한 사진이 포함된 핀 전체를 숨기거나 복구할 수 있습니다.' : '선택한 사진을 검토하고 답변을 남길 수 있습니다. 계정 조치가 필요하면 유저 관리에서 대상 UID를 확인해 주세요.'}</p>}
-    <form className="form" onSubmit={e => { e.preventDefault(); void save('save') }}><label>처리 상태<select value={status} onChange={e => setStatus(e.target.value as CaseStatus)} disabled={busy}>{Object.entries(STATUS_LABELS).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label><label>관리자 메모 (내부용)<textarea value={note} onChange={e => setNote(e.target.value)} rows={3} maxLength={2000} disabled={busy} /></label>{item.kind !== 'auto' && <label>사용자에게 보낼 답변<textarea value={reply} onChange={e => setReply(e.target.value)} rows={3} maxLength={2000} disabled={busy} placeholder="사용자의 문의·신고 내역에 표시됩니다." /></label>}{error && <p className="form-error" role="alert">{error}</p>}<div className="admin-actions"><button className="button button-primary" disabled={busy}>{busy ? '처리 중…' : '처리 결과 저장'}</button>{canHidePin && <><button type="button" className="button button-danger" disabled={busy} onClick={() => void save('hide')}>{item.kind === 'photo' ? '연결된 핀 숨김·처리 완료' : '핀 숨김·처리 완료'}</button><button type="button" className="button button-secondary" disabled={busy} onClick={() => void save('restore')}>숨긴 핀 복구</button></>}</div></form>
+  async function openUser() {
+    setBusy(true); setError('')
+    try {
+      const user = (await searchAdminUsers(token, 'uid', managedUid)).users.find(candidate => candidate.uid === managedUid)
+      if (user) { onOpenUser(user); return }
+      setError('대상 유저를 찾을 수 없습니다. 탈퇴했거나 프로필이 삭제되었을 수 있어요.')
+    } catch (e) { setError(errorText(e)) }
+    setBusy(false)
+  }
+  return <AdminDialog title="접수 상세" busy={busy} onClose={onClose}><div className="admin-row"><span className="eyebrow">{CASE_LABELS[item.kind]}</span><div className="admin-case-badges">{isHidden(item) && <span className="case-badge hidden"><EyeOff size={12} aria-hidden="true" />{target} 숨김</span>}<span className={`case-badge ${item.status}`}>{STATUS_LABELS[item.status]}</span></div></div><h3>{item.title}</h3><p>{reasonLabel(item.reason)} · {date(item.createdAt)}</p><p className="preserve-text">{item.details || '추가 설명 없음'}</p><small>신고자: {item.reporterName} · {item.reporterUid}</small>
+    {evidence && <section className="admin-evidence"><h3>접수 당시 콘텐츠</h3>{item.kind === 'comment' && evidence.title && <p>핀: {evidence.title}</p>}{evidence.authorNickname && <p>작성자: {evidence.authorNickname}</p>}{evidence.nickname && <p>{evidence.nickname} @{evidence.username}</p>}{evidence.placeName && <p>{evidence.placeName}{evidence.address ? ` · ${evidence.address}` : ''}</p>}<p className="preserve-text">{evidence.content || evidence.bio}</p><div className="admin-evidence-photos">{evidence.photoUrls?.map(url => <a href={safeImage(url)} key={url} target="_blank" rel="noreferrer"><img src={safeImage(url)} alt="신고된 콘텐츠 사진" loading="lazy" /></a>)}</div>{evidence.messages?.map(message => <article className="admin-evidence-message" key={message.id}><strong>{message.authorNickname}</strong><p className="preserve-text">{message.content}</p>{message.photoUrl && <img src={safeImage(message.photoUrl)} alt="신고된 채팅 사진" loading="lazy" />}</article>)}</section>}
+    {item.targetUid && <div className="admin-target-row"><p className="admin-footnote">대상 UID: {item.targetUid}</p>{managedUid && <button type="button" className="button button-secondary" disabled={busy} onClick={() => void openUser()}><UserCog size={16} aria-hidden="true" />대상 유저 관리</button>}</div>}
+    {item.kind === 'photo' && <p className="admin-footnote">{item.sourceKind === 'pin' ? '선택한 사진이 포함된 핀 전체를 숨기거나 복구할 수 있습니다.' : '선택한 사진을 검토하고 답변을 남길 수 있습니다. 계정 조치가 필요하면 대상 유저 관리를 이용해 주세요.'}</p>}
+    {item.kind === 'comment' && <p className="admin-footnote">{evidence?.replyId ? '답글을 숨기면 목록에서 사라지고, 원문은 복구할 수 있도록 보관됩니다.' : '댓글을 숨기면 "삭제된 댓글"로 표시되고 달린 답글은 유지됩니다. 원문은 복구할 수 있도록 보관됩니다.'}</p>}
+    {isHidden(item) && <div className="report-notice"><EyeOff size={18} aria-hidden="true" /><p>현재 {target}이 숨겨진 상태입니다. 검토 결과 문제가 없다면 &lsquo;숨긴 {target} 복구&rsquo;로 되돌릴 수 있습니다.</p></div>}
+    <form className="form" onSubmit={e => { e.preventDefault(); void save('save') }}><label>처리 상태<select value={status} onChange={e => setStatus(e.target.value as CaseStatus)} disabled={busy}>{Object.entries(STATUS_LABELS).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label><label>관리자 메모 (내부용)<textarea value={note} onChange={e => setNote(e.target.value)} rows={3} maxLength={2000} disabled={busy} /></label>{item.kind !== 'auto' && <label>사용자에게 보낼 답변<textarea value={reply} onChange={e => setReply(e.target.value)} rows={3} maxLength={2000} disabled={busy} placeholder="사용자의 문의·신고 내역에 표시됩니다." /></label>}{error && <p className="form-error" role="alert">{error}</p>}<div className="admin-actions"><button className="button button-primary" disabled={busy}>{busy ? '처리 중…' : '처리 결과 저장'}</button>{target && <><button type="button" className="button button-danger" disabled={busy} onClick={() => void save('hide')}>{item.kind === 'photo' ? '연결된 핀 숨김·처리 완료' : `${target} 숨김·처리 완료`}</button><button type="button" className="button button-secondary" disabled={busy} onClick={() => void save('restore')}>숨긴 {target} 복구</button></>}</div></form>
+    <section className="admin-history" aria-labelledby={`history-${item.id}`}><h3 id={`history-${item.id}`}>처리 이력</h3>{history === null ? <p className="admin-footnote" role="status">처리 이력을 불러오는 중…</p> : historyError ? <p className="admin-footnote" role="alert">처리 이력을 불러오지 못했습니다. {historyError}</p> : !history.length ? <p className="admin-footnote">아직 처리 이력이 없습니다.</p> : <ol>{history.map(entry => <li key={entry.id}><div className="admin-row"><strong>{actionLabel(entry.action)}</strong><span className={`case-badge ${entry.status}`}>{STATUS_LABELS[entry.status]}</span></div><small>{date(entry.createdAt)}</small>{entry.note && <p className="preserve-text">메모: {entry.note}</p>}{entry.reply && <p className="preserve-text">답변: {entry.reply}</p>}</li>)}</ol>}</section>
   </AdminDialog>
 }
 
@@ -186,7 +218,7 @@ function UsersPanel({ token, onChanged }: { token: string; onChanged: () => Prom
     try { const result = await searchAdminUsers(token, query.field, query.search, cursor); setUsers(previous => [...previous, ...result.users]); setCursor(result.nextCursor) }
     catch (e) { setError(errorText(e)) } finally { setLoading(false) }
   }
-  return <><section className="admin-panel"><form className="admin-user-search" onSubmit={e => { e.preventDefault(); setQuery({ field, search: search.trim(), version: query.version + 1 }) }}><label><span>검색 항목</span><select value={field} onChange={e => setField(e.target.value)} disabled={loading}><option value="nickname">닉네임</option><option value="username">사용자 이름</option><option value="uid">UID</option></select></label><label className="admin-search-input"><span>{field === 'uid' ? '정확한 값 입력' : '시작하는 글자로 검색'}</span><input value={search} onChange={e => setSearch(e.target.value)} maxLength={200} placeholder="비워 두면 전체 유저를 보여 드려요" disabled={loading} /></label><button className="button button-primary" disabled={loading}><Search size={17} />검색</button></form>
+  return <><section className="admin-panel"><form className="admin-user-search" onSubmit={e => { e.preventDefault(); setQuery({ field, search: search.trim(), version: query.version + 1 }) }}><label><span>검색 항목</span><select value={field} onChange={e => setField(e.target.value)} disabled={loading}><option value="nickname">닉네임</option><option value="username">사용자 이름</option><option value="email">이메일</option><option value="uid">UID</option></select></label><label className="admin-search-input"><span>{field === 'uid' || field === 'email' ? '정확한 값 입력' : '시작하는 글자로 검색'}</span><input type={field === 'email' ? 'email' : 'text'} value={search} onChange={e => setSearch(e.target.value)} maxLength={200} placeholder={field === 'email' ? '가입한 이메일 주소 전체를 입력하세요' : '비워 두면 전체 유저를 보여 드려요'} disabled={loading} /></label><button className="button button-primary" disabled={loading}><Search size={17} />검색</button></form>
     {error && <p className="form-error" role="alert">{error}</p>}
     <div className="admin-table-scroll"><table className="admin-user-table"><thead><tr><th>유저</th><th>가입일</th><th>상태</th><th>관리</th></tr></thead><tbody>{users.map(user => <tr key={user.uid}><td><div className="admin-user-identity">{user.photoURL ? <img src={safeImage(user.photoURL)} alt="" /> : <span>{user.nickname.slice(0, 1) || 'S'}</span>}<div><strong>{user.nickname || '이름 없음'}</strong><small>@{user.username || '미설정'}</small></div></div></td><td>{user.createdAt ? new Date(user.createdAt).toLocaleDateString('ko-KR') : '기록 없음'}</td><td><span className={`case-badge ${user.suspended ? 'dismissed' : 'resolved'}`}>{user.suspended ? '이용 정지' : '정상'}</span></td><td><button className="button button-secondary" onClick={() => setSelected(user)} aria-label={`${user.nickname} 관리`}>관리</button></td></tr>)}</tbody></table></div>
     {loading && <p className="empty-text" role="status">유저를 불러오는 중…</p>}{!loading && !users.length && !error && <p className="empty-text">검색된 유저가 없습니다.</p>}{cursor && <button className="button button-secondary" disabled={loading} onClick={() => void more()}>더 보기</button>}
@@ -197,12 +229,29 @@ function UserDetail({ user, token, onClose, onSaved }: { user: AdminUser; token:
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [history, setHistory] = useState<UserHistory | null>(null)
+  const [historyError, setHistoryError] = useState('')
+  useEffect(() => {
+    let cancelled = false
+    void getAdminUserHistory(token, user.uid).then(result => { if (!cancelled) setHistory(result) })
+      .catch(e => { if (!cancelled) setHistoryError(errorText(e)) })
+    return () => { cancelled = true }
+  }, [token, user.uid])
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError('')
     try { await manageAdminUser(token, user.uid, !user.suspended, reason); onSaved() }
     catch (e) { setError(errorText(e)); setBusy(false) }
   }
-  return <AdminDialog title="유저 상세·관리" busy={busy} onClose={onClose}><h3>{user.nickname} <small>@{user.username}</small></h3><dl className="admin-user-details"><dt>UID</dt><dd>{user.uid}</dd><dt>가입일</dt><dd>{date(user.createdAt)}</dd><dt>상태</dt><dd>{user.suspended ? '이용 정지' : '정상'}</dd><dt>소개</dt><dd className="preserve-text">{user.bio || '없음'}</dd>{user.suspensionReason && <><dt>최근 처리 사유</dt><dd>{user.suspensionReason}</dd></>}</dl><form className="form" onSubmit={submit}><label>{user.suspended ? '정지 해제' : '이용 정지'} 사유<textarea rows={3} required maxLength={500} value={reason} onChange={e => setReason(e.target.value)} disabled={busy} placeholder="처리 근거를 남겨 주세요." /></label><p className="report-notice">{user.suspended ? '해제하면 다시 로그인해 서비스를 이용할 수 있습니다.' : '정지하면 로그인이 차단되고 기존 로그인 세션에서도 핀·채팅을 이용할 수 없습니다.'}</p>{error && <p className="form-error" role="alert">{error}</p>}<button className={`button ${user.suspended ? 'button-primary' : 'button-danger'}`} disabled={busy || !reason.trim()}>{busy ? '처리 중…' : user.suspended ? '이용 정지 해제' : '이용 정지 적용'}</button></form></AdminDialog>
+  return <AdminDialog title="유저 상세·관리" busy={busy} onClose={onClose}><h3>{user.nickname} <small>@{user.username}</small></h3><dl className="admin-user-details"><dt>UID</dt><dd>{user.uid}</dd>{user.email && <><dt>이메일</dt><dd>{user.email}</dd></>}<dt>가입일</dt><dd>{date(user.createdAt)}</dd><dt>상태</dt><dd>{user.suspended ? '이용 정지' : '정상'}</dd><dt>소개</dt><dd className="preserve-text">{user.bio || '없음'}</dd>{user.suspensionReason && <><dt>최근 처리 사유</dt><dd>{user.suspensionReason}</dd></>}</dl>
+    <section className="admin-history" aria-labelledby={`user-history-${user.uid}`}><h3 id={`user-history-${user.uid}`}>신고·조치 이력</h3>
+      {historyError ? <p className="admin-footnote" role="alert">이력을 불러오지 못했습니다. {historyError}</p> : !history ? <p className="admin-footnote" role="status">이력을 불러오는 중…</p> : <>
+        <dl className="admin-history-stats"><div><dt>받은 신고</dt><dd>{history.total.toLocaleString('ko-KR')}건</dd></div><div><dt>미처리</dt><dd>{history.open.toLocaleString('ko-KR')}건</dd></div><div><dt>직접 접수</dt><dd>{history.filed.toLocaleString('ko-KR')}건</dd></div></dl>
+        {history.cases.length ? <ol>{history.cases.map(entry => <li key={entry.id}><div className="admin-row"><strong>{entry.title || CASE_LABELS[entry.kind]}</strong><div className="admin-case-badges">{isHidden(entry) && <span className="case-badge hidden"><EyeOff size={12} aria-hidden="true" />숨김</span>}<span className={`case-badge ${entry.status}`}>{STATUS_LABELS[entry.status]}</span></div></div><small>{CASE_LABELS[entry.kind]} · {reasonLabel(entry.reason)} · {entry.reporterName} · {date(entry.createdAt)}</small></li>)}</ol> : <p className="admin-footnote">이 계정에 접수된 신고가 없습니다.</p>}
+        {history.total > history.cases.length && <p className="admin-footnote">최근 {history.cases.length}건만 표시합니다. 전체 내역은 신고·문의 관리에서 확인해 주세요.</p>}
+        {history.actions.length > 0 && <><h4>관리자 조치</h4><ol>{history.actions.map(entry => <li key={entry.id}><div className="admin-row"><strong>{actionLabel(entry.action)}</strong><small>{date(entry.createdAt)}</small></div>{entry.reason && <p className="preserve-text">{entry.reason}</p>}</li>)}</ol></>}
+      </>}
+    </section>
+    <form className="form" onSubmit={submit}><label>{user.suspended ? '정지 해제' : '이용 정지'} 사유<textarea rows={3} required maxLength={500} value={reason} onChange={e => setReason(e.target.value)} disabled={busy} placeholder="처리 근거를 남겨 주세요." /></label><p className="report-notice">{user.suspended ? '해제하면 다시 로그인해 서비스를 이용할 수 있습니다.' : '정지하면 로그인이 차단되고 기존 로그인 세션에서도 핀·채팅을 이용할 수 없습니다.'}</p>{error && <p className="form-error" role="alert">{error}</p>}<button className={`button ${user.suspended ? 'button-primary' : 'button-danger'}`} disabled={busy || !reason.trim()}>{busy ? '처리 중…' : user.suspended ? '이용 정지 해제' : '이용 정지 적용'}</button></form></AdminDialog>
 }
 
 function AdminDialog({ title, busy, onClose, children }: { title: string; busy: boolean; onClose: () => void; children: React.ReactNode }) {

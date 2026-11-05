@@ -51,7 +51,7 @@ test('moderation and admin: real callable functions, Auth, Firestore and product
   let inquiryCase
   await t.test('password, forged session, expiry and every admin endpoint enforce server authorization', async () => {
     await assert.rejects(call('adminLogin', { password: 'wrong-password' }), { status: 'PERMISSION_DENIED' })
-    for (const name of ['adminStats', 'adminListCases', 'adminReviewCase', 'adminSearchUsers', 'adminManageUser', 'adminLogout']) {
+    for (const name of ['adminStats', 'adminListCases', 'adminReviewCase', 'adminSearchUsers', 'adminManageUser', 'adminUserHistory', 'adminCaseHistory', 'adminLogout']) {
       await assert.rejects(call(name, { sessionToken: 'f'.repeat(64) }), { status: 'UNAUTHENTICATED' })
     }
     const session = await call('adminLogin', { password: 'quokka' })
@@ -135,6 +135,49 @@ test('moderation and admin: real callable functions, Auth, Firestore and product
     assert.equal((await backend.auth().getUser(owner.uid)).disabled, false)
     assert.equal((await getDoc(doc(owner.db, 'posts', postId))).exists(), true)
     assert.ok((await db.collection('moderationAudit').where('targetUid', '==', owner.uid).get()).size >= 2)
+  })
+  await t.test('comment and reply reports can be hidden and restored; the original stays server-side', async () => {
+    const commentId = `comment-${unique}`
+    const commentPath = `posts/${postId}/comments/${commentId}`
+    const replyPath = `${commentPath}/replies/reply-${unique}`
+    const comment = { uid: owner.uid, authorNickname: '작성자', content: '신고할 댓글 원본', replyCount: 1, createdAt: now }
+    const reply = { uid: owner.uid, commentId, authorNickname: '작성자', content: '신고할 답글 원본', createdAt: now }
+    await db.doc(commentPath).set(comment)
+    await db.doc(replyPath).set(reply)
+    const report = { kind: 'comment', targetId: postId, messageId: commentId, reason: 'harassment', details: '' }
+    await assert.rejects(call('submitModerationCase', report, outsider.bearer), { status: 'PERMISSION_DENIED' })
+    await assert.rejects(call('submitModerationCase', report, owner.bearer), { status: 'INVALID_ARGUMENT' })
+    const commentCase = await call('submitModerationCase', report, reporter.bearer)
+    const replyCase = await call('submitModerationCase', { ...report, replyId: `reply-${unique}` }, reporter.bearer)
+    assert.equal((await db.doc(`moderationCases/${replyCase.id}`).get()).data().evidence.content, reply.content)
+
+    await call('adminReviewCase', { sessionToken, caseId: commentCase.id, status: 'resolved', action: 'hide', note: '욕설 확인', reply: '' })
+    const hidden = (await db.doc(commentPath).get()).data()
+    assert.equal(hidden.deleted, true)
+    assert.equal(hidden.content, '')
+    assert.equal((await db.doc(replyPath).get()).exists, true, 'replies under a hidden comment stay')
+    await call('adminReviewCase', { sessionToken, caseId: replyCase.id, status: 'resolved', action: 'hide', note: '', reply: '' })
+    assert.equal((await db.doc(replyPath).get()).exists, false)
+    await assert.rejects(getDoc(doc(reporter.db, 'moderationComments', 'any')), { code: 'permission-denied' })
+    await assert.rejects(call('adminReviewCase', { sessionToken, caseId: replyCase.id, status: 'resolved', action: 'restore' }), { status: 'FAILED_PRECONDITION' })
+
+    await call('adminReviewCase', { sessionToken, caseId: commentCase.id, status: 'resolved', action: 'restore', note: '재검토' })
+    const restored = (await db.doc(commentPath).get()).data()
+    assert.equal(restored.deleted, false)
+    assert.equal(restored.content, comment.content)
+    await call('adminReviewCase', { sessionToken, caseId: replyCase.id, status: 'resolved', action: 'restore' })
+    assert.equal((await db.doc(replyPath).get()).data().content, reply.content)
+    await assert.rejects(call('adminReviewCase', { sessionToken, caseId: inquiryCase.id, status: 'resolved', action: 'hide' }), { status: 'INVALID_ARGUMENT' })
+
+    const caseHistory = await call('adminCaseHistory', { sessionToken, caseId: commentCase.id })
+    assert.deepEqual(caseHistory.entries.map(entry => entry.action), ['hide', 'restore'])
+    assert.equal(caseHistory.entries[0].note, '욕설 확인')
+    const ownerHistory = await call('adminUserHistory', { sessionToken, targetUid: owner.uid })
+    assert.ok(ownerHistory.total >= 5)
+    assert.ok(ownerHistory.cases.some(item => item.id === commentCase.id))
+    assert.ok(ownerHistory.actions.some(item => item.action === 'suspend_user' && item.reason === '신고 검토로 정지'))
+    assert.ok(ownerHistory.actions.some(item => item.action === 'hide' && item.caseId === commentCase.id))
+    assert.ok((await call('adminUserHistory', { sessionToken, targetUid: reporter.uid })).filed >= 6)
   })
   await t.test('automatic filter queues suspicious content and does not automatically remove pins', async () => {
     const autoId = 'auto-' + unique

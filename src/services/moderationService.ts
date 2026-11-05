@@ -1,6 +1,6 @@
 import { connectFunctionsEmulator, getFunctions, httpsCallable, type Functions } from 'firebase/functions'
 import { firebaseApp } from '../lib/firebase'
-import type { AdminUser, CaseStatus, ModerationCase, ReportTarget } from '../types/moderation'
+import type { AdminUser, CaseHistoryEntry, CaseStatus, ModerationCase, ReportTarget, UserHistory } from '../types/moderation'
 
 let instance: Functions | undefined
 function client() {
@@ -30,3 +30,5 @@ export interface AdminStats { users: number; posts: number; chats: number; openC
 export const getAdminStats = (sessionToken: string) => moderationCall<AdminStats>('adminStats', { sessionToken })
 export const searchAdminUsers = (sessionToken: string, field: string, search: string, cursor?: string) => moderationCall<{ users: AdminUser[]; nextCursor: string | null }>('adminSearchUsers', { sessionToken, field, search, ...(cursor ? { cursor } : {}) })
 export const manageAdminUser = (sessionToken: string, targetUid: string, suspended: boolean, reason: string) => moderationCall('adminManageUser', { sessionToken, targetUid, suspended, reason })
+export const getAdminUserHistory = (sessionToken: string, targetUid: string) => moderationCall<UserHistory>('adminUserHistory', { sessionToken, targetUid })
+export const getAdminCaseHistory = (sessionToken: string, caseId: string) => moderationCall<{ entries: CaseHistoryEntry[] }>('adminCaseHistory', { sessionToken, caseId })

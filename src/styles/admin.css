@@ -135,6 +135,27 @@
 .support-case h3 { font-size: 1rem; margin-bottom: 12px; }
 .support-reply { background: var(--olive-soft); border-radius: 10px; padding: 16px; margin-top: 16px; font-size: .9rem; }
 .preserve-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.admin-case-badges { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; flex-shrink: 0; }
+.case-badge.hidden { gap: 4px; background: var(--ink); color: var(--paper); }
+.admin-target-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin-top: 22px; }
+.admin-target-row .admin-footnote { margin: 0; }
+.admin-target-row .button { min-height: 40px; gap: 6px; }
+.admin-dialog .report-notice { margin-top: 18px; }
+.admin-history { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); }
+.admin-history h3 { margin: 0 0 14px; font-size: .95rem; }
+.admin-history h4 { margin: 22px 0 8px; font-size: .85rem; color: var(--muted); font-weight: 600; }
+.admin-history ol { display: grid; margin: 0; padding: 0; list-style: none; }
+.admin-history li { display: grid; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: .84rem; }
+.admin-history li:last-child { border-bottom: 0; }
+.admin-history li strong { overflow-wrap: anywhere; }
+.admin-history li small { color: var(--muted); font-size: .74rem; }
+.admin-history li p { margin: 0; color: var(--muted); }
+.admin-history-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 10px; }
+.admin-history-stats div { padding: 12px; border-radius: 10px; background: var(--bg); }
+.admin-history-stats dt { color: var(--muted); font-size: .74rem; }
+.admin-history-stats dd { margin: 6px 0 0; font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.comment-heading .report-compact { margin-left: auto; min-height: 36px; }
+.comment-heading .report-compact + .comment-delete { margin-left: 0; }
 @media (max-width: 1100px) { .admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .admin-overview-grid { grid-template-columns: 1fr; } }
 @media (max-width: 760px) {
   .admin-heading-actions { justify-content: flex-start; width: 100%; }
