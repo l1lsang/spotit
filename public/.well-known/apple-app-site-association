@@ -1,0 +1,23 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["8T72WQ8S9P.kr.spotitmap.app"],
+        "components": [
+          { "/": "/posts/*", "comment": "Pin detail" },
+          { "/": "/feed/*", "comment": "Feed post" },
+          { "/": "/groups/*", "comment": "Group" },
+          { "/": "/people/*", "comment": "Profile" },
+          { "/": "/chats/*", "comment": "Chat room" }
+        ]
+      },
+      {
+        "appID": "8T72WQ8S9P.kr.spotitmap.app",
+        "paths": ["/posts/*", "/feed/*", "/groups/*", "/people/*", "/chats/*"]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["8T72WQ8S9P.kr.spotitmap.app"]
+  }
+}

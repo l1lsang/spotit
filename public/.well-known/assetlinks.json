@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "kr.spotitmap.app",
+      "sha256_cert_fingerprints": [
+        "20:B9:08:BF:9F:49:FE:7E:4F:51:1A:18:C1:21:BA:3C:84:92:94:F6:D4:EC:23:6F:30:33:5C:66:39:90:63:E6",
+        "56:14:5F:58:01:7A:D2:6A:1D:DF:FE:DB:5D:7E:B1:A5:70:F3:7F:14:09:58:F6:5F:3B:6C:96:ED:5D:4F:3C:4D"
+      ]
+    }
+  }
+]
