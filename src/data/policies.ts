@@ -48,7 +48,7 @@ const contact: PolicySection = {
     `주소: ${policyOperator.address} · 전화: ${policyOperator.phone}`,
     '서비스 문의, 권리 행사, 법정대리인의 요청 및 이용 제한에 대한 이의는 위 전화로 접수할 수 있습니다. 로그인할 수 있는 회원은 문의·신고 내역에서도 접수할 수 있습니다. 요청 내용 확인에 필요한 최소한의 정보만 보내 주세요.',
   ],
-  links: [{ label: '문의·신고 내역 (로그인 필요)', href: '/support' }],
+  // 문의·신고 내역은 앱에서 확인합니다 (웹 /support는 제거됨).
 }
 
 export const policies: Record<PolicyId, PolicyDocument> = {
@@ -310,7 +310,6 @@ export const policies: Record<PolicyId, PolicyDocument> = {
         '협박·성적 요구가 있으면 혼자 해결하려 하지 말고 믿을 수 있는 어른이나 전문 기관에 도움을 요청해 주세요. 생명·신체가 급박하게 위험하면 112 또는 119를 이용하세요.',
       ], links: [
         { label: '청소년상담 1388 · 온라인 상담 안내', href: 'https://www.1388.go.kr/cco/YTOSP_SC_CCI_01' },
-        { label: '피노리 신고·문의 (로그인 필요)', href: '/support' },
       ] },
       { ...contact, title: '6. 청소년보호 담당자', paragraphs: [
         `청소년보호 담당: 운영자 ${policyOperator.name} · 전화: ${policyOperator.phone}`,

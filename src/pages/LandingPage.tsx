@@ -1,22 +1,23 @@
-import { Link } from 'react-router-dom'
-import { BrandLogo } from '../components/layout/BrandLogo'
-import { PolicyFooter } from '../components/layout/PolicyFooter'
+import { BrandStory, FeatureHighlights, FinalCTA } from '../components/landing/LandingSections'
+import { ScrollPhoneStory } from '../components/landing/ScrollPhoneStory'
+import { SiteFooter } from '../components/site/SiteFooter'
+import { SiteHeader } from '../components/site/SiteHeader'
+import { usePageMeta } from '../hooks/usePageMeta'
 
-/**
- * 피노리 랜딩 페이지 (구성 예정).
- * 헤더·푸터만 두고 본문은 비워둔 상태입니다. 랜딩 섹션은 <main className="landing-main"> 안에 추가하세요.
- */
 export function LandingPage() {
+  usePageMeta('피노리 — 지도 위에 남기는 기록 SNS',
+    '피노리는 사진과 메모를 지도 위 핀으로 남기는 기록 SNS 앱입니다. 지나온 장소에 이야기를 남기고, 소중한 순간들을 다시 만나보세요.')
   return (
-    <div className="landing-page">
-      <header className="landing-header">
-        <Link to="/" className="brand-lockup" aria-label="피노리 홈"><BrandLogo /></Link>
-      </header>
-      <main id="main-content" className="landing-main">
-        <h1 className="sr-only">피노리</h1>
-        {/* TODO: 랜딩 콘텐츠 */}
+    <div className="site">
+      <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
+      <SiteHeader />
+      <main id="main-content" tabIndex={-1}>
+        <ScrollPhoneStory />
+        <FeatureHighlights />
+        <BrandStory />
+        <FinalCTA />
       </main>
-      <footer className="landing-footer"><span>피노리</span><PolicyFooter showCredit={false} /></footer>
+      <SiteFooter />
     </div>
   )
 }

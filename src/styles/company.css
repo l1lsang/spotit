@@ -1,0 +1,44 @@
+/* /company — same shell as the landing page (landing.css); only page-specific blocks here. */
+.company-hero { padding-block: clamp(80px, 12vw, 160px) clamp(64px, 8vw, 112px); }
+.company-title { max-width: 14em; margin: 0; font-size: clamp(2.25rem, 4.8vw, 4rem); font-weight: 700; line-height: 1.2; letter-spacing: -0.05em; }
+.company-lead { max-width: 34em; margin: var(--space-md) 0 0; color: var(--muted); font-size: 1.125rem; line-height: 1.85; }
+
+.company-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-md); margin: var(--space-2xl) 0 0; padding-top: var(--space-md); border-top: 1px solid var(--line); }
+.company-facts dt { color: var(--muted); font-size: var(--text-sm); }
+.company-facts dd { margin: var(--space-3xs) 0 0; font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.02em; }
+
+.company-problem, .company-contact { border-top: 1px solid var(--line); }
+.company-problem .company-prose p { font-size: clamp(1.125rem, 1.6vw, 1.375rem); line-height: 1.8; }
+
+/* One section per screen on a desktop: the hero alone first, then problem, solution, product. */
+@media (min-width: 1024px) and (min-height: 700px) {
+  .company-hero { display: flex; align-items: center; min-height: calc(100svh - 89px); padding-block: var(--space-xl); }
+  .company-problem, .company-solution, .company-product { display: flex; align-items: center; min-height: 100svh; }
+}
+.company-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); align-items: start; gap: var(--space-xl); }
+.company-prose p { margin: 0 0 var(--space-sm); font-size: 1.0625rem; line-height: 1.9; }
+.company-prose .button { min-height: 48px; margin-top: var(--space-xs); padding-inline: 22px; }
+
+.company-solution { background: var(--surface); }
+.solution-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-md); margin: var(--space-xl) 0 0; padding: 0; list-style: none; }
+.solution-list li { padding-top: var(--space-sm); border-top: 2px solid var(--primary); }
+.solution-index { color: var(--primary); font-size: var(--text-xs); font-weight: 700; }
+.solution-list h3 { margin: var(--space-xs) 0 var(--space-2xs); font-size: 1.125rem; font-weight: 700; letter-spacing: -0.02em; }
+.solution-list p { margin: 0; color: var(--muted); font-size: 0.9375rem; line-height: 1.75; }
+
+.product-phones { display: flex; flex-wrap: wrap; gap: clamp(20px, 4vw, 56px); margin: var(--space-xl) 0; }
+.product-phone { --screen-h: min(560px, 62vh); }
+
+@media (max-width: 1023px) {
+  .solution-list { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-lg); }
+  .product-phone { --screen-h: 440px; }
+}
+@media (max-width: 767px) {
+  .company-split { grid-template-columns: minmax(0, 1fr); gap: var(--space-md); }
+  .company-facts { grid-template-columns: minmax(0, 1fr); gap: var(--space-sm); margin-top: var(--space-xl); }
+  .solution-list { grid-template-columns: minmax(0, 1fr); }
+  .product-phones { flex-wrap: nowrap; justify-content: center; gap: var(--space-sm); }
+  .product-phone { --screen-h: min(340px, 54svh); }
+  .product-phone:nth-child(3) { display: none; }
+  .company-prose .button { width: 100%; }
+}

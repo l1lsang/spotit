@@ -10,10 +10,13 @@
 
 | 경로 | 화면 |
 | --- | --- |
-| `/` | 피노리 랜딩 페이지 (`src/pages/LandingPage.tsx`, 구성 예정 — 헤더·푸터만 있음) |
+| `/` | 공식 홈페이지. 스크롤하면 실제 앱 캡처를 담은 스마트폰이 올라와 로고 → 지도 → 사진 위치 → 핀 편집 → 피드 순으로 바뀝니다 (`src/components/landing/ScrollPhoneStory.tsx`). 768px 미만 화면과 동작 줄이기 설정에서는 고정 연출 없이 정적 단계로 보여줍니다. 장면·문구·타이밍은 `src/data/showcase.ts`에서 관리합니다. |
+| `/company` | 회사 소개 — 비전, 문제, 해결 방식, 제품, 제휴 문의 (`src/pages/CompanyPage.tsx`) |
 | `/posts/:id`, `/feed/:id`, `/groups/:id`, `/people/:id`, `/chats/:id` | 앱 공유 링크. 앱이 설치되어 있으면 유니버설 링크/앱 링크(`public/.well-known`)로 앱이 바로 열리고, 없으면 `src/pages/AppLinkPage.tsx`가 스토어 설치를 안내합니다. Android에서는 **앱에서 열기** 버튼(intent 링크)도 표시합니다. |
 | `/policies/:policyId?`, `/licenses` | 약관 및 정책, 오픈소스 라이선스 |
 | `/admin` | 신고·문의 관리 (Cloud Functions 호출) |
+
+홈페이지 스크린샷은 비식별 처리 전 원본이므로, 배포 전 [스크린샷 공개 체크리스트](docs/showcase-release-checklist.md)를 확인하세요.
 
 그 외 경로는 `/`로 이동합니다. 스토어 주소는 `src/lib/appStores.ts`의 기본값(App Store, Google Play)을 쓰며, `VITE_IOS_APP_URL`, `VITE_ANDROID_APP_URL`로 덮어쓸 수 있습니다.
 

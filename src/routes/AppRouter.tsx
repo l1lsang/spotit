@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLinkPage } from '../pages/AppLinkPage'
 import { LandingPage } from '../pages/LandingPage'
 
+const CompanyPage = lazy(() => import('../pages/CompanyPage').then(module => ({ default: module.CompanyPage })))
 const AdminPage = lazy(() => import('../pages/AdminPage').then(module => ({ default: module.AdminPage })))
 const OpenSourceLicensesPage = lazy(() => import('../pages/OpenSourceLicensesPage').then(module => ({ default: module.OpenSourceLicensesPage })))
 const PoliciesPage = lazy(() => import('../pages/PoliciesPage').then(module => ({ default: module.PoliciesPage })))
@@ -13,6 +14,7 @@ export function AppRouter() {
       <Suspense fallback={<div className="screen-message">화면을 불러오는 중입니다.</div>}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/company" element={<CompanyPage />} />
 
           {/* Shared links. With the app installed, universal/app links (public/.well-known) open the app
               directly; otherwise the browser lands here and offers the store. */}
