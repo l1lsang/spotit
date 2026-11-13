@@ -1,6 +1,7 @@
-// Copy, screens and scroll timing for the landing page's phone story.
-// Screenshots: public/pinori-showcase (original 945×2048 JPG) + web/*-640.webp (resized copies).
-// Before publishing, review docs/showcase-release-checklist.md (names, locations, photos in the captures).
+// Content, media and screens for the landing page's cinematic showcase.
+// - App screenshots: public/pinori-showcase (945×2048 JPG) + web/*-640.webp (resized copies)
+// - Scene media: public/showcase (web copies; originals are kept outside public in design/showcase-media)
+// Before publishing, review docs/showcase-release-checklist.md (names, locations, faces, plates, media licences).
 
 export interface ShowcaseScreen {
   id: string
@@ -26,83 +27,98 @@ export function screenSrc(file: string) {
   }
 }
 
-export const heroCopy = {
-  title: ['당신의 순간이,', '하나의 지도가 되다.'],
-  lead: '피노리는 사진과 메모를 지도 위 핀으로 남기는 기록 SNS예요. 지나온 장소에 이야기를 남기고, 소중한 순간들을 다시 만나보세요.',
+/** Where things sit inside the 945×2048 captures, as fractions of the screen. */
+export const screenSpots = {
+  /** The sunset photo in 05-feed-post (a centred square crop of the original). */
+  feedPhoto: { top: 395 / 2048, height: 945 / 2048 },
+  /** Highlights drawn over real UI, never a copy of it: centre x/y and size as a share of the width. */
+  homePin: { x: 524 / 945, y: 1050 / 2048, size: 0.16, round: true },
+  photoMarker: { x: 475 / 945, y: 530 / 2048, size: 0.17, round: false },
 }
 
-export type StoryStepId = 'find' | 'record' | 'revisit'
-
-export interface StoryStep {
-  id: StoryStepId
-  label: string
-  title: string
-  body: string
+export interface MediaAsset {
+  type: 'image' | 'video'
+  src: string
+  poster?: string
+  /** CSS object-position: the focal point kept on screen when the media is cropped by cover. */
+  objectPosition?: string
+  /** Intrinsic size, needed where the layout is computed (the sunset expansion). */
+  width?: number
+  height?: number
 }
 
-export const storySteps: StoryStep[] = [
+export type SceneId = 'beginning' | 'place' | 'moment' | 'yours'
+
+export interface ShowcaseScene {
+  id: SceneId
+  title: string[]
+  description?: string[]
+  /** Screens the phone shows during the scene, in order. */
+  phoneScreens: ShowcaseScreen[]
+  background: MediaAsset
+  mobileBackground?: MediaAsset
+  /** Darkening over the background so white copy stays readable (0–1). */
+  overlayOpacity: number
+}
+
+export const showcaseScenes: ShowcaseScene[] = [
   {
-    id: 'find',
-    label: '장소 찾기',
-    title: '사진 속 장소를 찾고',
-    body: '사진을 고르면 촬영 위치와 날짜를 읽어 핀을 찍을 장소를 먼저 보여줘요. 위치가 다르면 직접 옮길 수 있어요.',
+    id: 'beginning',
+    title: ['당신의 순간이,', '하나의 지도가 되다.'],
+    description: ['지나온 장소에 이야기를 남기고,', '소중한 순간들을 다시 만나보세요.'],
+    phoneScreens: [],
+    background: { type: 'video', src: '/showcase/scene1-city.mp4', poster: '/showcase/scene1-city-poster.webp', objectPosition: '50% 50%' },
+    mobileBackground: { type: 'video', src: '/showcase/scene1-city-mobile.mp4', poster: '/showcase/scene1-city-mobile-poster.webp' },
+    overlayOpacity: 0.52,
   },
   {
-    id: 'record',
-    label: '기록 남기기',
-    title: '나만의 색으로 순간을 남기고',
-    body: '핀 색상과 밝기를 고르고 제목과 메모를 적어요. 팔로워, 전체, 비공개 중 누가 볼지도 정해요.',
+    id: 'place',
+    title: ['우리가 지나온 모든 장소에는', '저마다의 이야기가 있습니다.'],
+    phoneScreens: [screens.home],
+    background: { type: 'video', src: '/showcase/scene2-place.mp4', poster: '/showcase/scene2-place-poster.webp', objectPosition: '50% 50%' },
+    mobileBackground: { type: 'video', src: '/showcase/scene2-place-mobile.mp4', poster: '/showcase/scene2-place-mobile-poster.webp' },
+    overlayOpacity: 0.5,
   },
   {
-    id: 'revisit',
-    label: '다시 보기',
-    title: '시간이 지나도, 그곳의 이야기는 남으니까',
-    body: '남긴 기록은 사진과 함께 피드와 지도에 쌓여요. 팔로우한 사람의 기록도 같은 지도에서 만나요.',
+    id: 'moment',
+    title: ['그날의 하늘도,', '그때의 마음도.'],
+    description: ['기억하고 싶은 순간을', '피노리에 남겨보세요.'],
+    phoneScreens: [screens.photo, screens.feed],
+    // The original photo of the sunset post in 05-feed-post. Portrait 9:16: cover keeps the pink sky on a wide screen.
+    background: { type: 'image', src: '/showcase/scene3-sunset.webp', objectPosition: '50% 28%', width: 2252, height: 4000 },
+    mobileBackground: { type: 'image', src: '/showcase/scene3-sunset-mobile.webp', objectPosition: '50% 45%', width: 2252, height: 4000 },
+    overlayOpacity: 0.3,
+  },
+  {
+    id: 'yours',
+    title: ['나만의 색으로,', '나만의 이야기를.'],
+    description: ['사진과 감정, 그리고 장소를', '하나의 기록으로 남겨보세요.'],
+    phoneScreens: [screens.pin, screens.details],
+    background: { type: 'image', src: '/showcase/scene4-cafe.webp', objectPosition: '62% 50%', width: 5400, height: 3600 },
+    mobileBackground: { type: 'image', src: '/showcase/scene4-cafe-mobile.webp', objectPosition: '66% 50%', width: 5400, height: 3600 },
+    // The phone UI leads here: a darker veil keeps the photo quiet behind it.
+    overlayOpacity: 0.58,
   },
 ]
 
-/**
- * What the phone shows along the pinned story, by scroll progress (0 at the page top, 1 when the
- * story section unpins). `until` is the progress where the next layer takes over.
- * 'splash' is a brand intro (the PINORI mark, lit once on load), not an app screenshot.
- */
-export interface StoryLayer {
-  id: string
-  until: number
-  screen?: ShowcaseScreen
-  /** Which copy block is shown on the left: the hero or a story step. */
-  copy: 'hero' | StoryStepId
-}
-
-export const storyLayers: StoryLayer[] = [
-  { id: 'splash', until: 0.12, copy: 'hero' },
-  { id: 'home', until: 0.27, screen: screens.home, copy: 'hero' },
-  { id: 'photo', until: 0.45, screen: screens.photo, copy: 'find' },
-  { id: 'pin', until: 0.6, screen: screens.pin, copy: 'record' },
-  { id: 'details', until: 0.75, screen: screens.details, copy: 'record' },
-  { id: 'feed', until: Infinity, screen: screens.feed, copy: 'revisit' },
-]
-
-/** Progress at which the phone has finished rising into place. */
-export const PHONE_RISE_END = 0.1
-
-/** The phone screen used for each step in the static (phone / reduced-motion) layout. */
-export const staticStepScreens: Record<StoryStepId, ShowcaseScreen> = {
-  find: screens.photo,
-  record: screens.pin,
-  revisit: screens.feed,
-}
+export const showcaseScene = (id: SceneId) => showcaseScenes.find(scene => scene.id === id)!
 
 export const features = [
   {
+    id: 'feed',
+    title: '기록이 이야기로 남는 피드',
+    body: '사진과 메모를 남기면 피드에 한 편의 이야기로 쌓여요. 팔로우한 사람과 좋아요, 댓글로 기록을 나눠요.',
+    screen: screens.feed,
+  },
+  {
     id: 'groups',
-    title: '그룹으로 함께 모으는 장소',
+    title: '취향을 함께 모으는 그룹',
     body: '러닝 크루, 동네 맛집처럼 취향이 닮은 사람들과 한 지도에 핀을 모아요. 공개 그룹은 바로, 비공개 그룹은 초대코드로 가입해요.',
     screen: screens.groups,
   },
   {
     id: 'reviews',
-    title: '장소마다 쌓이는 실시간 리뷰',
+    title: '지금 그 장소의 실시간 리뷰',
     body: '자리, 조용함, 콘센트처럼 지금 가면 알 수 있는 것만 골라 남겨요. 리뷰는 그룹과 관계없이 모든 사용자에게 보여요.',
     screen: screens.reviews,
   },

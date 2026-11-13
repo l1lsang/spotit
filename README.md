@@ -10,13 +10,13 @@
 
 | 경로 | 화면 |
 | --- | --- |
-| `/` | 공식 홈페이지. 스크롤하면 실제 앱 캡처를 담은 스마트폰이 올라와 로고 → 지도 → 사진 위치 → 핀 편집 → 피드 순으로 바뀝니다 (`src/components/landing/ScrollPhoneStory.tsx`). 768px 미만 화면과 동작 줄이기 설정에서는 고정 연출 없이 정적 단계로 보여줍니다. 장면·문구·타이밍은 `src/data/showcase.ts`에서 관리합니다. |
-| `/company` | 회사 소개 — 비전, 문제, 해결 방식, 제품, 제휴 문의 (`src/pages/CompanyPage.tsx`) |
+| `/` | 공식 홈페이지. 시네마틱 쇼케이스(`src/components/landing/CinematicShowcase.tsx`)에서 스크롤에 따라 배경 영상·사진과 스마트폰 속 실제 앱 화면이 함께 바뀝니다: 도시 영상과 스플래시 → 밤거리 영상과 지도 → 피드 사진이 화면 전체 노을 배경으로 확장 → 카페 사진과 핀·기록 작성. GSAP ScrollTrigger 타임라인 하나를 sticky 무대에 scrub으로 연결하며, 모바일도 같은 연출(세로 배치)을 쓰고 동작 줄이기 설정에서는 정지 패널로 보여줍니다. 장면·미디어·문구는 `src/data/showcase.ts`, 웹용 미디어는 `public/showcase/`에 있습니다. |
+| `/company` | 회사 소개 — 비전, 문제, 해결 방식, 제품, 차별성, 검증과 로드맵(자료 정리 중 표시), 팀과 제휴 문의 (`src/pages/CompanyPage.tsx`) |
 | `/posts/:id`, `/feed/:id`, `/groups/:id`, `/people/:id`, `/chats/:id` | 앱 공유 링크. 앱이 설치되어 있으면 유니버설 링크/앱 링크(`public/.well-known`)로 앱이 바로 열리고, 없으면 `src/pages/AppLinkPage.tsx`가 스토어 설치를 안내합니다. Android에서는 **앱에서 열기** 버튼(intent 링크)도 표시합니다. |
 | `/policies/:policyId?`, `/licenses` | 약관 및 정책, 오픈소스 라이선스 |
 | `/admin` | 신고·문의 관리 (Cloud Functions 호출) |
 
-홈페이지 스크린샷은 비식별 처리 전 원본이므로, 배포 전 [스크린샷 공개 체크리스트](docs/showcase-release-checklist.md)를 확인하세요.
+홈페이지 스크린샷·영상·사진은 비식별·라이선스 확인 전 원본이므로, 배포 전 [공개 체크리스트](docs/showcase-release-checklist.md)를 확인하세요. 원본 미디어(4K 영상 등)는 `design/showcase-media/`에 두며 git과 배포에서 제외됩니다.
 
 그 외 경로는 `/`로 이동합니다. 스토어 주소는 `src/lib/appStores.ts`의 기본값(App Store, Google Play)을 쓰며, `VITE_IOS_APP_URL`, `VITE_ANDROID_APP_URL`로 덮어쓸 수 있습니다.
 

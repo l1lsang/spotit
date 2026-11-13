@@ -14,6 +14,17 @@
 | `06-groups.jpg` | 기능 카드(그룹) | 특이 사항 낮음 |
 | `07-reviews.jpg` | 기능 카드(리뷰), Company 제품 | **리뷰 작성자 실명 "장경민"**, 상태바 알림에 개인 텍스트("성경") |
 
+## 배경 영상·사진 (Scene 01–04)
+
+원본은 `design/showcase-media/`(배포·git 제외), 웹용 사본은 `public/showcase/`에 있습니다.
+
+| 원본 | 웹용 파일 | 장면 | 확인할 내용 |
+| --- | --- | --- | --- |
+| `1. 도시 풍경.mp4` (4K, 16초) | `scene1-city(.mp4 / -mobile.mp4 / -poster.webp)` | 01 오프닝 | **촬영자·라이선스 기록 필요**. 전광판 광고 화면이 보임 |
+| `2.장소 발견.mp4` (4K, 8.7초) | `scene2-place(...)` | 02 장소 | **촬영자·라이선스 기록 필요**. **행인 얼굴이 가까이 보이고(약 4초 부근), 자동차 번호판이 읽힐 수 있음(약 6–7초)** — 초상권·번호판 비식별 검토 |
+| `3. 나의 추억이 펼쳐진다.jpg` | `scene3-sunset(.webp / -mobile.webp)` | 03 노을 | 05 피드 게시물의 원본 사진. 촬영자 게시 동의 확인 (사람 얼굴 없음) |
+| `4. 순간 기록.jpg` (5400×3600) | `scene4-cafe(.webp / -mobile.webp)` | 04 카페 | **출처·라이선스 기록 필요** (스톡 사진이면 라이선스 조건 확인). 실내 인물은 흐릿하게 보임 |
+
 ## 공통 확인
 
 - [ ] 실명 노출: 05, 07의 이름을 공개해도 되는지 본인 동의 확인 (안 되면 데모 계정으로 다시 캡처)
@@ -32,4 +43,13 @@ cd public/pinori-showcase
 python -c "from PIL import Image;import glob,os;[Image.open(f).convert('RGB').resize((640,round(Image.open(f).height*640/Image.open(f).width)),Image.LANCZOS).save('web/'+os.path.splitext(f)[0]+'-640.webp','WEBP',quality=82,method=6) for f in glob.glob('*.jpg')]"
 ```
 
-장면 순서와 문구는 `src/data/showcase.ts`에서 바꿉니다.
+배경 영상·사진을 바꿀 때는 원본을 `design/showcase-media/`에 두고 같은 설정으로 다시 인코딩합니다 (ffmpeg 필요).
+
+```bash
+# 데스크톱 1600px / 모바일 세로 720×1280 크롭, 오디오 제거, faststart
+ffmpeg -i "1. 도시 풍경.mp4" -vf "scale=1600:-2" -an -c:v libx264 -preset slow -crf 29 -maxrate 2.6M -bufsize 6M -pix_fmt yuv420p -movflags +faststart public/showcase/scene1-city.mp4
+ffmpeg -i "1. 도시 풍경.mp4" -vf "crop=ih*9/16:ih,scale=720:1280" -an -c:v libx264 -preset slow -crf 28 -maxrate 2M -bufsize 8M -pix_fmt yuv420p -movflags +faststart public/showcase/scene1-city-mobile.mp4
+ffmpeg -ss 0.2 -i public/showcase/scene1-city.mp4 -frames:v 1 -c:v libwebp -quality 78 public/showcase/scene1-city-poster.webp
+```
+
+장면 순서, 문구, 배경, 초점(`objectPosition`), 오버레이 농도는 `src/data/showcase.ts`에서 바꿉니다.

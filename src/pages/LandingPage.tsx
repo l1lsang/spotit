@@ -1,5 +1,5 @@
 import { BrandStory, FeatureHighlights, FinalCTA } from '../components/landing/LandingSections'
-import { ScrollPhoneStory } from '../components/landing/ScrollPhoneStory'
+import { CinematicShowcase } from '../components/landing/CinematicShowcase'
 import { SiteFooter } from '../components/site/SiteFooter'
 import { SiteHeader } from '../components/site/SiteHeader'
 import { usePageMeta } from '../hooks/usePageMeta'
@@ -12,7 +12,7 @@ export function LandingPage() {
       <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
       <SiteHeader />
       <main id="main-content" tabIndex={-1}>
-        <ScrollPhoneStory />
+        <CinematicShowcase />
         <FeatureHighlights />
         <BrandStory />
         <FinalCTA />

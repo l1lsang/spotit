@@ -217,6 +217,26 @@ async function collect(dependency) {
     documents.push({ title: 'MIT standard license terms (attribution above)', source: standardSource,
       text: standard.slice(standard.indexOf('Permission is hereby granted')) })
   }
+  if (!documents.length && /^Standard 'no charge' license/i.test(license || '')) {
+    // GSAP publishes its terms only as a web page (linked from the license field), with no license file in
+    // the package or its repository. Keep the package's own declaration and README notice, which link to it.
+    documents.push({
+      title: 'Package license declaration', source: `https://registry.npmjs.org/${encodeURIComponent(dependency.name)}/${dependency.version}`,
+      text: JSON.stringify({ name: metadata.name, version: metadata.version, license, homepage: metadata.homepage,
+        repository: metadata.repository }, null, 2),
+    })
+    for (const directory of dependency.directories) {
+      if (!existsSync(join(directory, 'package.json'))) continue
+      for (const file of readdirSync(directory).filter(path => /^readme(?:\.|$)/i.test(path))) {
+        const contents = readFileSync(join(directory, file), 'utf8')
+        const match = /(?:^|\n)(?:#{1,6}\s*)?Licen[cs]e[^\n]*\n/i.exec(contents)
+        if (match) documents.push({ title: `${file} (license notice)`,
+          text: contents.slice(match.index).trimStart().split(/\n#{1,6} /)[0],
+          source: `${metadata.name}@${metadata.version}/${file}` })
+      }
+      break
+    }
+  }
   if (!license || !documents.length) throw new Error(`${key}: license/notice missing (gitHead: ${registry?.gitHead || 'none'})`)
   const uniqueDocuments = new Map()
   for (const document of documents) {
