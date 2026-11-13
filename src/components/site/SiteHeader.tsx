@@ -13,7 +13,7 @@ export function SiteHeader() {
           <a className="site-nav-link site-nav-optional" href="/#story">서비스 소개</a>
           <a className="site-nav-link site-nav-optional" href="/#features">기능</a>
           <Link className="site-nav-link" to="/company" aria-current={onCompany ? 'page' : undefined}>회사 소개</Link>
-          <a className="button button-primary site-nav-cta" href="/#download">앱 내려받기</a>
+          <a className="button button-primary site-nav-cta" href="/#download">다운받기</a>
         </nav>
       </div>
     </header>

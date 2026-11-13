@@ -73,24 +73,43 @@
 }
 
 /* ---------- Phone mockup ---------- */
+/* A thin graphite rim, a slim black bezel and the side keys; sizes scale with the screen height so
+ * every phone (story, features, company) keeps the same proportions. */
 .phone {
   --screen-h: 560px;
+  --rim: max(2px, calc(var(--screen-h) * 0.0045));
+  --bezel: max(4px, calc(var(--screen-h) * 0.0105));
+  --screen-r: calc(var(--screen-h) * 0.058);
+  position: relative;
   width: max-content;
-  padding: 9px;
-  border-radius: 50px;
-  background: oklch(20% 0.012 165);
+  padding: var(--rim);
+  border-radius: calc(var(--screen-r) + var(--bezel) + var(--rim));
+  background: linear-gradient(155deg, oklch(62% 0.006 165) 0%, oklch(34% 0.008 165) 22%, oklch(26% 0.008 165) 50%, oklch(40% 0.008 165) 78%, oklch(58% 0.006 165) 100%);
   box-shadow:
-    0 0 0 1px oklch(20% 0.012 165 / 40%),
-    0 40px 80px -32px oklch(23% 0.015 165 / 45%),
-    0 16px 32px -20px oklch(23% 0.015 165 / 30%);
+    inset 0 0 0 1px oklch(100% 0 0 / 14%),
+    0 1px 2px oklch(23% 0.015 165 / 18%),
+    0 22px 44px -22px oklch(23% 0.015 165 / 32%),
+    0 60px 110px -50px oklch(23% 0.015 165 / 38%);
 }
+.phone::before, .phone::after {
+  content: '';
+  position: absolute;
+  right: calc(var(--rim) * -1);
+  width: var(--rim);
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(90deg, oklch(30% 0.008 165), oklch(52% 0.006 165));
+}
+.phone::before { top: 21%; height: 6.5%; }
+.phone::after { top: 31%; height: 12%; }
 .phone-screen {
   position: relative;
+  box-sizing: content-box;
   height: var(--screen-h);
   aspect-ratio: 945 / 2048;
   overflow: hidden;
-  border-radius: 41px;
-  background: oklch(16% 0.01 165);
+  border: var(--bezel) solid oklch(11% 0.004 165);
+  border-radius: calc(var(--screen-r) + var(--bezel));
+  background: oklch(11% 0.004 165);
   isolation: isolate;
 }
 .phone-shot { width: 100%; height: 100%; object-fit: cover; }
