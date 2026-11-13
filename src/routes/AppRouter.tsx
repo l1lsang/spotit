@@ -1,150 +1,33 @@
-import { lazy, Suspense, type ReactNode } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
-import { isPublicPolicyPath } from '../lib/policyNavigation'
-import { InstallPrompt } from '../components/layout/InstallPrompt'
+import { lazy, Suspense } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { AppLinkPage } from '../pages/AppLinkPage'
 import { LandingPage } from '../pages/LandingPage'
 
-// Only the landing page ships in the entry bundle; every other screen loads on demand.
-const ChatListPage = lazy(() => import('../pages/ChatListPage').then(module => ({ default: module.ChatListPage })))
-const ChatRoomPage = lazy(() => import('../pages/ChatRoomPage').then(module => ({ default: module.ChatRoomPage })))
-const FeedDetailPage = lazy(() => import('../pages/FeedDetailPage').then(module => ({ default: module.FeedDetailPage })))
-const FeedPage = lazy(() => import('../pages/FeedPage').then(module => ({ default: module.FeedPage })))
-const LoginPage = lazy(() => import('../pages/LoginPage').then(module => ({ default: module.LoginPage })))
-const MapPage = lazy(() => import('../pages/MapPage').then(module => ({ default: module.MapPage })))
-const MyPostsPage = lazy(() => import('../pages/MyPostsPage').then(module => ({ default: module.MyPostsPage })))
-const NotificationsPage = lazy(() => import('../pages/NotificationsPage').then(module => ({ default: module.NotificationsPage })))
-const PeoplePage = lazy(() => import('../pages/PeoplePage').then(module => ({ default: module.PeoplePage })))
-const PersonProfilePage = lazy(() => import('../pages/PersonProfilePage').then(module => ({ default: module.PersonProfilePage })))
-const PostDetailPage = lazy(() => import('../pages/PostDetailPage').then(module => ({ default: module.PostDetailPage })))
-const ProfilePage = lazy(() => import('../pages/ProfilePage').then(module => ({ default: module.ProfilePage })))
-const ProfileSettingsPage = lazy(() => import('../pages/ProfileSettingsPage').then(module => ({ default: module.ProfileSettingsPage })))
-const SignupPage = lazy(() => import('../pages/SignupPage').then(module => ({ default: module.SignupPage })))
-const SupportPage = lazy(() => import('../pages/SupportPage').then(module => ({ default: module.SupportPage })))
 const AdminPage = lazy(() => import('../pages/AdminPage').then(module => ({ default: module.AdminPage })))
-const GroupsPage = lazy(() => import('../pages/GroupsPage').then(module => ({ default: module.GroupsPage })))
-const GroupDetailPage = lazy(() => import('../pages/GroupDetailPage').then(module => ({ default: module.GroupDetailPage })))
 const OpenSourceLicensesPage = lazy(() => import('../pages/OpenSourceLicensesPage').then(module => ({ default: module.OpenSourceLicensesPage })))
 const PoliciesPage = lazy(() => import('../pages/PoliciesPage').then(module => ({ default: module.PoliciesPage })))
-
-function ProtectedRoute({ children }: { children: ReactNode }) {
-  const location = useLocation()
-  const { currentUser, loading } = useAuth()
-
-  if (loading) {
-    return <div className="screen-message">로그인 상태를 확인하는 중입니다.</div>
-  }
-
-  if (!currentUser) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
-  }
-
-  return children
-}
-
-function OnboardingGuard({ children }: { children: ReactNode }) {
-  const { currentUser, profile, loading, profileError, refreshProfile } = useAuth()
-  const location = useLocation()
-  if (isPublicPolicyPath(location.pathname) || location.pathname === '/signup' || ['/admin', '/licenses'].includes(location.pathname.replace(/\/$/, ''))) return children
-  // The landing page is public, so paint it immediately; the guard re-checks once auth settles.
-  if (loading) return location.pathname === '/' ? children : <div className="screen-message">로그인 상태를 확인하는 중입니다.</div>
-  if (currentUser && profileError) {
-    return (
-      <div className="screen-message" role="alert">
-        <p>{profileError}</p>
-        <button className="button button-primary" onClick={() => void refreshProfile().catch(() => undefined)}>
-          다시 시도
-        </button>
-      </div>
-    )
-  }
-  if (currentUser && profile?.onboardingComplete === false) return <Navigate to="/signup" replace />
-  return children
-}
 
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <OnboardingGuard>
-        <Suspense fallback={<div className="screen-message">화면을 불러오는 중입니다.</div>}>
+      <Suspense fallback={<div className="screen-message">화면을 불러오는 중입니다.</div>}>
         <Routes>
-          <Route path="/admin" element={<Suspense fallback={<div className="screen-message">관리자 화면을 불러오는 중…</div>}><AdminPage /></Suspense>} />
-          <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/licenses" element={<Suspense fallback={<div className="screen-message">라이선스를 불러오는 중입니다.</div>}><OpenSourceLicensesPage /></Suspense>} />
-          <Route path="/policies/:policyId?" element={<Suspense fallback={<div className="screen-message">약관 및 정책을 불러오는 중입니다.</div>}><PoliciesPage /></Suspense>} />
-          <Route path="/map" element={<MapPage />} />
-          <Route path="/feed" element={<FeedPage />} />
-          <Route path="/feed/:postId" element={<FeedDetailPage />} />
-          <Route path="/groups" element={<ProtectedRoute><Suspense fallback={<div className="screen-message">그룹을 불러오는 중…</div>}><GroupsPage /></Suspense></ProtectedRoute>} />
-          <Route path="/groups/:groupId" element={<ProtectedRoute><Suspense fallback={<div className="screen-message">그룹을 불러오는 중…</div>}><GroupDetailPage /></Suspense></ProtectedRoute>} />
-          <Route path="/posts/:postId" element={<PostDetailPage />} />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <NotificationsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/people"
-            element={
-              <ProtectedRoute>
-                <PeoplePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/people/:userId"
-            element={
-              <ProtectedRoute>
-                <PersonProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/chats"
-            element={
-              <ProtectedRoute>
-                <ChatListPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/chats/:chatId"
-            element={
-              <ProtectedRoute>
-                <ChatRoomPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/my"
-            element={
-              <ProtectedRoute>
-                <MyPostsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/profile/settings" element={<ProtectedRoute><ProfileSettingsPage /></ProtectedRoute>} />
-          {/* Liked pins now live in the profile's 좋아요 tab. */}
-          <Route path="/profile/likes" element={<Navigate to="/profile?tab=likes" replace />} />
+
+          {/* Shared links. With the app installed, universal/app links (public/.well-known) open the app
+              directly; otherwise the browser lands here and offers the store. */}
+          <Route path="/posts/:id" element={<AppLinkPage kind="post" />} />
+          <Route path="/feed/:id" element={<AppLinkPage kind="post" />} />
+          <Route path="/groups/:id" element={<AppLinkPage kind="group" />} />
+          <Route path="/people/:id" element={<AppLinkPage kind="profile" />} />
+          <Route path="/chats/:id" element={<AppLinkPage kind="chat" />} />
+
+          <Route path="/policies/:policyId?" element={<PoliciesPage />} />
+          <Route path="/licenses" element={<OpenSourceLicensesPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        </Suspense>
-      </OnboardingGuard>
-      <InstallPrompt />
+      </Suspense>
     </BrowserRouter>
   )
 }

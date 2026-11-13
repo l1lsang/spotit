@@ -21,20 +21,6 @@
       <pubDate>Wed, 04 Nov 2026 00:00:00 +0900</pubDate>
     </item>
     <item>
-      <title>지도</title>
-      <link>https://pinori.kr/map</link>
-      <guid isPermaLink="true">https://pinori.kr/map</guid>
-      <description>지도 위에서 오늘의 장소를 찾고 기록을 남깁니다.</description>
-      <pubDate>Mon, 25 May 2026 00:00:00 +0900</pubDate>
-    </item>
-    <item>
-      <title>피드</title>
-      <link>https://pinori.kr/feed</link>
-      <guid isPermaLink="true">https://pinori.kr/feed</guid>
-      <description>사람들이 남긴 장소와 순간을 모아 봅니다.</description>
-      <pubDate>Mon, 25 May 2026 00:00:00 +0900</pubDate>
-    </item>
-    <item>
       <title>이용약관</title>
       <link>https://pinori.kr/policies/terms</link>
       <guid isPermaLink="true">https://pinori.kr/policies/terms</guid>

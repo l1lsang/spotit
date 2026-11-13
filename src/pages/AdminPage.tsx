@@ -59,7 +59,7 @@ export function AdminPage() {
   if (session && verified) return <AdminDashboard token={session.token} onLogout={logout} />
   return (
     <main className="admin-login-page">
-      <Link className="admin-back" to="/map"><ArrowLeft size={16} aria-hidden="true" />피노리로 돌아가기</Link>
+      <Link className="admin-back" to="/"><ArrowLeft size={16} aria-hidden="true" />피노리로 돌아가기</Link>
       <section className="admin-login-card" aria-labelledby="admin-login-heading">
         <img src="/logo-mark.png" alt="피노리" width="55" height="64" />
         <p className="eyebrow">PINORI ADMIN</p>
@@ -102,7 +102,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => Pr
     <button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}><LayoutDashboard size={18} />통계</button>
     <button className={tab === 'cases' ? 'active' : ''} onClick={() => setTab('cases')}><Flag size={18} />신고·문의{stats ? <span>{stats.openCases}</span> : null}</button>
     <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}><Users size={18} />유저 관리</button>
-  </nav><div className="admin-sidebar-footer"><Link to="/map"><ArrowLeft size={16} />서비스로 이동</Link><button onClick={() => { setBusy(true); void onLogout().catch(e => { setError(errorText(e)); setBusy(false) }) }} disabled={busy}><LogOut size={16} />로그아웃</button></div></aside>
+  </nav><div className="admin-sidebar-footer"><Link to="/"><ArrowLeft size={16} />홈으로 이동</Link><button onClick={() => { setBusy(true); void onLogout().catch(e => { setError(errorText(e)); setBusy(false) }) }} disabled={busy}><LogOut size={16} />로그아웃</button></div></aside>
   <main className="admin-main"><header className="admin-heading"><div><p className="eyebrow">PINORI ADMIN</p><h1>{tab === 'overview' ? '한눈에 보는 피노리' : tab === 'cases' ? '신고·문의 관리' : '유저 관리'}</h1><p>{tab === 'overview' ? '서비스 현황과 지금 확인할 일을 살펴보세요.' : tab === 'cases' ? '접수된 내용을 확인하고 처리 결과를 남겨 주세요.' : '유저를 검색하고 계정 이용 상태를 관리하세요.'}</p></div>
     <div className="admin-heading-actions">
       <div className="admin-total-users" role="status" aria-busy={busy}>

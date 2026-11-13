@@ -13,8 +13,9 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
+// The web no longer runs as a PWA. Remove the service worker installed by earlier versions.
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(() => undefined)
-  })
+  void navigator.serviceWorker.getRegistrations()
+    .then(registrations => Promise.all(registrations.map(registration => registration.unregister())))
+    .catch(() => undefined)
 }

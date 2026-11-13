@@ -1,97 +1,13 @@
-const CACHE_NAME = 'spotit-shell-v6'
-const APP_SHELL = [
-  '/', '/map', '/manifest.webmanifest',
-  '/logo-mark.png', '/logo-wordmark.png', '/favicon-32.png', '/favicon-64.png',
-  '/icon-192.png', '/icon-512.png', '/badge-96.png',
-]
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL.map((url) => new Request(url, { cache: 'reload' }))))
-      .then(() => self.skipWaiting()),
-  )
-})
+// The web is no longer a PWA. Browsers that installed an earlier worker fetch this file on update:
+// it clears the old caches, unregisters itself and reloads open tabs onto the network version.
+self.addEventListener('install', () => self.skipWaiting())
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim()),
-  )
-})
-
-self.addEventListener('fetch', (event) => {
-  const request = event.request
-
-  if (request.method !== 'GET') {
-    return
-  }
-
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        if (response.ok && new URL(request.url).origin === self.location.origin) {
-          const responseClone = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone))
-        }
-
-        return response
-      })
-      .catch(() =>
-        caches.match(request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse
-          }
-
-          if (request.mode === 'navigate') {
-            return caches.match('/')
-          }
-
-          return Response.error()
-        }),
-      ),
-  )
-})
-
-self.addEventListener('push', (event) => {
-  const payload = event.data ? event.data.json() : {}
-  const data = payload.data || payload.notification?.data || {}
-  const title = data.title || payload.notification?.title || '피노리'
-  const body = data.body || payload.notification?.body || ''
-  const href = data.href || payload.fcmOptions?.link || '/notifications'
-
-  event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon: '/icon-512.png',
-      badge: '/badge-96.png',
-      tag: data.notificationId ? `spotit-${data.notificationId}` : 'spotit-notification',
-      data: { href },
-    }),
-  )
-})
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close()
-
-  const targetUrl = new URL(event.notification.data?.href || '/notifications', self.location.origin).href
-
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      const sameOriginClient = clientList.find((client) => new URL(client.url).origin === self.location.origin)
-
-      if (sameOriginClient) {
-        if ('navigate' in sameOriginClient) {
-          return sameOriginClient.navigate(targetUrl).then((client) => client?.focus())
-        }
-
-        return sameOriginClient.focus()
-      }
-
-      return self.clients.openWindow(targetUrl)
-    }),
-  )
+  event.waitUntil((async () => {
+    const keys = await caches.keys()
+    await Promise.all(keys.map((key) => caches.delete(key)))
+    await self.registration.unregister()
+    const clients = await self.clients.matchAll({ type: 'window' })
+    clients.forEach((client) => client.navigate(client.url))
+  })())
 })

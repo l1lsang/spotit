@@ -1,10 +1,8 @@
 User-agent: *
 Allow: /
 
-Disallow: /notifications
+Disallow: /admin
 Disallow: /people
 Disallow: /chats
-Disallow: /my
-Disallow: /profile
 
 Sitemap: https://pinori.kr/sitemap.xml

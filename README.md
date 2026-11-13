@@ -4,6 +4,19 @@
 
 운영 주소는 **https://pinori.kr**입니다. Google Maps, 카카오 로그인과 Firebase의 도메인 등록 방법은 [운영 도메인 설정](docs/domain-setup.md)을 참고합니다.
 
+## 웹의 역할
+
+서비스는 모바일 앱에서 제공하며, 이 저장소의 웹(pinori.kr)은 아래만 담당합니다. 아래 그룹·지도·피드 등 기능 설명은 같은 Firebase 백엔드(Firestore 규칙·Functions)를 쓰는 앱 기준 문서입니다.
+
+| 경로 | 화면 |
+| --- | --- |
+| `/` | 피노리 랜딩 페이지 (`src/pages/LandingPage.tsx`, 구성 예정 — 헤더·푸터만 있음) |
+| `/posts/:id`, `/feed/:id`, `/groups/:id`, `/people/:id`, `/chats/:id` | 앱 공유 링크. 앱이 설치되어 있으면 유니버설 링크/앱 링크(`public/.well-known`)로 앱이 바로 열리고, 없으면 `src/pages/AppLinkPage.tsx`가 스토어 설치를 안내합니다. Android에서는 **앱에서 열기** 버튼(intent 링크)도 표시합니다. |
+| `/policies/:policyId?`, `/licenses` | 약관 및 정책, 오픈소스 라이선스 |
+| `/admin` | 신고·문의 관리 (Cloud Functions 호출) |
+
+그 외 경로는 `/`로 이동합니다. 스토어 주소는 `src/lib/appStores.ts`의 기본값(App Store, Google Play)을 쓰며, `VITE_IOS_APP_URL`, `VITE_ANDROID_APP_URL`로 덮어쓸 수 있습니다.
+
 ## 실행 방법
 
 ```bash
@@ -16,14 +29,6 @@ npm run dev
 ```bash
 npm run build
 ```
-
-Figma 수정본과 JSON 예시 데이터로 화면 확인:
-
-```bash
-npm run dev:design
-```
-
-`http://127.0.0.1:5241/feed`에서 확인합니다. 예시 문구는 `src/data/previewContent.json`에서 수정하며, 운영 데이터에 저장되지 않습니다. 변경 내역은 [Figma 수정본 반영 기록](docs/figma-update-2026-10-19.md)을 참고합니다.
 
 ## 공개·비공개 그룹과 초대코드
 
