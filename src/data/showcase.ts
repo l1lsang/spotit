@@ -93,7 +93,7 @@ export const showcaseScenes: ShowcaseScene[] = [
     id: 'yours',
     title: ['나만의 색으로,', '나만의 이야기를.'],
     description: ['사진과 감정, 그리고 장소를', '하나의 기록으로 남겨보세요.'],
-    phoneScreens: [screens.pin, screens.details],
+    phoneScreens: [screens.details, screens.pin],
     background: { type: 'image', src: '/showcase/scene4-cafe.webp', objectPosition: '62% 50%', width: 5400, height: 3600 },
     mobileBackground: { type: 'image', src: '/showcase/scene4-cafe-mobile.webp', objectPosition: '66% 50%', width: 5400, height: 3600 },
     // The phone UI leads here: a darker veil keeps the photo quiet behind it.

@@ -17,7 +17,7 @@ const REDUCED = '(prefers-reduced-motion: reduce)'
 /** Timeline length in "screens" of scrolling; the section is one screen taller than this. */
 const TOTAL = 5
 
-const phoneOrder = [screens.home, screens.photo, screens.feed, screens.pin, screens.details]
+const phoneOrder = [screens.home, screens.photo, screens.feed, screens.details, screens.pin]
 
 export function CinematicShowcase() {
   return useMediaQuery(REDUCED) ? <StaticShowcase /> : <Cinematic />
@@ -190,13 +190,13 @@ function Cinematic() {
           .to(copy('moment'), copyIn, 3.55)
           .to(copy('moment'), copyOut, 4.0)
 
-        // 04 · A quieter café photograph; the phone carries the scene from pin colour to record.
+        // 04 · A quieter café photograph; the phone carries the scene from the record to its pin colour.
           .to(bg('yours'), { autoAlpha: 1, duration: 0.35 }, 4.0)
           .to(overlay, { opacity: showcaseScene('yours').overlayOpacity, duration: 0.35 }, 4.0)
           .fromTo(q('.cine-bg[data-scene="yours"] .cine-media'), { scale: 1.02 }, { scale: 1.09, duration: 1.0 }, 4.0)
-          .to(layer('pin'), screenIn, 4.15)
+          .to(layer('details'), screenIn, 4.15)
           .to(copy('yours'), copyIn, 4.3)
-          .to(layer('details'), screenIn, 4.65)
+          .to(layer('pin'), screenIn, 4.65)
           .to({}, { duration: 0.01 }, TOTAL - 0.01)
 
         syncVideos(tl.scrollTrigger!.progress * TOTAL)
@@ -274,7 +274,7 @@ function Cinematic() {
 /** Reduced motion: every scene as a still panel, with the same copy, photographs and screens. */
 function StaticShowcase() {
   const wide = useMediaQuery(WIDE)
-  const phoneFor: Partial<Record<SceneId, typeof screens.home>> = { beginning: screens.home, moment: screens.feed, yours: screens.pin }
+  const phoneFor: Partial<Record<SceneId, typeof screens.home>> = { beginning: screens.home, moment: screens.feed, yours: screens.details }
   return (
     <section id="showcase" className="cine-static" aria-label="피노리 소개">
       {showcaseScenes.map(scene => {
